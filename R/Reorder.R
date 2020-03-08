@@ -1,0 +1,86 @@
+#'Reorder the dimension of an array
+#'
+#'Reorder the dimension order of a multi-dimensional array  
+#'
+#'@param data An array of which the dimension to be reordered.
+#'@param order A vector of indices or character strings indicating the new 
+#'  order of the dimension.
+#'
+#'@return An array which has the same values as parameter 'data' but with 
+#'  different dimension order.
+#'
+#'@examples
+#'  dat1 <- array(c(1:30), dim = c(dat = 1, sdate = 3, ftime = 2, lon = 5))
+#'  print(dim(Reorder(dat1, c(2, 1, 4, 3))))
+#'  print(dim(Reorder(dat1, c('sdate', 'dat', 'lon', 'ftime'))))
+#'  dat2 <- array(c(1:10), dim = c(2, 1, 5))
+#'  print(dim(Reorder(dat2, c(2, 1, 3))))
+#'@export
+Reorder <- function(data, order) {
+
+  # Check inputs 
+  ## data
+  if (is.null(data)) {
+    stop("Parameter 'data' cannot be NULL.")
+  }
+  if (!is.array(data)) {
+    stop("Parameter 'data' must be an array.")
+  }
+
+  ## order
+  if (is.null(order)) {
+    stop("Parameter 'order' cannot be NULL.")
+  }
+  if (!is.vector(order) | (is.vector(order) & !is.numeric(order) & !is.character(order))) {
+    stop("Parameter 'order' must be a vector of numeric or character string.")
+  }
+  if (is.numeric(order)) {
+    if (any(order < 1) | any(order %% 1 != 0)) {
+      stop("Parameter 'order' must be positive integers.")
+    } else if (any(order > length(dim(data)))) {
+      stop("Parameter 'order' exceeds the dimension length of parameter 'data'.")
+    }
+  }
+  if (is.character(order)) {
+    if (!all(order %in% names(dim(data)))) {
+      stop("Parameter 'order' do not match the dimension names of parameter 'data'.")
+    }
+  }
+  if (length(order) != length(dim(data))) {
+    stop(paste0("The length of parameter 'order' should be the same with the ",
+                "dimension length of parameter 'data'."))
+  }
+
+
+
+  ###############################
+  # Reorder
+
+  ## If order is character string, find the indices
+  if (is.character(order)) {
+    tmp <- rep(0, length(order))
+    for (i in 1:length(order)) {
+      tmp[i] <- which(names(dim(data)) == order[i])
+    }
+  order <- tmp
+  }
+
+  ## reorder
+  old_dims <- dim(data)
+  attr_bk <- attributes(data)
+  if ('dim' %in% names(attr_bk)) {
+    attr_bk[['dim']] <- NULL
+  }
+  if (is.numeric(data)) {
+    data <- aperm(data, order)
+  } else {
+    y <- array(1:length(data), dim = dim(data))
+    y <- aperm(y, order)
+    data <- data[as.vector(y)]
+  }
+  dim(data) <- old_dims[order]
+  attributes(data) <- c(attributes(data), attr_bk)
+  data
+}
+
+
