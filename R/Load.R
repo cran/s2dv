@@ -754,7 +754,7 @@
 #'#
 #'# Example 1: Providing lists of lists to 'exp' and 'obs':
 #'#
-#'  \donttest{
+#'  \dontrun{
 #'data_path <- system.file('sample_data', package = 's2dv')
 #'exp <- list(
 #'         name = 'experiment',
@@ -780,7 +780,7 @@
 #'# has the proper entries to load these (see ?LoadConfigFile for details on 
 #'# writing a configuration file). 
 #'#
-#'  \donttest{
+#'  \dontrun{
 #'data_path <- system.file('sample_data', package = 's2dv')
 #'expA <- list(name = 'experiment', path = file.path(data_path, 
 #'             'model/$EXP_NAME$/$STORE_FREQ$_mean/$VAR_NAME$_3hourly',
@@ -833,6 +833,7 @@
 #'  } 
 #'@import parallel bigmemory methods
 #'@importFrom stats ts window na.omit
+#'@importFrom abind abind
 #'@export
 Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL, 
                  nmemberobs = NULL, nleadtime = NULL, leadtimemin = 1, 
@@ -843,6 +844,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
                  configfile = NULL, varmin = NULL, varmax = NULL, 
                  silent = FALSE, nprocs = NULL, dimnames = NULL, 
                  remapcells = 2, path_glob_permissive = 'partial') {
+
   #library(parallel)
   #library(bigmemory)
 
@@ -850,7 +852,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   parameter_names <- ls()
   if (length(parameter_names) < 3 || is.null(var) ||
       is.null(sdates) || (is.null(exp) && is.null(obs))) {
-    stop("At least 'var', 'exp'/'obs' and 'sdates' must be provided.")
+    stop("Error: At least 'var', 'exp'/'obs' and 'sdates' must be provided.")
   }
   load_parameters <- lapply(parameter_names, get, envir = environment())
   names(load_parameters) <- parameter_names
@@ -893,7 +895,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   # Check and sanitize parameters
   # var
   if (is.null(var) || !(is.character(var) && nchar(var) > 0)) {
-    stop("Parameter 'var' should be a character string of length >= 1.")
+    stop("Error: parameter 'var' should be a character string of length >= 1.")
   }
 
   # exp
@@ -901,22 +903,22 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   exp_info_names <- c('name', 'path', 'nc_var_name', 'suffix', 
                       'var_min', 'var_max', 'dimnames')
   if (!is.null(exp) && !(is.character(exp) && all(nchar(exp) > 0)) && !is.list(exp)) {
-    stop("Parameter 'exp' should be a vector of strings or a list with information of the experimental datasets to load. Check 'exp' in ?Load for details.")
+    stop("Error: parameter 'exp' should be a vector of strings or a list with information of the experimental datasets to load. Check 'exp' in ?Load for details.")
   } else if (!is.null(exp)) {
     if (!is.list(exp)) {
       exp <- lapply(exp, function (x) list(name = x))
     }
     for (i in 1:length(exp)) {
       if (!is.list(exp[[i]])) {
-        stop("Parameter 'exp' is incorrect. It should be a list of lists.")
+        stop("Error: parameter 'exp' is incorrect. It should be a list of lists.")
       }
       #if (!(all(names(exp[[i]]) %in% exp_info_names))) {
-      #  stop("Parameter 'exp' is incorrect. There are unrecognized components in the information of some of the experiments. Check 'exp' in ?Load for details.")
+      #  stop("Error: parameter 'exp' is incorrect. There are unrecognized components in the information of some of the experiments. Check 'exp' in ?Load for details.")
       #}
       if (!('name' %in% names(exp[[i]]))) {
         exp[[i]][['name']] <- paste0('exp', i)
         if (!('path' %in% names(exp[[i]]))) {
-          stop("Parameter 'exp' is incorrect. A 'path' should be provided for each experimental dataset if no 'name' is provided. See 'exp' in ?Load for details.")
+          stop("Error: parameter 'exp' is incorrect. A 'path' should be provided for each experimental dataset if no 'name' is provided. See 'exp' in ?Load for details.")
         }
       } else if (!('path' %in% names(exp[[i]]))) {
         exps_to_fetch <- c(exps_to_fetch, i)
@@ -946,22 +948,22 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   obs_info_names <- c('name', 'path', 'nc_var_name', 'suffix', 
                       'var_min', 'var_max', 'dimnames')
   if (!is.null(obs) && !(is.character(obs) && all(nchar(obs) > 0)) && !is.list(obs)) {
-    stop("Parameter 'obs' should be a vector of strings or a list with information of the observational datasets to load. Check 'obs' in ?Load for details.")
+    stop("Error: parameter 'obs' should be a vector of strings or a list with information of the observational datasets to load. Check 'obs' in ?Load for details.")
   } else if (!is.null(obs)) {
     if (!is.list(obs)) {
       obs <- lapply(obs, function (x) list(name = x))
     }
     for (i in 1:length(obs)) {
       if (!is.list(obs[[i]])) {
-        stop("Parameter 'obs' is incorrect. It should be a list of lists.")
+        stop("Error: parameter 'obs' is incorrect. It should be a list of lists.")
       }
       #if (!(all(names(obs[[i]]) %in% obs_info_names))) {
-      #  stop("Parameter 'obs' is incorrect. There are unrecognized components in the information of some of the observations. Check 'obs' in ?Load for details.")
+      #  stop("Error: parameter 'obs' is incorrect. There are unrecognized components in the information of some of the observations. Check 'obs' in ?Load for details.")
       #}
       if (!('name' %in% names(obs[[i]]))) {
         obs[[i]][['name']] <- paste0('obs', i)
         if (!('path' %in% names(obs[[i]]))) {
-          stop("Parameter 'obs' is incorrect. A 'path' should be provided for each observational dataset if no 'name' is provided. See 'obs' in ?Load for details.")
+          stop("Error: parameter 'obs' is incorrect. A 'path' should be provided for each observational dataset if no 'name' is provided. See 'obs' in ?Load for details.")
         }
       } else if (!('path' %in% names(obs[[i]]))) {
         obs_to_fetch <- c(obs_to_fetch, i)
@@ -988,23 +990,23 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
 
   # sdates
   if (is.null(sdates)) {
-    stop("Parameter 'sdates' must be provided.")
+    stop("Error: parameter 'sdates' must be provided.")
   }
   if (!is.character(sdates) || !all(nchar(sdates) == 8) || any(is.na(strtoi(sdates)))) {
-    stop("Parameter 'sdates' is incorrect. All starting dates should be a character string in the format 'YYYYMMDD'.")
+    stop("Error: parameter 'sdates' is incorrect. All starting dates should be a character string in the format 'YYYYMMDD'.")
   }
 
   # nmember
   if (!is.null(nmember) && !is.null(exp)) {
     if (!is.numeric(nmember)) {
-      stop("Parameter 'nmember' is incorrect. It should be numeric.")
+      stop("Error: parameter 'nmember' is incorrect. It should be numeric.")
     }
     if (length(nmember) == 1) {
       .warning(paste("'nmember' should specify the number of members of each experimental dataset. Forcing to", nmember, "for all experiments."))
       nmember <- rep(nmember, length(exp))
     }
     if (length(nmember) != length(exp)) {
-      stop("'nmember' must contain as many values as 'exp'.")
+      stop("Error: 'nmember' must contain as many values as 'exp'.")
     } else if (any(is.na(nmember))) {
       nmember[which(is.na(nmember))] <- max(nmember, na.rm = TRUE)
     }
@@ -1013,14 +1015,14 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   # nmemberobs
   if (!is.null(nmemberobs) && !is.null(obs)) {
     if (!is.numeric(nmemberobs)) {
-      stop("Parameter 'nmemberobs' is incorrect. It should be numeric.")
+      stop("Error: parameter 'nmemberobs' is incorrect. It should be numeric.")
     }
     if (length(nmemberobs) == 1) {
       .warning(paste("'nmemberobs' should specify the number of members of each observational dataset. Forcing to", nmemberobs, "for all observations."))
       nmemberobs <- rep(nmemberobs, length(obs))
     }
     if (length(nmemberobs) != length(obs)) {
-      stop("'nmemberobs' must contain as many values as 'obs'.")
+      stop("Error: 'nmemberobs' must contain as many values as 'obs'.")
     } else if (any(is.na(nmemberobs))) {
       nmemberobs[which(is.na(nmemberobs))] <- max(nmemberobs, na.rm = TRUE)
     }
@@ -1028,35 +1030,34 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
 
   # nleadtime
   if (!is.null(nleadtime) && !is.numeric(nleadtime)) {
-    stop("Parameter 'nleadtime' is wrong. It should be numeric.")
+    stop("Error: parameter 'nleadtime' is wrong. It should be numeric.")
   }
 
   # leadtimemin
   if (is.null(leadtimemin) || !is.numeric(leadtimemin)) {
-    stop("Parameter 'leadtimemin' is wrong. It should be numeric.")
+    stop("Error: parameter 'leadtimemin' is wrong. It should be numeric.")
   }
 
   # leadtimemax
   if (!is.null(leadtimemax) && !is.numeric(leadtimemax)) {
-    stop("Parameter 'leadtimemax' is wrong. It should be numeric.")
+    stop("Error: parameter 'leadtimemax' is wrong. It should be numeric.")
   }
 
   # storefreq       
   if (!is.character(storefreq) || !(storefreq %in% c('monthly', 'daily'))) {
-    stop("Parameter 'storefreq' is wrong, can take value 'daily' or 'monthly'.")
+    stop("Error: parameter 'storefreq' is wrong, can take value 'daily' or 'monthly'.")
   }
-
   # sampleperiod
   if (is.null(sampleperiod) || !is.numeric(sampleperiod)) {
-    stop("Parameter 'sampleperiod' is wrong. It should be numeric.")
+    stop("Error: parameter 'sampleperiod' is wrong. It should be numeric.")
   }
 
   # lonmin
   if (is.null(lonmin) || !is.numeric(lonmin)) {
-    stop("Parameter 'lonmin' is wrong. It should be numeric.")
+    stop("Error: parameter 'lonmin' is wrong. It should be numeric.")
   }
   if (lonmin < -360 || lonmin > 360) {
-    stop("Parameter 'lonmin' must be in the range [-360, 360]")
+    stop("Error: parameter 'lonmin' must be in the range [-360, 360]")
   }
   if (lonmin < 0) {
     lonmin <- lonmin + 360
@@ -1064,10 +1065,10 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
 
   # lonmax
   if (is.null(lonmax) || !is.numeric(lonmax)) {
-    stop("Parameter 'lonmax' is wrong. It should be numeric.")
+    stop("Error: parameter 'lonmax' is wrong. It should be numeric.")
   }
   if (lonmax < -360 || lonmax > 360) {
-    stop("Parameter 'lonmax' must be in the range [-360, 360]")
+    stop("Error: parameter 'lonmax' must be in the range [-360, 360]")
   }
   if (lonmax < 0) {
     lonmax <- lonmax + 360
@@ -1075,28 +1076,28 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
 
   # latmin
   if (is.null(latmin) || !is.numeric(latmin)) {
-    stop("Parameter 'latmin' is wrong. It should be numeric.")
+    stop("Error: parameter 'latmin' is wrong. It should be numeric.")
   }
   if (latmin > 90 || latmin < -90) {
-    stop("'latmin' must be in the interval [-90, 90].")
+    stop("Error: 'latmin' must be in the interval [-90, 90].")
   }
   
   # latmax
   if (is.null(latmax) || !is.numeric(latmax)) {
-    stop("Parameter 'latmax' is wrong. It should be numeric.")
+    stop("Error: parameter 'latmax' is wrong. It should be numeric.")
   }
   if (latmax > 90 || latmax < -90) {
-    stop("'latmax' must be in the interval [-90, 90].")
+    stop("Error: 'latmax' must be in the interval [-90, 90].")
   }
 
   # output
   if (is.null(output) || !(output %in% c('lonlat', 'lon', 'lat', 'areave'))) {
-    stop("'output' can only take values 'lonlat', 'lon', 'lat' or 'areave'.")
+    stop("Error: 'output' can only take values 'lonlat', 'lon', 'lat' or 'areave'.")
   }
 
   # method
   if (is.null(method) || !(method %in% c('bilinear', 'bicubic', 'conservative', 'distance-weighted'))) {
-    stop("Parameter 'method' is wrong, can take value 'bilinear', 'bicubic', 'conservative' or 'distance-weighted'.")
+    stop("Error: parameter 'method' is wrong, can take value 'bilinear', 'bicubic', 'conservative' or 'distance-weighted'.")
   }
   remap <- switch(method, 'bilinear' = 'bil', 'bicubic' = 'bic', 
                   'conservative' = 'con', 'distance-weighted' = 'dis')
@@ -1114,41 +1115,41 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
         }
       }
     } else {
-      stop("Parameter 'grid' should be a character string, if specified.")
+      stop("Error: parameter 'grid' should be a character string, if specified.")
     }
   }
 
   # maskmod
   if (!is.list(maskmod)) {
-    stop("Parameter 'maskmod' must be a list.")
+    stop("Error: parameter 'maskmod' must be a list.")
   }
   if (length(maskmod) < length(exp)) {
-    stop("'maskmod' must contain a numeric mask or NULL for each experiment in 'exp'.")
+    stop("Error: 'maskmod' must contain a numeric mask or NULL for each experiment in 'exp'.")
   }
   for (i in 1:length(maskmod)) {
     if (is.list(maskmod[[i]])) {
       if ((length(maskmod[[i]]) > 2) || !all(names(maskmod[[i]]) %in% c('path', 'nc_var_name'))) {
-        stop("All masks in 'maskmod' must be a numeric matrix, or a list with the components 'path' and optionally 'nc_var_name', or NULL.")
+        stop("Error: all masks in 'maskmod' must be a numeric matrix, or a list with the components 'path' and optionally 'nc_var_name', or NULL.")
       }
     } else if (!(is.numeric(maskmod[[i]]) || is.null(maskmod[[i]]))) {
-      stop("All masks in 'maskmod' must be a numeric matrix, or a list with the components 'path' and optionally 'nc_var_name', or NULL.")
+      stop("Error: all masks in 'maskmod' must be a numeric matrix, or a list with the components 'path' and optionally 'nc_var_name', or NULL.")
     }
   }
 
   # maskobs
   if (!is.list(maskobs)) {
-    stop("Parameter 'maskobs' must be a list.")
+    stop("Error: parameter 'maskobs' must be a list.")
   }
   if (length(maskobs) < length(obs)) {
-    stop("'maskobs' must contain a numeric mask or NULL for each obseriment in 'obs'.")
+    stop("Error: 'maskobs' must contain a numeric mask or NULL for each obseriment in 'obs'.")
   }
   for (i in 1:length(maskobs)) {
     if (is.list(maskobs[[i]])) {
       if ((length(maskobs[[i]]) > 2) || !all(names(maskobs[[i]]) %in% c('path', 'nc_var_name'))) {
-        stop("All masks in 'maskobs' must be a numeric matrix, or a list with the components 'path' and optionally 'nc_var_name', or NULL.")
+        stop("Error: all masks in 'maskobs' must be a numeric matrix, or a list with the components 'path' and optionally 'nc_var_name', or NULL.")
       }
     } else if (!(is.numeric(maskobs[[i]]) || is.null(maskobs[[i]]))) {
-      stop("All masks in 'maskobs' must be a numeric matrix, or a list with the components 'path' and optionally 'nc_var_name', or NULL.")
+      stop("Error: all masks in 'maskobs' must be a numeric matrix, or a list with the components 'path' and optionally 'nc_var_name', or NULL.")
     }
   }
 
@@ -1165,45 +1166,45 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   if (is.null(configfile)) {
     configfile <- system.file("config", "BSC.conf", package = "s2dv")
   } else if (!is.character(configfile) || !(nchar(configfile) > 0)) {
-    stop("Parameter 'configfile' must be a character string with the path to an s2dv configuration file, if specified.")
+    stop("Error: parameter 'configfile' must be a character string with the path to an s2dv configuration file, if specified.")
   }
 
   # varmin
   if (!is.null(varmin) && !is.numeric(varmin)) {
-    stop("Parameter 'varmin' must be numeric, if specified.")
+    stop("Error: parameter 'varmin' must be numeric, if specified.")
   }
 
   # varmax
   if (!is.null(varmax) && !is.numeric(varmax)) {
-    stop("Parameter 'varmax' must be numeric, if specified.")
+    stop("Error: parameter 'varmax' must be numeric, if specified.")
   }
 
   # silent
   if (!is.logical(silent)) {
-    stop("Parameter 'silent' must be TRUE or FALSE.")
+    stop("Error: parameter 'silent' must be TRUE or FALSE.")
   }
 
   # nprocs
   if (!is.null(nprocs) && (!is.numeric(nprocs) || nprocs < 1)) {
-    stop("Parameter 'nprocs' must be a positive integer, if specified.")
+    stop("Error: parameter 'nprocs' must be a positive integer, if specified.")
   }
 
   # dimnames
   if (!is.null(dimnames) && (!is.list(dimnames))) {
-    stop("Parameter 'dimnames' must be a list, if specified.")
+    stop("Error: parameter 'dimnames' must be a list, if specified.")
   }
   if (!all(names(dimnames) %in% c('member', 'lat', 'lon'))) {
-    stop("Parameter 'dimnames' is wrong. There are unrecognized component names. See 'dimnames' in ?Load for details.")
+    stop("Error: parameter 'dimnames' is wrong. There are unrecognized component names. See 'dimnames' in ?Load for details.")
   }
 
   # remapcells  
   if (!is.numeric(remapcells) || remapcells < 0) {
-    stop("'remapcells' must be an integer >= 0.")
+    stop("Error: 'remapcells' must be an integer >= 0.")
   }
 
   # path_glob_permissive
   if (!is.logical(path_glob_permissive) && !(path_glob_permissive %in% c('yes', 'partial', 'no'))) {
-    stop("'path_glob_permissive' must be one of TRUE, 'yes', 'partial', FALSE or 'no'.")
+    stop("Error: 'path_glob_permissive' must be one of TRUE, 'yes', 'partial', FALSE or 'no'.")
   }
   if (is.logical(path_glob_permissive)) {
     if (path_glob_permissive) {
@@ -1375,6 +1376,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   dims2define <- TRUE
   is_file_per_member_exp <- rep(nmod, FALSE)
   exp_work_pieces <- list()
+  first_time_step_list <- NULL
   jmod <- 1
   while (jmod <= nmod) {
     first_dataset_file_found <- FALSE
@@ -1419,6 +1421,21 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
       replace_values[["DAY"]] <- substr(sdates[jsdate], 7, 8)
       if (is_file_per_member_exp[jmod]) {
         replace_values[["MEMBER_NUMBER"]] <- '*'
+      }
+      if (jsdate == 1) {
+        work_piecetime <- list(dataset_type = dataset_type,
+                           filename = .ConfigReplaceVariablesInString(quasi_final_path,
+                                                                      replace_values),
+                           namevar = namevar, grid = grid, remap = remap, 
+                           remapcells = remapcells,
+                           is_file_per_member = is_file_per_member_exp[jmod],
+                           is_file_per_dataset = FALSE,
+                           lon_limits = c(lonmin, lonmax),
+                           lat_limits = c(latmin, latmax), dimnames = exp[[jmod]][['dimnames']],
+                           single_dataset = single_dataset)
+        looking_time <- .LoadDataFile(work_piecetime, explore_dims = TRUE, 
+                                      silent = silent)
+        first_time_step_list <- c(first_time_step_list, list(looking_time$time_dim))
       }
       # If the dimensions of the output matrices are still to define, we try to read
       # the metadata of the data file that corresponds to the current iteration
@@ -1466,10 +1483,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
           if (is.null(leadtimemax)) {
             leadtimemax <- nleadtime
           } else if (leadtimemax > nleadtime) {
-            stop(paste0("Parameter 'leadtimemax' is greater than the number of ",
-                        "loaded leadtimes. Put first the experiment with the ",
-                        "greatest number of leadtimes or adjust properly the ",
-                        "parameters 'nleadtime' and 'leadtimemax'."))
+            stop("Error: 'leadtimemax' argument is greater than the number of loaded leadtimes. Put first the experiment with the greatest number of leadtimes or adjust properly the parameters 'nleadtime' and 'leadtimemax'.")
           }
           leadtimes <- seq(leadtimemin, leadtimemax, sampleperiod)
           latitudes <- found_dims[['lat']]
@@ -1527,6 +1541,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
       jsdate <- jsdate + 1
     }
     replace_values[extra_vars] <- NULL
+    #first_dataset_file_found <- FALSE
     jmod <- jmod + 1
   }
   if (dims2define && length(exp) > 0) {
@@ -1549,7 +1564,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   # the current date.
   if (is.null(exp) || dims == 0) {
     if (is.null(leadtimemax)) {
-      diff <- Sys.time() - as.POSIXct(sdates[1], format = '%Y%m%d')
+      diff <- Sys.time() - as.POSIXct(sdates[1], format = '%Y%m%d', tz = "UTC")
       if (diff > 0) {
         .warning("Loading observations only and no 'leadtimemax' specified. Data will be loaded from each starting date to current time.")
         if (storefreq == 'monthly') { 
@@ -1567,7 +1582,52 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
     }
     leadtimes <- seq(leadtimemin, leadtimemax, sampleperiod)
   }
-  
+  # If there are differences in the first time stamp in exp files:
+  if (!is.null(exp)) {
+    in_date <- lapply(first_time_step_list, function(x) {
+        origin <- as.POSIXct(
+          paste(strsplit(x$time_units, " ")[[1]][c(3,4)],
+                collapse = " "), tz = 'UTC')
+        units <- strsplit(x$time_units, " ")[[1]][1]
+        if (units == 'hours') {
+          exp_first_time_step <- as.POSIXct(
+            x$first_time_step_in_file *
+            3600, origin = origin, tz = 'UTC')
+        } else if (units == 'days') {
+          exp_first_time_step <- as.POSIXct(
+            x$first_time_step_in_file *
+            86400, origin = origin, tz = 'UTC')
+        }
+        day <- as.numeric(format(exp_first_time_step, "%d"))
+        return(day)
+    })
+    exp_first_time_step <- min(unlist(in_date))
+    if (max(unlist(in_date)) > 1) {
+      leadtimes <- seq(exp_first_time_step, leadtimemax + max(unlist(in_date)) - 1, 
+                       sampleperiod)
+    }
+    if (leadtimemin > 1 & length(in_date) > 1) {
+      lags <- lapply(in_date, function(x) {x - in_date[[1]]})
+      new_leadtimemin <- lapply(lags, function(x) {leadtimemin - x})
+      new_leadtimemax <- lapply(lags, function(x) {leadtimemax - x})
+      jmod <- 2
+      npieces <- length(exp_work_pieces)/nmod
+      while (jmod <= nmod) {
+        jpiece <- 1
+        while (jpiece <= npieces) {
+          exp_work_pieces[[npieces * (jmod - 1) + jpiece]]$leadtimes <- 
+            seq(new_leadtimemin[[jmod]], new_leadtimemax[[jmod]], sampleperiod)
+          jpiece <- jpiece + 1
+        }
+        jmod <- jmod + 1
+      }
+    }
+    lag <- 1 - in_date[[1]]
+    leadtimes <- seq(leadtimemin - lag, leadtimemax #+ max(unlist(in_date)) + lag,
+                     - lag,
+                     sampleperiod)
+    exp_first_time_step <- leadtimemin - lag
+  }
   # Now we start iterating over observations. We try to find the output matrix
   # dimensions and we build anyway the work pieces corresponding to the observational
   # data that time-corresponds the experimental data or the time-steps until the
@@ -1631,6 +1691,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
         found_data <- .LoadDataFile(work_piece, explore_dims = TRUE, silent = silent)
         found_dims <- found_data$dims
         var_long_name <- found_data$var_long_name
+        first_time_step_list <- c(first_time_step_list, list(found_data$time_dim))
         units <- found_data$units
         if (!is.null(found_dims)) {
           is_2d_var <- found_data$is_2d_var
@@ -1705,7 +1766,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
           }
           day <- as.integer(day)
           startdate <- as.POSIXct(paste(substr(sdate, 1, 4), '-',
-                       substr(sdate, 5, 6), '-', day, ' 12:00:00', sep = '')) + 
+                       substr(sdate, 5, 6), '-', day, ' 12:00:00', sep = ''), tz = "UTC") + 
                        (leadtimemin - 1) * 86400
           year <- as.integer(substr(startdate, 1, 4))
           month <- as.integer(substr(startdate, 6, 7))
@@ -1728,7 +1789,18 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
             ## This condition must be fulfilled to put all the month time steps
             ## in the dimension of length nleadtimes. Otherwise it must be cut:
             #(length(leadtimes) - 1)*sampleperiod + 1 - (jleadtime - 1)*sampleperiod >= days_in_month - day + 1
-            obs_file_indices <- seq(day, min(days_in_month, (length(leadtimes) - jleadtime) * sampleperiod + day), sampleperiod)
+            
+            ## The first time step in exp could be different from sdate:
+            if (jleadtime == 1 & !is.null(exp)) {
+             if (is.null(first_time_step_list[[1]])) {
+                stop("Check 'time' variable in the experimental files ",
+                     "since not units or first time step have been found.")
+              } else {
+                  day <- leadtimes[1]
+              }
+            }
+          obs_file_indices <- seq(day, min(days_in_month,
+                  (length(leadtimes) - jleadtime) * sampleperiod + day), sampleperiod)
           } else {
             obs_file_indices <- 1
           }
@@ -1824,7 +1896,8 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
           }
           
           if (storefreq == 'daily') {
-            startdate <- startdate + 86400 * sampleperiod * length(obs_file_indices)
+            startdate <- startdate + 86400 * sampleperiod * 
+                         max(obs_file_indices)
             year <- as.integer(substr(startdate, 1, 4))
             month <- as.integer(substr(startdate, 6, 7))
             day <- as.integer(substr(startdate, 9, 10))
@@ -2079,7 +2152,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   not_found_files <- unlist(lapply(work_pieces[which(unlist(lapply(found_files, is.null)))], '[[', 'filename'))
 
   } else {
-    error_message <- "No found files for any dataset. Check carefully the file patterns and correct either the pattern or the provided parameters:\n"
+    error_message <- "Error: No found files for any dataset. Check carefully the file patterns and correct either the pattern or the provided parameters:\n"
     tags_to_find <- c('START_DATE', 'YEAR', 'MONTH', 'DAY', 'MEMBER_NUMBER')
     position_of_tags <- na.omit(match(tags_to_find, names(replace_values)))
     if (!is.null(exp)) {
@@ -2138,49 +2211,54 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
     attr(variable, 'daily_agg_cellfun') <- 'none'
     attr(variable, 'monthly_agg_cellfun') <- 'none'
     attr(variable, 'verification_time') <- 'none'
-
-    number_ftime <- NULL 
+    
+    number_ftime <- NULL
     if (is.null(var_exp)) {
       mod_data <- NULL
-    } else { 
+    } else {
       dim_reorder <- length(dim_exp):1
       dim_reorder[2:3] <- dim_reorder[3:2]
       old_dims <- dim_exp
       dim_exp <- dim_exp[dim_reorder]
-      mod_data <- aperm(array(bigmemory::as.matrix(var_exp), dim = old_dims), dim_reorder)
+      mod_data <-
+        aperm(array(bigmemory::as.matrix(var_exp), dim = old_dims), dim_reorder)
       attr(mod_data, 'dimensions') <- names(dim_exp)
       names(dim(mod_data)) <- names(dim_exp)
       number_ftime <- dim_exp[["ftime"]]
     }
-
+    
     if (is.null(var_obs)) {
       obs_data <- NULL
-    } else {                     
+    } else {
       dim_reorder <- length(dim_obs):1
       dim_reorder[2:3] <- dim_reorder[3:2]
       old_dims <- dim_obs
       dim_obs <- dim_obs[dim_reorder]
-      obs_data <- aperm(array(bigmemory::as.matrix(var_obs), dim = old_dims), dim_reorder)
+      obs_data <-
+        aperm(array(bigmemory::as.matrix(var_obs), dim = old_dims), dim_reorder)
       attr(obs_data, 'dimensions') <- names(dim_obs)
       names(dim(obs_data)) <- names(dim_obs)
       if (is.null(number_ftime)) {
         number_ftime <- dim_obs[["ftime"]]
       }
     }
-
     if (is.null(latitudes)) {
       lat <- 0
       attr(lat, 'cdo_grid_name') <- 'none'
       attr(lat, 'first_lat') <- 'none'
-      attr(lat, 'last_lat') <- 'none' 
+      attr(lat, 'last_lat') <- 'none'
     } else {
       lat <- latitudes
-      attr(lat, 'cdo_grid_name') <- if (is.null(grid)) 'none' else grid
+      attr(lat, 'cdo_grid_name') <-
+        if (is.null(grid))
+          'none'
+      else
+        grid
       attr(lat, 'first_lat') <- tail(lat, 1)
       attr(lat, 'last_lat') <- head(lat, 1)
     }
     attr(lat, 'projection') <- 'none'
-
+    
     if (is.null(longitudes)) {
       lon <- 0
       attr(lon, 'cdo_grid_name') <- 'none'
@@ -2190,14 +2268,18 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
       attr(lon, 'last_lon') <- 'none'
     } else {
       lon <- longitudes
-      attr(lon, 'cdo_grid_name') <- if (is.null(grid)) 'none' else grid
+      attr(lon, 'cdo_grid_name') <-
+        if (is.null(grid))
+          'none'
+      else
+        grid
       attr(lon, 'data_across_gw') <- data_across_gw
       attr(lon, 'array_across_gw') <- array_across_gw
       attr(lon, 'first_lon') <- lon[which.min(abs(lon - lonmin))]
       attr(lon, 'last_lon') <- lon[which.min(abs(lon - lonmax))]
     }
     attr(lon, 'projection') <- 'none'
-
+    
     dates <- list()
     ## we must put a start and end time for each prediction c(start date, forecast time)
     if (storefreq == 'minutely') {
@@ -2209,22 +2291,42 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
     } else if (storefreq == 'monthly') {
       store_period <- 'month'
     }
-
+    
     addTime <- function(date, period, n = 1) {
       seq(date, by = paste(n, period), length = 2)[2]
     }
-
+    
     # We build dates, a list with components start and end.
     # Start is a list with as many components as start dates.
     # Each component is a vector of the initial POSIXct date of each
     # forecast time step
-    dates[["start"]] <- do.call(c, lapply(sdates,
+    if (!is.null(exp)) {
+      if (storefreq == 'daily' & leadtimes[[1]] > 1) {
+        origin <- leadtimes[[1]] - 1
+        leadtimemin <- 1
+      } else {
+        origin <- 0
+      }
+      dates[["start"]] <- do.call(c, lapply(sdates,
+          function(x) {
+            do.call(c, lapply((origin:(origin + number_ftime - 1)) * sampleperiod,
+              function(y) {
+                 addTime(as.POSIXct(x, format = "%Y%m%d", tz = "UTC"),
+                                    store_period, y + leadtimemin - 1)
+              }))
+           }))
+    } else {
+      origin <- 0
+      dates[["start"]] <- do.call(c, lapply(sdates,
       function(x) {
         do.call(c, lapply((0:(number_ftime - 1)) * sampleperiod,
           function(y) {
-            addTime(as.POSIXct(x, format = "%Y%m%d"), store_period, y + leadtimemin - 1)
+            addTime(as.POSIXct(x, format = "%Y%m%d", tz = "UTC"),
+                    store_period, y + leadtimemin - 1)
           }))
       }))
+    }
+    attr(dates[["start"]], "tzone") <- "UTC"
     # end is similar to start, but contains the end dates of each forecast 
     # time step
     dates[["end"]] <- do.call(c, lapply(dates[["start"]],
@@ -2234,6 +2336,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
             addTime(y, store_period)
           }))
       }))
+    attr(dates[["end"]], "tzone") <- "UTC"
 
     tags_to_find <- c('START_DATE', 'MEMBER_NUMBER', 'YEAR', 'MONTH', 'DAY')
     position_of_tags <- na.omit(match(tags_to_find, names(replace_values)))
@@ -2245,14 +2348,19 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
       models <- list()
       for (jmod in 1:length(exp)) {
         member_names <- paste0("Member_", 1:nmember[jmod])
-        models[[exp[[jmod]][["name"]]]] <- list(
-          InitializationDates = lapply(member_names,
+
+        InitializationDates <- do.call(c, lapply(member_names,
             function(x) {
               do.call(c, lapply(sdates, function(y) {
-                as.POSIXct(y, format = "%Y%m%d")
+                as.POSIXct(y, format = "%Y%m%d", tz = "UTC")
               }))
-            }),
+            }))
+        attr(InitializationDates, "tzone") <- "UTC"
+
+        models[[exp[[jmod]][["name"]]]] <- list(
+          InitializationDates = InitializationDates,
           Members = member_names)
+
         names(models[[exp[[jmod]][["name"]]]]$InitializationDates) <- member_names
         attr(models[[exp[[jmod]][["name"]]]], 'dataset') <- exp[[jmod]][["name"]]
         attr(models[[exp[[jmod]][["name"]]]], 'source') <- {

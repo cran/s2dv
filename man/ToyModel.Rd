@@ -81,6 +81,21 @@ toyforecast <- ToyModel(alpha = a, beta = b, gamma = g, sig = sig, trend = t,
 
 # Example 2: Generate forecast from loaded observations
 # Decadal prediction example
+ \dontrun{
+data_path <- system.file('sample_data', package = 's2dv')
+expA <- list(name = 'experiment', path = file.path(data_path,
+            'model/$EXP_NAME$/$STORE_FREQ$_mean/$VAR_NAME$_3hourly',
+            '$VAR_NAME$_$START_DATE$.nc'))
+obsX <- list(name = 'observation', path = file.path(data_path,
+            '$OBS_NAME$/$STORE_FREQ$_mean/$VAR_NAME$',
+            '$VAR_NAME$_$YEAR$$MONTH$.nc'))
+
+# Now we are ready to use Load().
+startDates <- c('19851101', '19901101', '19951101', '20001101', '20051101')
+sampleData <- Load('tos', list(expA), list(obsX), startDates,
+                  output = 'areave', latmin = 27, latmax = 48,
+                  lonmin = -12, lonmax = 40)
+ }
  \dontshow{
 startDates <- c('19851101', '19901101', '19951101', '20001101', '20051101')
 sampleData <- s2dv:::.LoadSampleData('tos', c('experiment'),
@@ -97,6 +112,12 @@ nm <- 10
 
 toyforecast <- ToyModel(alpha = a, beta = b, gamma = g, nmemb = nm, 
                        obsini = sampleData$obs, nstartd = 5, nleadt = 60)
+## Add PlotAno() back when this function is included!!
+#  \donttest{
+#PlotAno(toyforecast$mod, toyforecast$obs, startDates, 
+#        toptitle = c("Synthetic decadal temperature prediction"), 
+#        fileout = "ex_toymodel.eps")
+#  }
 
 }
 

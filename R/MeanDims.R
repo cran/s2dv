@@ -3,11 +3,14 @@
 #'This function returns the mean of an array along a set of dimensions and 
 #'preserves the dimension names if it has.
 #'
+#'@details It is recommended to use \code{'apply(x, dim, mean)'} to improve the
+#'  efficiency when the dimension to be averaged is only one. 
+#'
 #'@param data An array to be averaged.
 #'@param dims A vector of numeric or charactor string, indicating along which 
 #'  dimensions to average.
 #'@param na.rm A logical value indicating whether to ignore NA values (TRUE) or 
-#'  not (FALSE).
+#'  not (FALSE). The default value is FALSE.
 #'
 #'@return An array with the same dimension as parameter 'data' except the 'dims' 
 #'  dimensions. 
@@ -19,7 +22,7 @@
 #'print(dim(MeanDims(a, c(2, 3))))
 #'print(dim(MeanDims(a, c('a', 'b'))))
 #'@export
-MeanDims <- function(data, dims, na.rm = TRUE) {
+MeanDims <- function(data, dims, na.rm = FALSE) {
 
   # Check inputs 
   ## data

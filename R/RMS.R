@@ -11,13 +11,17 @@
 #'The confidence interval is computed by the chi2 distribution.\cr
 #'
 #'@param exp A named numeric array of experimental data, with at least two 
-#'  dimensions 'time_dim' and 'memb_dim'.
+#'  dimensions 'time_dim' and 'dat_dim'. It can also be a vector with the 
+#'  same length as 'obs', then the vector will automatically be 'time_dim' and 
+#'  'dat_dim' will be 1.
 #'@param obs A named numeric array of observational data, same dimensions as  
-#'  parameter 'exp' except along memb_dim.
+#'  parameter 'exp' except along dat_dim. It can also be a vector with the same
+#'  length as 'exp', then the vector will automatically be 'time_dim' and 
+#'  'dat_dim' will be 1.
 #'@param time_dim A character string indicating the name of dimension along  
 #'  which the correlations are computed. The default value is 'sdate'.
-#'@param memb_dim A character string indicating the name of member (nobs/nexp) 
-#'  dimension. The default value is 'member'.
+#'@param dat_dim A character string indicating the name of member (nobs/nexp) 
+#'  dimension. The default value is 'dataset'.
 #'@param comp_dim A character string indicating the name of dimension along which
 #'  obs is taken into account only if it is complete. The default value
 #'  is NULL.
@@ -33,8 +37,8 @@
 #'@return 
 #'A list containing the numeric arrays with dimension:\cr 
 #'  c(nexp, nobs, all other dimensions of exp except time_dim).\cr
-#'nexp is the number of experiment (i.e., memb_dim in exp), and nobs is the 
-#'number of observation (i.e., memb_dim in obs).\cr
+#'nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
+#'number of observation (i.e., dat_dim in obs).\cr
 #'\item{$rms}{
 #'  The root mean square error. 
 #'}
@@ -46,21 +50,23 @@
 #'}
 #'
 #'@examples
+#'# Load sample data as in Load() example:
 #'  set.seed(1)
-#'  exp1 <- array(rnorm(120), dim = c(member = 3, sdate = 5, ftime = 2, lon = 1, lat = 4))
+#'  exp1 <- array(rnorm(120), dim = c(dataset = 3, sdate = 5, ftime = 2, lon = 1, lat = 4))
 #'  set.seed(2)
-#'  obs1 <- array(rnorm(80),  dim = c(member = 2, sdate = 5, ftime = 2, lon = 1, lat = 4))
+#'  obs1 <- array(rnorm(80),  dim = c(dataset = 2, sdate = 5, ftime = 2, lon = 1, lat = 4))
 #'  set.seed(2)
 #'  na <- floor(runif(10, min = 1, max = 80))
 #'  obs1[na] <- NA
 #'  res <- RMS(exp1, obs1, comp_dim = 'ftime')
+#'  # Renew example when Ano and Smoothing are ready
 #'
 #'@rdname RMS
 #'@import multiApply
 #'@importFrom ClimProjDiags Subset
 #'@importFrom stats qchisq
 #'@export
-RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
+RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
                 comp_dim = NULL, limits = NULL, 
                 conf = TRUE, conf.lev = 0.95, ncores = NULL) {       
   # Check inputs 
@@ -71,9 +77,19 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
   if (!is.numeric(exp) | !is.numeric(obs)) {
     stop("Parameter 'exp' and 'obs' must be a numeric array.")
   }
-  if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must be at least two dimensions ",
-                "containing time_dim and memb_dim."))
+  if (is.null(dim(exp)) & is.null(dim(obs))) {  #is vector
+    if (length(exp) == length(obs)) {
+      exp <- array(exp, dim = c(length(exp), 1))
+      names(dim(exp)) <- c(time_dim, dat_dim)
+      obs <- array(obs, dim = c(length(obs), 1))
+      names(dim(obs)) <- c(time_dim, dat_dim)
+    } else {
+    stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
+                "dimensions time_dim and dat_dim, or vector of same length."))
+    }
+  } else if (is.null(dim(exp)) | is.null(dim(obs))) {
+    stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
+                "dimensions time_dim and dat_dim, or vector of same length."))
   }
   if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
@@ -90,12 +106,12 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
   if (!time_dim %in% names(dim(exp)) | !time_dim %in% names(dim(obs))) {
     stop("Parameter 'time_dim' is not found in 'exp' or 'obs' dimension.")
   }
-  ## memb_dim
-  if (!is.character(memb_dim) | length(memb_dim) > 1) {
-    stop("Parameter 'memb_dim' must be a character string.")
+  ## dat_dim
+  if (!is.character(dat_dim) | length(dat_dim) > 1) {
+    stop("Parameter 'dat_dim' must be a character string.")
   }
-  if (!memb_dim %in% names(dim(exp)) | !memb_dim %in% names(dim(obs))) {
-    stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.")
+  if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
+    stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.")
   }
   ## comp_dim
   if (!is.null(comp_dim)) {
@@ -135,11 +151,11 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
-  name_exp <- name_exp[-which(name_exp == memb_dim)]
-  name_obs <- name_obs[-which(name_obs == memb_dim)]
+  name_exp <- name_exp[-which(name_exp == dat_dim)]
+  name_obs <- name_obs[-which(name_obs == dat_dim)]
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimension expect 'memb_dim'."))
+                "all dimension expect 'dat_dim'."))
   }
   if (dim(exp)[time_dim] < 2) {
     stop("The length of time_dim must be at least 2 to compute RMS.")
@@ -170,50 +186,50 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
   }
   
   res <- Apply(list(exp, obs), 
-               target_dims = list(c(time_dim, memb_dim), 
-                                  c(time_dim, memb_dim)),
+               target_dims = list(c(time_dim, dat_dim), 
+                                  c(time_dim, dat_dim)),
                fun = .RMS, 
-               time_dim = time_dim, memb_dim = memb_dim,
+               time_dim = time_dim, dat_dim = dat_dim,
                conf = conf, conf.lev = conf.lev, ncores = ncores)
   return(res)
 }
 
-.RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
+.RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
                  conf = TRUE, conf.lev = 0.95) { 
 
-  # exp: [sdate, member_exp]
-  # obs: [sdate, member_obs]
-  n_exp <- as.numeric(dim(exp)[2])
-  n_obs <- as.numeric(dim(obs)[2])
-  n_sdate <- as.numeric(dim(exp)[1])
+  # exp: [sdate, dat_exp]
+  # obs: [sdate, dat_obs]
+  nexp <- as.numeric(dim(exp)[2])
+  nobs <- as.numeric(dim(obs)[2])
+  nsdate <- as.numeric(dim(exp)[1])
 
-  dif <- array(dim = c(sdate = n_sdate, n_exp = n_exp, n_obs = n_obs))
-  chi <- array(dim = c(nexp = n_exp, nobs = n_obs))
+  dif <- array(dim = c(sdate = nsdate, nexp = nexp, nobs = nobs))
+  chi <- array(dim = c(nexp = nexp, nobs = nobs))
   if (conf) {
     conflow <- (1 - conf.lev) / 2
     confhigh <- 1 - conflow
-    conf.lower <- array(dim = c(nexp = n_exp, nobs = n_obs))
-    conf.upper <- array(dim = c(nexp = n_exp, nobs = n_obs))
+    conf.lower <- array(dim = c(nexp = nexp, nobs = nobs))
+    conf.upper <- array(dim = c(nexp = nexp, nobs = nobs))
   }
 
   # dif
-  for (i in 1:n_obs) {
-    dif[, , i] <- sapply(1:n_exp, function(x) {exp[, x] - obs[, i]})
+  for (i in 1:nobs) {
+    dif[, , i] <- sapply(1:nexp, function(x) {exp[, x] - obs[, i]})
   }
-  rms <- apply(dif^2, c(2, 3), mean, na.rm = TRUE)^0.5  #array(dim = c(n_exp, n_obs))
+  rms <- apply(dif^2, c(2, 3), mean, na.rm = TRUE)^0.5  #array(dim = c(_exp, nobs))
 
   if (conf) {
-    #eno <- Eno(dif, 1) #count effective sample along sdate. dim = c(n_exp, n_obs)
+    #eno <- Eno(dif, 1) #count effective sample along sdate. dim = c(nexp, nobs)
     eno <- Eno(dif, time_dim) #change to this line when Eno() is done
 
     # conf.lower
-    chi <- sapply(1:n_obs, function(i) {
+    chi <- sapply(1:nobs, function(i) {
                              qchisq(confhigh, eno[, i] - 1)
                            })
     conf.lower <- (eno * rms ** 2 / chi) ** 0.5
 
     # conf.upper
-    chi <- sapply(1:n_obs, function(i) {
+    chi <- sapply(1:nobs, function(i) {
                              qchisq(conflow, eno[, i] - 1)
                            })
     conf.upper <- (eno * rms ** 2 / chi) ** 0.5

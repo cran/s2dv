@@ -74,23 +74,26 @@ InsertDim <- function(data, posdim, lendim, name = NULL, ncores = NULL) {
   # Calculate InsertDim
 
   ## create output dimension
-  outdim <- lendim
-  if (posdim > 1) {
-    outdim <- c(dim(data)[1:(posdim - 1)], outdim)
+  if (posdim == 1) { # first dim
+    outdim <- c(lendim, dim(data))
+  } else {
+    if (posdim > length(dim(data))) { # last dim
+      outdim <- c(dim(data), lendim)
+    } else { # middle dim
+    outdim <- c(dim(data)[1:(posdim - 1)], lendim, dim(data)[posdim:length(dim(data))])
+    }
   }
-  if (posdim <= length(dim(data))) {
-    outdim <- c(outdim, dim(data)[posdim:length(dim(data))])
-  }
+
   ## create output array
   outvar <- array(dim = c(outdim))
   ## give temporary names for Apply(). The name will be replaced by data in the end
   names(dim(outvar)) <- paste0('D', 1:length(outdim))
-  names(dim(outvar))[posdim] <- name #'new'
+  names(dim(outvar))[posdim] <- name
 
-  res <- Apply(data = list(outvar), 
-               margins = name, #'new', 
+  res <- Apply(list(outvar), 
+               margins = name, 
                fun = .InsertDim, 
-               dat = data,
+               val = data,
                ncores = ncores)$output1
 
   if (posdim != 1) {
@@ -106,7 +109,7 @@ InsertDim <- function(data, posdim, lendim, name = NULL, ncores = NULL) {
   return(res)
 }
 
-.InsertDim <- function(x, data) {
-  x <- data
+.InsertDim <- function(x, val) {
+  x <- val
   return(x)
 }

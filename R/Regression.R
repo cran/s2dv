@@ -1,7 +1,7 @@
 #'Compute the regression of an array on another along one dimension.
 #'
 #'Compute the regression of the array 'datay' on the array 'datax' along the
-#''time_dim' dimension by least square fitting (default) or self-defined model. 
+#''reg_dim' dimension by least square fitting (default) or self-defined model. 
 #'The function provides the slope of the regression, the intercept, and the
 #'associated p-value and confidence interval. The filtered datay from the 
 #'regression onto datax is also provided.\cr
@@ -12,8 +12,8 @@
 #'  which the regression is computed.
 #'@param datax An numeric array as predictor. The dimension should be identical
 #'  as parameter 'datay'.
-#'@param time_dim A character string indicating the dimension along which to 
-#'  compute the regression.
+#'@param reg_dim A character string indicating the dimension along which to 
+#'  compute the regression. The default value is 'sdate'.
 #'@param formula An object of class "formula" (see function \code{link[stats]{lm}}).
 #'@param pval A logical value indicating whether to retrieve the p-value 
 #'  or not. The default value is TRUE.
@@ -35,14 +35,14 @@
 #'A list containing:
 #'\item{$regression}{
 #'  A numeric array with same dimensions as parameter 'datay' and 'datax' except 
-#'  the 'time_dim' dimension, which is replaced by a 'stats' dimension containing 
+#'  the 'reg_dim' dimension, which is replaced by a 'stats' dimension containing 
 #'  the regression coefficients from the lowest order (i.e., intercept) to 
 #'  the highest degree. The length of the 'stats' dimension should be 
 #'  \code{polydeg + 1}.  
 #'}
 #'\item{$conf.lower}{
 #'  A numeric array with same dimensions as parameter 'daty' and 'datax' except
-#'  the 'time_dim' dimension, which is replaced by a 'stats' dimension containing 
+#'  the 'reg_dim' dimension, which is replaced by a 'stats' dimension containing 
 #'  the lower value of the \code{siglev}\% confidence interval for all
 #'  the regression coefficients with the same order as $regression. The length 
 #'  of 'stats' dimension should be \code{polydeg + 1}. Only present if 
@@ -50,7 +50,7 @@
 #'}
 #'\item{$conf.upper}{
 #'  A numeric array with same dimensions as parameter 'daty' and 'datax' except
-#'  the 'time_dim' dimension, which is replaced by a 'stats' dimension containing 
+#'  the 'reg_dim' dimension, which is replaced by a 'stats' dimension containing 
 #'  the upper value of the \code{siglev}\% confidence interval for all
 #'  the regression coefficients with the same order as $regression. The length 
 #'  of 'stats' dimension should be \code{polydeg + 1}. Only present if 
@@ -58,11 +58,11 @@
 #'}
 #'\item{$p.val}{
 #'  A numeric array with same dimensions as parameter 'daty' and 'datax' except
-#'  the 'time_dim' dimension, The array contains the p-value.
+#'  the 'reg_dim' dimension, The array contains the p-value.
 #'}
 #'\item{$filtered}{
 #'  A numeric array with the same dimension as paramter 'datay' and 'datax', 
-#'  the filtered datay from the regression onto datax along the 'time_dim' 
+#'  the filtered datay from the regression onto datax along the 'reg_dim' 
 #'  dimension.
 #'}
 #'
@@ -79,7 +79,7 @@
 #'@importFrom stats lm na.omit confint
 #'@import multiApply
 #'@export
-Regression <- function(datay, datax, time_dim = 'sdate', formula = y ~ x, 
+Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x, 
                        pval = TRUE, conf = TRUE, conf.lev = 0.95,
                        na.action = na.omit, ncores = NULL) {
 
@@ -91,8 +91,16 @@ Regression <- function(datay, datax, time_dim = 'sdate', formula = y ~ x,
   if (!is.numeric(datay) | !is.numeric(datax)) {
     stop("Parameter 'datay' and 'datax' must be a numeric array.")
   }
-  if (is.null(dim(datay)) | is.null(dim(datax))) {
-    stop("Parameter 'datay' and 'datax' must be at least one dimension 'time_dim'.")
+#  if (is.null(dim(datay)) | is.null(dim(datax))) {
+#    stop("Parameter 'datay' and 'datax' must be at least one dimension 'reg_dim'.")
+#  }
+  if (is.null(dim(datay))) {  #is vector
+    dim(datay) <- c(length(datay))
+    names(dim(datay)) <- reg_dim
+  }
+  if (is.null(dim(datax))) {  #is vector
+    dim(datax) <- c(length(datax))
+    names(dim(datax)) <- reg_dim
   }
   if(any(is.null(names(dim(datay))))| any(nchar(names(dim(datay))) == 0) |
      any(is.null(names(dim(datax))))| any(nchar(names(dim(datax))) == 0)) {
@@ -107,12 +115,12 @@ Regression <- function(datay, datax, time_dim = 'sdate', formula = y ~ x,
   if(!all(dim(datay)[name_datay] == dim(datax)[name_datax])) {
     stop("Parameter 'datay' and 'datax' must have same length of all dimensions.")
   }
-  ## time_dim
-  if (!is.character(time_dim) | length(time_dim) > 1) {
-    stop("Parameter 'time_dim' must be a character string.")
+  ## reg_dim
+  if (!is.character(reg_dim) | length(reg_dim) > 1) {
+    stop("Parameter 'reg_dim' must be a character string.")
   }
-  if (!time_dim %in% names(dim(datay)) | !time_dim %in% names(dim(datax))) {
-    stop("Parameter 'time_dim' is not found in 'datay' or 'datax' dimension.")
+  if (!reg_dim %in% names(dim(datay)) | !reg_dim %in% names(dim(datax))) {
+    stop("Parameter 'reg_dim' is not found in 'datay' or 'datax' dimension.")
   }
   ## formula
   if (class(formula) != 'formula') {
@@ -163,19 +171,19 @@ Regression <- function(datay, datax, time_dim = 'sdate', formula = y ~ x,
   # Calculate Regression
     if (conf & pval) {
     output_dims <- list(regression = 'stats', conf.lower = 'stats',
-                        conf.upper = 'stats', p.val = NULL, filtered = time_dim)
+                        conf.upper = 'stats', p.val = NULL, filtered = reg_dim)
   } else if (conf & !pval) {
     output_dims <- list(regression = 'stats', conf.lower = 'stats',
-                        conf.upper = 'stats', filtered = time_dim)
+                        conf.upper = 'stats', filtered = reg_dim)
   } else if (!conf & pval) {
     output_dims <- list(regression = 'stats',
-                        p.val = NULL, filtered = time_dim)
+                        p.val = NULL, filtered = reg_dim)
   } else if (!conf & !pval) {
-    output_dims <- list(regression = 'stats', filtered = time_dim)
+    output_dims <- list(regression = 'stats', filtered = reg_dim)
   }
   
   res <- Apply(list(datay, datax), 
-               target_dims = time_dim, 
+               target_dims = reg_dim, 
                output_dims = output_dims,
                fun = .Regression, 
                formula = formula, pval = pval, conf = conf,
@@ -200,10 +208,7 @@ Regression <- function(datay, datax, time_dim = 'sdate', formula = y ~ x,
     check_na <- TRUE
   }
 
-  # remove NAs for potential poly()
-  x2 <- x[!is.na(NApos)]
-  y2 <- y[!is.na(NApos)]
-  lm.out <- lm(formula, data = data.frame(x = x2, y = y2), na.action = na.action)
+  lm.out <- lm(formula, data = data.frame(x = x, y = y), na.action = na.action)
   coeff <- lm.out$coefficients
   if (conf) {
     conf.lower <- confint(lm.out, level = conf.lev)[, 1]

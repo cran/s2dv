@@ -26,11 +26,11 @@
 #'  options include 'clim', 'kharin', and 'NDV'. The default value is 'clim'.
 #'@param ftime_dim A character string indicating the name of forecast time
 #'  dimension. Only used when method = 'NDV'. The default value is 'ftime'.
+#'@param memb A logical value indicating whether to remain 'memb_dim' dimension
+#'  (TRUE) or do ensemble mean over 'memb_dim' (FALSE). The default value is TRUE.
 #'@param memb_dim A character string indicating the name of the member 
 #'  dimension. Only used when parameter 'memb' is FALSE. It must be one element
 #'  in 'dat_dim'. The default value is 'member'.
-#'@param memb A logical value indicating whether to remain 'memb_dim' dimension
-#'  (TRUE) or do ensemble mean over 'memb_dim' (FALSE). The default value is TRUE.
 #'@param na.rm A logical value indicating whether to remove NA values along 
 #'  'time_dim' when calculating climatology (TRUE) or return NA if there is NA 
 #'  along 'time_dim' (FALSE). The default value is TRUE.
@@ -56,13 +56,19 @@
 #'example(Load)
 #'clim <- Clim(sampleData$mod, sampleData$obs)
 #'clim2 <- Clim(sampleData$mod, sampleData$obs, method = 'kharin', memb = FALSE)
+#'\donttest{
+#'PlotClim(clim$clim_exp, clim$clim_obs, 
+#'         toptitle = paste('sea surface temperature climatologies'), 
+#'         ytitle = 'K', monini = 11, listexp = c('CMIP5 IC3'), 
+#'         listobs = c('ERSST'), biglab = FALSE, fileout = 'tos_clim.eps')
+#'}
 #'@importFrom abind adrop
 #'@importFrom ClimProjDiags Subset
 #'@import multiApply
 #'@export
 Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'), 
-                 method = 'clim', ftime_dim = 'ftime', memb_dim = 'member',
-                 memb = TRUE, na.rm = TRUE, ncores = NULL) {
+                 method = 'clim', ftime_dim = 'ftime', memb = TRUE,
+                  memb_dim = 'member', na.rm = TRUE, ncores = NULL) {
 
   # Check inputs 
   ## exp and obs (1)
@@ -103,22 +109,26 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
     stop("Parameter 'method' must be one of 'clim', 'kharin' or 'NDV'.")
   }
   ## ftime_dim
-  if (!is.character(ftime_dim) | length(ftime_dim) > 1) {
-    stop("Parameter 'ftime_dim' must be a character string.")
-  }
-  if (!ftime_dim %in% names(dim(exp)) | !ftime_dim %in% names(dim(obs))) {
-    stop("Parameter 'ftime_dim' is not found in 'exp' or 'obs' dimension.")
-  }
-  ## memb_dim
-  if (!is.character(memb_dim) | length(memb_dim) > 1) {
-    stop("Parameter 'memb_dim' must be a character string.")
-  }
-  if (!memb_dim %in% names(dim(exp)) | !memb_dim %in% names(dim(obs))) {
-    stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.")
+  if (method == "NDV") {
+    if (!is.character(ftime_dim) | length(ftime_dim) > 1) {
+      stop("Parameter 'ftime_dim' must be a character string.")
+    }
+    if (!ftime_dim %in% names(dim(exp)) | !ftime_dim %in% names(dim(obs))) {
+      stop("Parameter 'ftime_dim' is not found in 'exp' or 'obs' dimension.")
+    }
   }
   ## memb
   if (!is.logical(memb) | length(memb) > 1) {
     stop("Parameter 'memb' must be one logical value.")
+  }
+  ## memb_dim
+  if (!memb) {
+    if (!is.character(memb_dim) | length(memb_dim) > 1) {
+      stop("Parameter 'memb_dim' must be a character string.")
+    }
+    if (!memb_dim %in% names(dim(exp)) | !memb_dim %in% names(dim(obs))) {
+      stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.")
+    }
   }
   ## na.rm
   if (!is.logical(na.rm) | length(na.rm) > 1) {
@@ -180,7 +190,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
                   target_dims = c(time_dim, dat_dim),
                   fun = .Clim,
                   method = method, time_dim = time_dim, 
-                  dat_dim = dat_dim, ftime_dim = ftime_dim, memb_dim = memb_dim,
+                  dat_dim = dat_dim, memb_dim = memb_dim,
                   memb = memb, na.rm = na.rm,
                   ncores = ncores)
     # Add member dimension name back
@@ -325,10 +335,10 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
     tmp <- Subset(obs, ftime_dim, 1, drop = 'selected')
     ini_obs <- InsertDim(tmp, pos_ftime, dim_ftime) #only first ftime
     #ini_: [sdate, dat_dim, ftime]
-    tmp_exp <- Regression(datay = exp, datax = ini_exp, time_dim = time_dim,
+    tmp_exp <- Regression(datay = exp, datax = ini_exp, reg_dim = time_dim,
                           na.action = na.omit,
                           pval = FALSE, conf = FALSE)$regression
-    tmp_obs <- Regression(datay = obs, datax = ini_obs, time_dim = time_dim, 
+    tmp_obs <- Regression(datay = obs, datax = ini_obs, reg_dim = time_dim, 
                           na.action = na.omit, 
                           pval = FALSE, conf = FALSE)$regression
     #tmp_: [stats = 2, dat_dim, ftime]

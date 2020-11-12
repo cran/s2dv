@@ -1,5 +1,5 @@
 #'@importFrom abind abind
-#'@importFrom plyr take
+#'@import plyr
 #'@importFrom grDevices png jpeg pdf svg bmp tiff
 #'@import ncdf4
 
@@ -24,7 +24,7 @@
         } else if (allow_undefined_key_vars) {
           output <- paste0(output, "$", part, "$")
         } else {
-          stop(paste('The variable $', part, '$ was not defined in the configuration file.', sep = ''))
+          stop(paste('Error: The variable $', part, '$ was not defined in the configuration file.', sep = ''))
         }
       }
       i <- i + 1
@@ -70,7 +70,7 @@
     } else {
       nlons <- nlons + 2
       if (nlons > 9999) {
-        stop("Pick another gaussian grid truncation. It doesn't fulfill the standards to apply FFT.")
+        stop("Error: pick another gaussian grid truncation. It doesn't fulfill the standards to apply FFT.")
       }
     }
   }
@@ -90,7 +90,7 @@
   # Auxiliar function to convert array indices to lineal indices
   arrayIndex2VectorIndex <- function(indices, dims) {
     if (length(indices) > length(dims)) {
-      stop("Indices do not match dimensions in arrayIndex2VectorIndex.")
+      stop("Error: indices do not match dimensions in arrayIndex2VectorIndex.")
     }
     position <- 1
     dims <- rev(dims)
@@ -127,7 +127,7 @@
       } else {
         nlons <- nlons + 2
         if (nlons > 9999) {
-          stop("Pick another gaussian grid truncation. It doesn't fulfill the standards to apply FFT.")
+          stop("Error: pick another gaussian grid truncation. It doesn't fulfill the standards to apply FFT.")
         }
       }
     }
@@ -182,7 +182,7 @@
     # But first we open the file and work out whether the requested variable is 2d
     fnc <- nc_open(filein)
     if (!(namevar %in% names(fnc$var))) {
-      stop(paste("The variable", namevar, "is not defined in the file", filename))
+      stop(paste("Error: The variable", namevar, "is not defined in the file", filename))
     }
     var_long_name <- fnc$var[[namevar]]$longname
     units <- fnc$var[[namevar]]$units
@@ -209,9 +209,13 @@
     }
     if ((is_2d_var || work_piece[['is_file_per_dataset']])) {
       if (Sys.which("cdo")[[1]] == "") {
-        stop("CDO libraries not available")
+        stop("Error: CDO libraries not available")
       }
-      cdo_version <- as.numeric_version(strsplit(suppressWarnings(system2("cdo", args = '-V', stderr = TRUE))[[1]], ' ')[[1]][5])
+
+     cdo_version <- strsplit(suppressWarnings(system2("cdo", args = '-V', stderr = TRUE))[[1]], ' ')[[1]][5]
+
+      cdo_version <- as.numeric_version(unlist(strsplit(cdo_version, "[A-Za-z]", fixed = FALSE))[[1]])
+
     }
     # If the variable to load is 2-d, we need to determine whether:
     #  - interpolation is needed
@@ -263,7 +267,7 @@
         grids_info <- grids_info[which(grids_types %in% c('gaussian', 'lonlat'))]
         grids_types <- grids_types[which(grids_types %in% c('gaussian', 'lonlat'))]
         if (length(grids_matches) == 0) {
-          stop("Only 'gaussian' and 'lonlat' grids supported. See e.g: cdo sinfo ", filename)
+          stop("Error: Only 'gaussian' and 'lonlat' grids supported. See e.g: cdo sinfo ", filename)
         }
         if (sum(grids_matches) > 1) {
           if ((all(grids_types[which(grids_matches)] == 'gaussian') || 
@@ -272,7 +276,7 @@
                                  grids_info[which(grids_matches)][[1]])))) {
             grid_type <- grids_types[which(grids_matches)][1]
           } else {
-            stop("Load() can't disambiguate: More than one lonlat/gaussian grids with the same size as the requested variable defined in ", filename)
+            stop("Error: Load() can't disambiguate: More than one lonlat/gaussian grids with the same size as the requested variable defined in ", filename)
           }
         } else if (sum(grids_matches) == 1) {
           grid_type <- grids_types[which(grids_matches)]
@@ -303,7 +307,7 @@
           common_grid_lons <- as.numeric(strsplit(work_piece[['grid']], '[^0-9]{1,+}')[[1]][2])
           common_grid_lats <- as.numeric(strsplit(work_piece[['grid']], '[^0-9]{1,+}')[[1]][3])
         } else {
-          stop("Only supported grid types in parameter 'grid' are t<RES>grid and r<NX>x<NY>")
+          stop("Error: Only supported grid types in parameter 'grid' are t<RES>grid and r<NX>x<NY>")
         }
       } else {
         ## If no 'grid' is specified, there is no common grid.
@@ -433,7 +437,7 @@
         ###mask_file <- tempfile(pattern = 'loadMask', fileext = '.nc')
         if (is.list(mask)) {
           if (!file.exists(mask[['path']])) {
-            stop(paste("Couldn't find the mask file", mask[['path']]))
+            stop(paste("Error: Couldn't find the mask file", mask[['path']]))
           }
           mask_file <- mask[['path']]
           ###file.copy(work_piece[['mask']][['path']], mask_file)
@@ -442,12 +446,12 @@
           if ('nc_var_name' %in% names(mask)) {
             if (!(mask[['nc_var_name']] %in% 
                   vars_in_mask)) {
-              stop(paste("Couldn't find variable", mask[['nc_var_name']], 
+              stop(paste("Error: couldn't find variable", mask[['nc_var_name']], 
                          "in the mask file", mask[['path']]))
             }
           } else {
             if (length(vars_in_mask) != 1) {
-              stop(paste("One and only one non-coordinate variable should be defined in the mask file", 
+              stop(paste("Error: one and only one non-coordinate variable should be defined in the mask file", 
                    mask[['path']], "if the component 'nc_var_name' is not specified. Currently found: ", 
                    paste(vars_in_mask, collapse = ', '), "."))
             } else {
@@ -455,7 +459,7 @@
             }
           }
           if (sum(fnc_mask$var[[mask[['nc_var_name']]]]$size > 1) != 2) {
-            stop(paste0("The variable '", 
+            stop(paste0("Error: the variable '", 
                  mask[['nc_var_name']], 
                  "' must be defined only over the dimensions '", 
                  work_piece[['dimnames']][['lon']], "' and '", 
@@ -483,10 +487,10 @@
         ### Now ready to check that the mask is right
         ##if (!(lonlat_subsetting_requested && remap_needed)) {
         ###  if ((dim(mask)[2] != length(lon)) || (dim(mask)[1] != length(lat))) {
-        ###    stop(paste("The mask of the dataset with index ", tail(work_piece[['indices']], 1), " in '", work_piece[['dataset_type']], "' is wrong. It must be on the common grid if the selected output type is 'lonlat', 'lon' or 'lat', or 'areave' and 'grid' has been specified. It must be on the grid of the corresponding dataset if the selected output type is 'areave' and no 'grid' has been specified. For more information check ?Load and see help on parameters 'grid', 'maskmod' and 'maskobs'.", sep = ""))
+        ###    stop(paste("Error: the mask of the dataset with index ", tail(work_piece[['indices']], 1), " in '", work_piece[['dataset_type']], "' is wrong. It must be on the common grid if the selected output type is 'lonlat', 'lon' or 'lat', or 'areave' and 'grid' has been specified. It must be on the grid of the corresponding dataset if the selected output type is 'areave' and no 'grid' has been specified. For more information check ?Load and see help on parameters 'grid', 'maskmod' and 'maskobs'.", sep = ""))
         ###  }
           ###if (!(identical(mask_lon, lon) && identical(mask_lat, lat))) {
-          ###  stop(paste0("The longitudes and latitudes in the masks must be identical to the ones in the corresponding data files if output = 'areave' or, if the selected output is 'lon', 'lat' or 'lonlat', the longitudes in the mask file must start by 0 and the latitudes must be ordered from highest to lowest. See\n  ", 
+          ###  stop(paste0("Error: the longitudes and latitudes in the masks must be identical to the ones in the corresponding data files if output = 'areave' or, if the selected output is 'lon', 'lat' or 'lonlat', the longitudes in the mask file must start by 0 and the latitudes must be ordered from highest to lowest. See\n  ", 
           ###     work_piece[['mask']][['path']], " and ", filein))
           ###}
         }
@@ -511,15 +515,7 @@
       }
       if (!is.null(mask) && !(lonlat_subsetting_requested && remap_needed)) {
         if ((dim(mask)[1] != length(lon)) || (dim(mask)[2] != length(lat))) {
-          stop(paste0("The mask of the dataset with index ", tail(work_piece[['indices']], 1), 
-                      " in '", work_piece[['dataset_type']], "' is wrong. ",
-                      "It must be on the common grid if the selected output ",
-                      "type is 'lonlat', 'lon' or 'lat', or 'areave' and 'grid' ",
-                      "has been specified. It must be on the grid of the ",
-                      "corresponding dataset if the selected output type is ",
-                      "'areave' and no 'grid' has been specified. For more ",
-                      "information check ?Load and see help on parameters 'grid', ",
-                      "'maskmod' and 'maskobs'."))
+          stop(paste("Error: the mask of the dataset with index ", tail(work_piece[['indices']], 1), " in '", work_piece[['dataset_type']], "' is wrong. It must be on the common grid if the selected output type is 'lonlat', 'lon' or 'lat', or 'areave' and 'grid' has been specified. It must be on the grid of the corresponding dataset if the selected output type is 'areave' and no 'grid' has been specified. For more information check ?Load and see help on parameters 'grid', 'maskmod' and 'maskobs'.", sep = ""))
         }
         mask <- mask[lon_indices, lat_indices]
       }
@@ -591,7 +587,7 @@
         if (!is.null(old_members_dimname)) {
           expected_dims[which(expected_dims == 'lev')] <- old_members_dimname
         }
-        stop(paste("The expected dimension(s)", 
+        stop(paste("Error: the expected dimension(s)", 
                    paste(expected_dims[which(is.na(dim_matches))], collapse = ', '), 
                    "were not found in", filename))
       }
@@ -604,17 +600,17 @@
         nltime <- fnc$var[[namevar]][['dim']][[match(time_dimname, var_dimnames)]]$len
         expected_dims <- c(expected_dims, time_dimname)
         dim_matches <- match(expected_dims, var_dimnames)
+        first_time_step_in_file <- fnc$var[[namevar]][['dim']][[match(time_dimname,
+                                        var_dimnames)]]$vals[1]
+        time_units <- fnc$var[[namevar]][['dim']][[match(time_dimname, var_dimnames)]]$units
       } else {
         if (!is.null(old_members_dimname)) {
           expected_dims[which(expected_dims == 'lev')] <- old_members_dimname
         }
-        stop(paste("The variable", namevar, 
+        stop(paste("Error: the variable", namevar, 
                    "is defined over more dimensions than the expected (", 
                    paste(c(expected_dims, 'time'), collapse = ', '), 
-                   "). It could also be that the members, longitude or latitude",
-                   "dimensions are named incorrectly. In that case, either rename",
-                   "the dimensions in the file or adjust Load() to recognize the",
-                   "actual name with the parameter 'dimnames'. See file", filename))
+                   "). It could also be that the members, longitude or latitude dimensions are named incorrectly. In that case, either rename the dimensions in the file or adjust Load() to recognize the actual name with the parameter 'dimnames'. See file", filename))
       }
     } else {
       nltime <- 1
@@ -647,7 +643,7 @@
         time_indices <- ts(time_indices, start = c(years[1], mons[1]), 
                            end = c(years[length(years)], mons[length(mons)]),
                            frequency = 12)
-        ltimes_list <- list()
+                ltimes_list <- list()
         for (sdate in work_piece[['startdates']]) {
           selected_time_indices <- window(time_indices, start = c(as.numeric(
                                    substr(sdate, 1, 4)), as.numeric(substr(sdate, 5, 6))), 
@@ -809,15 +805,7 @@
               nc_close(fnc_mask)
               file.remove(mask_file, mask_file_remap)
               if ((dim(mask)[1] != common_grid_lons) || (dim(mask)[2] != common_grid_lats)) {
-                stop(paste("The mask of the dataset with index ", tail(work_piece[['indices']], 1), 
-                           " in '", work_piece[['dataset_type']], "' is wrong.",
-                           "It must be on the common grid if the selected output",
-                           "type is 'lonlat', 'lon' or 'lat', or 'areave' and",
-                           "'grid' has been specified. It must be on the grid",
-                           "of the corresponding dataset if the selected output",
-                           "type is 'areave' and no 'grid' has been specified.",
-                           "For more information check ?Load and see help on",
-                           "parameters 'grid', 'maskmod' and 'maskobs'."))
+                stop(paste("Error: the mask of the dataset with index ", tail(work_piece[['indices']], 1), " in '", work_piece[['dataset_type']], "' is wrong. It must be on the common grid if the selected output type is 'lonlat', 'lon' or 'lat', or 'areave' and 'grid' has been specified. It must be on the grid of the corresponding dataset if the selected output type is 'areave' and no 'grid' has been specified. For more information check ?Load and see help on parameters 'grid', 'maskmod' and 'maskobs'.", sep = ""))
               }
               mask_lons[which(mask_lons < 0)] <- mask_lons[which(mask_lons < 0)] + 360
               if (lonmax >= lonmin) {
@@ -962,7 +950,9 @@
   if (explore_dims) {
     list(dims = dims, is_2d_var = is_2d_var, grid = grid_name, 
          units = units, var_long_name = var_long_name, 
-         data_across_gw = data_across_gw, array_across_gw = array_across_gw)
+         data_across_gw = data_across_gw, array_across_gw = array_across_gw,
+         time_dim = list(first_time_step_in_file = first_time_step_in_file,
+                        time_units = time_units))
   } else {
     ###if (!silent && !is.null(progress_connection) && !is.null(work_piece[['progress_amount']])) {
     ###  foobar <- writeBin(work_piece[['progress_amount']], progress_connection)
@@ -1677,5 +1667,110 @@
   names(dim(output)) <- dim_names
   names(dim(output))[names(dim(output)) == time_dim] <- 'stats'
   return(output)
+}
+
+# to be used in AMV.R, TPI.R, SPOD.R, GSAT.R and GMST.R
+.Indices <- function(data, type, monini, indices_for_clim,
+                    fmonth_dim, sdate_dim, year_dim, month_dim, member_dim) {
+  
+  data = drop(data)
+  
+  if(member_dim %in% names(dim(data))){
+    if (type == 'dcpp'){
+      data = s2dv::Reorder(data = data, order = c(sdate_dim,fmonth_dim,member_dim))
+    } else if (type %in% c('hist','obs')){
+      data = s2dv::Reorder(data = data, order = c(year_dim,month_dim,member_dim))
+    }
+  }
+  
+  if (type == 'dcpp'){
+    
+    data = s2dv::Season(data = data, time_dim = fmonth_dim,
+                        monini = monini, moninf = 1, monsup = 12,
+                        method = mean, na.rm = FALSE)
+    names(dim(data))[which(names(dim(data))==fmonth_dim)] = 'fyear'
+    if (member_dim %in% names(dim(data))){
+      data = s2dv::Reorder(data = data, order = c('fyear',sdate_dim,member_dim))
+    } else {
+      data = s2dv::Reorder(data = data, order = c('fyear',sdate_dim))
+    }
+    
+    if (is.logical(indices_for_clim)) { 
+      if(!any(indices_for_clim)) {
+      # indices_for_clim == FALSE -> anomalies are directly given
+        anom = data
+      }      
+      
+    } else {
+    
+      ## Different indices_for_clim for each forecast year (same actual years)
+      
+      n_fyears = as.numeric(dim(data)['fyear'])
+      n_sdates = as.numeric(dim(data)[sdate_dim])
+      
+      if (is.null(indices_for_clim)){
+        
+        # indices_for_clim == NULL -> anomalies based on the whole (common) period
+        first_years_for_clim = n_fyears : 1
+        last_years_for_clim = n_sdates : (n_sdates - n_fyears + 1)
+        
+      } else {
+        
+        first_years_for_clim = seq(from = indices_for_clim[1], by = -1, length.out = n_fyears)
+        last_years_for_clim = seq(from = indices_for_clim[length(indices_for_clim)], by = -1, length.out = n_fyears) 
+        
+      }
+
+      anom = array(data = NA, dim = dim(data))
+      if (member_dim %in% names(dim(data))){
+        clim = array(data = NA, dim = c(dim(data)['fyear'],dim(data)[member_dim]))
+      } else {
+        clim = array(data = NA, dim = c(dim(data)['fyear']))
+      }
+      for (i in 1:n_fyears){
+        if (member_dim %in% names(dim(data))){
+          for (m in 1:as.numeric(dim(data)[member_dim])){
+            clim[i,m] = mean(data[i,first_years_for_clim[i]:last_years_for_clim[i],m])
+            anom[i,,m] = data[i,,m] - clim[i,m]
+          }
+        } else {
+          clim = mean(data[i,first_years_for_clim[i]:last_years_for_clim[i]])
+          anom[i,] = data[i,] - clim
+        }
+      }
+    }
+    
+  } else if (type %in% c('obs','hist')){
+    
+    data = multiApply::Apply(data = data, target_dims = month_dim, fun = mean)$output1
+    
+    if (is.logical(indices_for_clim)) {
+      if(!any(indices_for_clim)) {      
+        anom = data
+      }
+
+    } else {
+      
+      if (is.null(indices_for_clim)){
+        
+        clim = multiApply::Apply(data = data, target_dims = year_dim, fun = mean)$output1
+      
+      } else {
+        
+        if (member_dim %in% names(dim(data))){
+          target_dims = c(year_dim,member_dim)
+        } else {
+          target_dims = year_dim
+        }
+        clim = multiApply::Apply(data = ClimProjDiags::Subset(x = data, along = year_dim, indices = indices_for_clim),
+                                 target_dims = target_dims, fun = mean)$output1
+      }
+      anom = multiApply::Apply(data = data, target_dims = year_dim, 
+                               fun = function(data,clim){data-clim}, clim = clim)$output1
+    }
+    
+  } else {stop('type must be dcpp, hist or obs')}
+  
+  return(anom)
 }
 

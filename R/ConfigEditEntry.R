@@ -77,14 +77,14 @@
 #'@export
 ConfigEditEntry <- function(configuration, dataset_type, position, dataset_name = NULL, var_name = NULL, main_path = NULL, file_path = NULL, nc_var_name = NULL, suffix = NULL, varmin = NULL, varmax = NULL) {
   if (!(dataset_type %in% c('experiments', 'observations'))) {
-    stop("'dataset_type' must be one of 'experiments' or 'observations'.")
+    stop("Error: 'dataset_type' must be one of 'experiments' or 'observations'")
   }
 
   table_name <- dataset_type
   
   all_entries <- length(unlist(configuration[[table_name]], recursive = FALSE))
   if (position < 1 || position > all_entries) {
-    stop("'position' must be in the range [1, # of table entries].")
+    stop("Error: 'position' must be in the range [1, # of table entries]")
   }
 
   found <- FALSE

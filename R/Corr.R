@@ -10,15 +10,20 @@
 #'available at all leadtimes.\cr 
 #'The confidence interval is computed by the Fisher transformation and the 
 #'significance level relies on an one-sided student-T distribution.\cr 
+#'If the dataset has more than one member, ensemble mean is necessary necessary
+#'before using this function since it only allows one dimension 'dat_dim' to
+#'have inconsistent length between 'exp' and 'obs'. If all the dimensions of
+#''exp' and 'obs' are identical, you can simply use apply() and cor() to 
+#'compute the correlation.
 #'
 #'@param exp A named numeric array of experimental data, with at least two 
-#'  dimensions 'time_dim' and 'memb_dim'.
+#'  dimensions 'time_dim' and 'dat_dim'.
 #'@param obs A named numeric array of observational data, same dimensions as  
-#'  parameter 'exp' except along memb_dim.
+#'  parameter 'exp' except along dat_dim.
 #'@param time_dim A character string indicating the name of dimension along  
 #'  which the correlations are computed. The default value is 'sdate'.
-#'@param memb_dim A character string indicating the name of member (nobs/nexp) 
-#'  dimension. The default value is 'member'.
+#'@param dat_dim A character string indicating the name of dataset (nobs/nexp) 
+#'  dimension. The default value is 'dataset'.
 #'@param comp_dim A character string indicating the name of dimension along which
 #'  obs is taken into account only if it is complete. The default value
 #'  is NULL.
@@ -38,8 +43,8 @@
 #'@return 
 #'A list containing the numeric arrays with dimension:\cr 
 #'  c(nexp, nobs, all other dimensions of exp except time_dim).\cr
-#'nexp is the number of experiment (i.e., memb_dim in exp), and nobs is the 
-#'number of observation (i.e., memb_dim in obs).\cr
+#'nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
+#'number of observation (i.e., dat_dim in obs).\cr
 #'\item{$corr}{
 #'  The correlation coefficient. 
 #'}
@@ -57,14 +62,15 @@
 #'# Load sample data as in Load() example: 
 #'example(Load) 
 #'clim <- Clim(sampleData$mod, sampleData$obs) 
-#'corr <- Corr(clim$clim_exp, clim$clim_obs, time_dim = 'ftime')
+#'corr <- Corr(clim$clim_exp, clim$clim_obs, time_dim = 'ftime', dat_dim = 'member')
+#'# Renew the example when Ano and Smoothing is ready
 #'
 #'@rdname Corr
 #'@import multiApply
 #'@importFrom ClimProjDiags Subset
 #'@importFrom stats cor pt qnorm 
 #'@export
-Corr <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', 
+Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset', 
                  comp_dim = NULL, limits = NULL,
                  method = 'pearson', pval = TRUE, conf = TRUE,
                  conf.lev = 0.95, ncores = NULL) {
@@ -79,7 +85,7 @@ Corr <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
   }
   if (is.null(dim(exp)) | is.null(dim(obs))) {
     stop(paste0("Parameter 'exp' and 'obs' must be at least two dimensions ",
-                "containing time_dim and memb_dim."))
+                "containing time_dim and dat_dim."))
   }
   if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
@@ -96,12 +102,12 @@ Corr <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
   if (!time_dim %in% names(dim(exp)) | !time_dim %in% names(dim(obs))) {
     stop("Parameter 'time_dim' is not found in 'exp' or 'obs' dimension.")
   }
-  ## memb_dim
-  if (!is.character(memb_dim) | length(memb_dim) > 1) {
-    stop("Parameter 'memb_dim' must be a character string.")
+  ## dat_dim
+  if (!is.character(dat_dim) | length(dat_dim) > 1) {
+    stop("Parameter 'dat_dim' must be a character string.")
   }
-  if (!memb_dim %in% names(dim(exp)) | !memb_dim %in% names(dim(obs))) {
-    stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.")
+  if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
+    stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.")
   }
   ## comp_dim
   if (!is.null(comp_dim)) {
@@ -149,11 +155,11 @@ Corr <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
-  name_exp <- name_exp[-which(name_exp == memb_dim)]
-  name_obs <- name_obs[-which(name_obs == memb_dim)]
+  name_exp <- name_exp[-which(name_exp == dat_dim)]
+  name_obs <- name_obs[-which(name_obs == dat_dim)]
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimension expect 'memb_dim'."))
+                "all dimension expect 'dat_dim'."))
   }
   if (dim(exp)[time_dim] < 3) {
     stop("The length of time_dim must be at least 3 to compute correlation.")
@@ -184,8 +190,8 @@ Corr <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
   }
 
  res <- Apply(list(exp, obs), 
-              target_dims = list(c(time_dim, memb_dim), 
-                                 c(time_dim, memb_dim)),
+              target_dims = list(c(time_dim, dat_dim), 
+                                 c(time_dim, dat_dim)),
               fun = .Corr, 
               time_dim = time_dim, method = method,
               pval = pval, conf = conf, conf.lev = conf.lev, 
@@ -196,19 +202,19 @@ Corr <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member',
 .Corr <- function(exp, obs, time_dim = 'sdate', method = 'pearson',
                   conf = TRUE, pval = TRUE, conf.lev = 0.95) {
 
-  # exp: [sdate, member_exp]
-  # obs: [sdate, member_obs]
-  n_exp <- as.numeric(dim(exp)[2])
-  n_obs <- as.numeric(dim(obs)[2])
+  # exp: [sdate, dat_exp]
+  # obs: [sdate, dat_obs]
+  nexp <- as.numeric(dim(exp)[2])
+  nobs <- as.numeric(dim(obs)[2])
   
-  CORR <- array(dim = c(n_exp = n_exp, n_obs = n_obs))
-  eno_expand <- array(dim = c(n_exp = n_exp, n_obs = n_obs))
-  p.val <- array(dim = c(n_exp = n_exp, n_obs = n_obs))
+  CORR <- array(dim = c(nexp = nexp, nobs = nobs))
+  eno_expand <- array(dim = c(nexp = nexp, nobs = nobs))
+  p.val <- array(dim = c(nexp = nexp, nobs = nobs))
 
   # ens_mean
-  for (i in 1:n_obs) {
+  for (i in 1:nobs) {
 
-    CORR[, i] <- sapply(1:n_exp, 
+    CORR[, i] <- sapply(1:nexp, 
                           function(x) {
     if (any(!is.na(exp[, x])) && sum(!is.na(obs[, i])) > 2) {
 cor(exp[, x], obs[, i],
@@ -221,8 +227,8 @@ cor(exp[, x], obs[, i],
   }
 
 #  if (pval) {
-#    for (i in 1:n_obs) {
-#      p.val[, i] <- try(sapply(1:n_exp,
+#    for (i in 1:nobs) {
+#      p.val[, i] <- try(sapply(1:nexp,
 #                           function(x) {(cor.test(exp[, x], obs[, i],
 #                                         use = "pairwise.complete.obs",
 #                                         method = method)$p.value)/2}), silent = TRUE)
@@ -240,7 +246,7 @@ cor(exp[, x], obs[, i],
     } else if (method == "pearson") {
       eno <- Eno(obs, time_dim)  
     }
-    for (i in 1:n_exp) {
+    for (i in 1:nexp) {
       eno_expand[i, ] <- eno
     }
   }

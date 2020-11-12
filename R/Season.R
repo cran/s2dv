@@ -6,7 +6,7 @@
 #'
 #'@param data A named numeric array with at least one dimension 'time_dim'. 
 #'@param time_dim A character string indicating the name of dimension along  
-#'  which the seasonal means are computed. The default value is 'sdate'.
+#'  which the seasonal means are computed. The default value is 'ftime'.
 #'@param monini An integer indicating what the first month of the time series is. 
 #'  It can be from 1 to 12.
 #'@param moninf An integer indicating the starting month of the seasonal mean. 
@@ -26,7 +26,7 @@
 #'
 #'@examples
 #'set.seed(1)
-#'dat1 <- array(rnorm(144*3), dim = c(member = 2, sdate = 12*3, ftime = 2, lon = 3))
+#'dat1 <- array(rnorm(144*3), dim = c(member = 2, sdate = 2, ftime = 12*3, lon = 3))
 #'res <- Season(data = dat1, monini = 1, moninf = 1, monsup = 2)
 #'res <- Season(data = dat1, monini = 10, moninf = 12, monsup = 2)
 #'dat2 <- dat1
@@ -37,7 +37,7 @@
 #'res <- Season(data = dat2, monini = 3, moninf = 1, monsup = 2, na.rm = FALSE)
 #'@import multiApply
 #'@export
-Season <- function(data, time_dim = 'sdate', monini, moninf, monsup, 
+Season <- function(data, time_dim = 'ftime', monini, moninf, monsup, 
                    method = mean, na.rm = TRUE, ncores = NULL) {
 
   # Check inputs 
@@ -115,12 +115,37 @@ Season <- function(data, time_dim = 'sdate', monini, moninf, monsup,
         monsup <- monsup + 12
     }
 
+# if (ncores == 1 | is.null(ncores)) { use apply } else { use Apply }
+    if (!is.null(ncores)) {
+      if (ncores == 1) {
+        use_apply <- TRUE
+      } else {
+        use_apply <- FALSE
+      }
+    } else {
+        use_apply <- TRUE
+    }
+
+    if (use_apply) {
+      time_dim_ind <- match(time_dim, names(dim(data)))
+      res <- apply(data, c(1:length(dim(data)))[-time_dim_ind], .Season,
+                   monini = monini, moninf = moninf, monsup = monsup,
+                   method = method, na.rm = na.rm)
+      if (length(dim(res)) < length(dim(data))) {
+        res <- InsertDim(res, posdim = 1, lendim = 1, name = time_dim)
+      } else {
+        names(dim(res))[1] <- time_dim
+      }
+
+    } else {
     res <- Apply(list(data), 
                  target_dims = time_dim, 
                  output_dims = time_dim,
                  fun = .Season, 
                  monini = monini, moninf = moninf, monsup = monsup,
                  method = method, na.rm = na.rm, ncores = ncores)$output1
+
+    }
 
     return(res)
 }

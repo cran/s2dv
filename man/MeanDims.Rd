@@ -4,7 +4,7 @@
 \alias{MeanDims}
 \title{Average an array along multiple dimensions}
 \usage{
-MeanDims(data, dims, na.rm = TRUE)
+MeanDims(data, dims, na.rm = FALSE)
 }
 \arguments{
 \item{data}{An array to be averaged.}
@@ -13,7 +13,7 @@ MeanDims(data, dims, na.rm = TRUE)
 dimensions to average.}
 
 \item{na.rm}{A logical value indicating whether to ignore NA values (TRUE) or 
-not (FALSE).}
+not (FALSE). The default value is FALSE.}
 }
 \value{
 An array with the same dimension as parameter 'data' except the 'dims' 
@@ -23,6 +23,10 @@ An array with the same dimension as parameter 'data' except the 'dims'
 \description{
 This function returns the mean of an array along a set of dimensions and 
 preserves the dimension names if it has.
+}
+\details{
+It is recommended to use \code{'apply(x, dim, mean)'} to improve the
+ efficiency when the dimension to be averaged is only one.
 }
 \examples{
 a <- array(rnorm(24), dim = c(a = 2, b= 3, c = 4))

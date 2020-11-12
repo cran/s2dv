@@ -81,9 +81,8 @@ ConfigApplyMatchingEntries <- function(configuration, var, exp = NULL, obs = NUL
     }
 
     if (length(mod_var_matching_entries) == 0) {
-      stop(paste0("There are no matching entries in the configuration file for ",
-                 "the experiment ", mod, " and the variable ", var, ". Please ",
-                 "check the configuration file."))
+      stop(paste('Error: There are no matching entries in the configuration file for the experiment', mod, 'and the variable', var, 
+                 '. Please check the configuration file.)'))
     } else {
       if (show_entries) {
         header <- paste0("# Matching entries for experiment '", exp[jmod], "' and variable '", var, "' #")
@@ -125,9 +124,8 @@ ConfigApplyMatchingEntries <- function(configuration, var, exp = NULL, obs = NUL
     }
 
     if (length(ref_var_matching_entries) == 0) {
-      stop(paste0("There are no matching entries in the configuration file for ",
-                  "the observation ", ref, " and the variable ", var, 
-                 ". Please check the configuration file."))
+      stop(paste('Error: There are no matching entries in the configuration file for the observation', ref, 'and the variable', var, 
+                 '. Please check the configuration file.)'))
     } else {
       if (show_entries) {
         header <- paste0("# Matching entries for observation '", obs[jobs], "' and variable '", var, "' #\n")

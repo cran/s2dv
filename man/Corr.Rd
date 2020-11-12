@@ -4,22 +4,22 @@
 \alias{Corr}
 \title{Compute the correlation coefficient between an array of forecast and their corresponding observation}
 \usage{
-Corr(exp, obs, time_dim = "sdate", memb_dim = "member", comp_dim = NULL,
+Corr(exp, obs, time_dim = "sdate", dat_dim = "dataset", comp_dim = NULL,
   limits = NULL, method = "pearson", pval = TRUE, conf = TRUE,
   conf.lev = 0.95, ncores = NULL)
 }
 \arguments{
 \item{exp}{A named numeric array of experimental data, with at least two 
-dimensions 'time_dim' and 'memb_dim'.}
+dimensions 'time_dim' and 'dat_dim'.}
 
 \item{obs}{A named numeric array of observational data, same dimensions as
-parameter 'exp' except along memb_dim.}
+parameter 'exp' except along dat_dim.}
 
 \item{time_dim}{A character string indicating the name of dimension along
 which the correlations are computed. The default value is 'sdate'.}
 
-\item{memb_dim}{A character string indicating the name of member (nobs/nexp) 
-dimension. The default value is 'member'.}
+\item{dat_dim}{A character string indicating the name of dataset (nobs/nexp) 
+dimension. The default value is 'dataset'.}
 
 \item{comp_dim}{A character string indicating the name of dimension along which
 obs is taken into account only if it is complete. The default value
@@ -46,8 +46,8 @@ computation. The default value is NULL.}
 \value{
 A list containing the numeric arrays with dimension:\cr 
  c(nexp, nobs, all other dimensions of exp except time_dim).\cr
-nexp is the number of experiment (i.e., memb_dim in exp), and nobs is the 
-number of observation (i.e., memb_dim in obs).\cr
+nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
+number of observation (i.e., dat_dim in obs).\cr
 \item{$corr}{
  The correlation coefficient. 
 }
@@ -71,13 +71,19 @@ limits[1] and limits[2]. This option can be activated if the user wants to
 account only for the forecasts which the corresponding observations are 
 available at all leadtimes.\cr 
 The confidence interval is computed by the Fisher transformation and the 
-significance level relies on an one-sided student-T distribution.\cr
+significance level relies on an one-sided student-T distribution.\cr 
+If the dataset has more than one member, ensemble mean is necessary necessary
+before using this function since it only allows one dimension 'dat_dim' to
+have inconsistent length between 'exp' and 'obs'. If all the dimensions of
+'exp' and 'obs' are identical, you can simply use apply() and cor() to 
+compute the correlation.
 }
 \examples{
 # Load sample data as in Load() example: 
 example(Load) 
 clim <- Clim(sampleData$mod, sampleData$obs) 
-corr <- Corr(clim$clim_exp, clim$clim_obs, time_dim = 'ftime')
+corr <- Corr(clim$clim_exp, clim$clim_obs, time_dim = 'ftime', dat_dim = 'member')
+# Renew the example when Ano and Smoothing is ready
 
 }
 

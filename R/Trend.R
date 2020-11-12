@@ -2,13 +2,15 @@
 #'
 #'Compute the linear trend or any degree of polynomial regression along the 
 #'forecast time. It returns the regression coefficients (including the intercept)
-#'and the confidence intervals if needed. The detrended array is also provided.\cr
-#'The confidence interval relies on the student-T distribution.\cr\cr
+#'and the detrended array. The confidence intervals and p-value are also 
+#'provided if needed.\cr
+#'The confidence interval relies on the student-T distribution, and the p-value 
+#'is calculated by ANOVA.
 #'
 #'@param data An numeric array including the dimension along which the trend 
 #'  is computed.
 #'@param time_dim A character string indicating the dimension along which to 
-#'  compute the trend. The default value is 'sdate'.
+#'  compute the trend. The default value is 'ftime'.
 #'@param interval A positive numeric indicating the unit length between two 
 #' points along 'time_dim' dimension. The default value is 1.
 #'@param polydeg A positive integer indicating the degree of polynomial 
@@ -17,6 +19,8 @@
 #'  intervals or not. The default value is TRUE.
 #'@param conf.lev A numeric indicating the confidence level for the 
 #'  regression computation. The default value is 0.95.
+#'@param pval A logical value indicating whether to compute the p-value or not. 
+#'  The default value is TRUE.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -45,6 +49,9 @@
 #'  regression coefficients with the same order as \code{$trend}. Only present 
 #'  \code{conf = TRUE}.
 #'}
+#'\item{$p.val}{
+#'  The p-value calculated by anova(). Only present if \code{pval = TRUE}.
+#'}
 #'\item{$detrended}{
 #'  A numeric array with the same dimensions as paramter 'data', containing the 
 #'  detrended values along the 'time_dim' dimension.
@@ -54,13 +61,14 @@
 #'# Load sample data as in Load() example:
 #'example(Load)
 #'months_between_startdates <- 60
-#'trend <- Trend(sampleData$obs, polydeg = 2)
+#'trend <- Trend(sampleData$obs, polydeg = 2, interval = months_between_startdates)
 #'
 #'@rdname Trend
 #'@import multiApply
+#'@importFrom stats anova
 #'@export
-Trend <- function(data, time_dim = 'sdate', interval = 1, polydeg = 1,
-                  conf = TRUE, conf.lev = 0.95, ncores = NULL) {
+Trend <- function(data, time_dim = 'ftime', interval = 1, polydeg = 1,
+                  conf = TRUE, conf.lev = 0.95, pval = TRUE, ncores = NULL) {
 
   # Check inputs 
   ## data
@@ -85,11 +93,11 @@ Trend <- function(data, time_dim = 'sdate', interval = 1, polydeg = 1,
     stop("Parameter 'time_dim' is not found in 'data' dimension.")
   }
   ## interval
-  if (any(!is.numeric(interval) | interval <= 0 | length(interval) > 1)) {
+  if (!is.numeric(interval) | interval <= 0 | length(interval) > 1) {
     stop("Parameter 'interval' must be a positive number.")
   }
   ## polydeg
-  if (!is.numeric(polydeg) | polydeg %% 1 != 0 | polydeg < 0 |
+  if (!is.numeric(polydeg) | polydeg %% 1 != 0 | polydeg <= 0 |
       length(polydeg) > 1) {
     stop("Parameter 'polydeg' must be a positive integer.")
   }
@@ -100,6 +108,10 @@ Trend <- function(data, time_dim = 'sdate', interval = 1, polydeg = 1,
   ## conf.lev
   if (!is.numeric(conf.lev) | conf.lev < 0 | conf.lev > 1 | length(conf.lev) > 1) {
     stop("Parameter 'conf.lev' must be a numeric number between 0 and 1.")
+  }
+  ## pval
+  if (!is.logical(pval) | length(pval) > 1) {
+    stop("Parameter 'pval' must be one logical value.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -113,10 +125,15 @@ Trend <- function(data, time_dim = 'sdate', interval = 1, polydeg = 1,
   # Calculate Trend
   dim_names <- names(dim(data))
 
-  if (conf) {
+  if (conf & pval) {
+    output_dims <- list(trend = 'stats', conf.lower = 'stats',
+                        conf.upper = 'stats', p.val = 'stats', detrended = time_dim)
+  } else if (conf & !pval) {
     output_dims <- list(trend = 'stats', conf.lower = 'stats',
                         conf.upper = 'stats', detrended = time_dim)
-  } else if (!conf) {
+  } else if (!conf & pval) {
+    output_dims <- list(trend = 'stats', p.val = 'stats', detrended = time_dim)
+  } else {
     output_dims <- list(trend = 'stats', detrended = time_dim)
   }
 
@@ -127,16 +144,14 @@ Trend <- function(data, time_dim = 'sdate', interval = 1, polydeg = 1,
                   output_dims = output_dims,
                   time_dim = time_dim, interval = interval, 
                   polydeg = polydeg, conf = conf,
-                  conf.lev = conf.lev,
+                  conf.lev = conf.lev, pval = pval,
                   ncores = ncores)
-
-  #output <- lapply(output, .reorder, time_dim = time_dim, dim_names = dim_names)
 
   return(output)
 }
 
-.Trend <- function(x, time_dim = 'sdate', interval = 1, polydeg = 1,
-                   conf = TRUE, conf.lev = 0.95) {
+.Trend <- function(x, time_dim = 'ftime', interval = 1, polydeg = 1,
+                   conf = TRUE, conf.lev = 0.95, pval = TRUE) {
 
   mon <- seq(x) * interval
 
@@ -156,20 +171,37 @@ Trend <- function(data, time_dim = 'sdate', interval = 1, polydeg = 1,
       conf.upper <- confint(lm.out, level = conf.lev)[, 2]
     }
 
+    if (pval) {
+      p.val <- as.array(stats::anova(lm.out)$'Pr(>F)'[1])
+    }
+
     detrended <- c()
     detrended[is.na(x) == FALSE] <- x[is.na(x) == FALSE] - lm.out$fitted.values
+
   } else {
+
     trend <- rep(NA, polydeg + 1)
-    detrend <- NA
+    detrended <- rep(NA, length(x))
+
     if (conf) {
       conf.lower <- rep(NA, polydeg + 1)
       conf.upper <- rep(NA, polydeg + 1)
     }
+
+    if (pval) {
+      p.val <- rep(NA, polydeg + 1)
+    }
+
   }
 
-  if (conf) {
+  if (conf & pval) {
     return(list(trend = trend, conf.lower = conf.lower, conf.upper = conf.upper, 
+                p.val = p.val, detrended = detrended))
+  } else if (conf & !pval) {
+    return(list(trend = trend, conf.lower = conf.lower, conf.upper = conf.upper,
                 detrended = detrended))
+  } else if (!conf & pval) {
+    return(list(trend = trend, p.val = p.val, detrended = detrended))
   } else {
     return(list(trend = trend, detrended = detrended))
   }

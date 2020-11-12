@@ -5,8 +5,8 @@
 \title{Compute Bias Corrected Climatologies}
 \usage{
 Clim(exp, obs, time_dim = "sdate", dat_dim = c("dataset", "member"),
-  method = "clim", ftime_dim = "ftime", memb_dim = "member",
-  memb = TRUE, na.rm = TRUE, ncores = NULL)
+  method = "clim", ftime_dim = "ftime", memb = TRUE,
+  memb_dim = "member", na.rm = TRUE, ncores = NULL)
 }
 \arguments{
 \item{exp}{A named numeric array of experimental data, with at least two 
@@ -29,12 +29,12 @@ options include 'clim', 'kharin', and 'NDV'. The default value is 'clim'.}
 \item{ftime_dim}{A character string indicating the name of forecast time
 dimension. Only used when method = 'NDV'. The default value is 'ftime'.}
 
+\item{memb}{A logical value indicating whether to remain 'memb_dim' dimension
+(TRUE) or do ensemble mean over 'memb_dim' (FALSE). The default value is TRUE.}
+
 \item{memb_dim}{A character string indicating the name of the member 
 dimension. Only used when parameter 'memb' is FALSE. It must be one element
 in 'dat_dim'. The default value is 'member'.}
-
-\item{memb}{A logical value indicating whether to remain 'memb_dim' dimension
-(TRUE) or do ensemble mean over 'memb_dim' (FALSE). The default value is TRUE.}
 
 \item{na.rm}{A logical value indicating whether to remove NA values along 
 'time_dim' when calculating climatology (TRUE) or return NA if there is NA 
@@ -75,5 +75,11 @@ the 'exp' and 'obs' are excluded when computing the climatologies.
 example(Load)
 clim <- Clim(sampleData$mod, sampleData$obs)
 clim2 <- Clim(sampleData$mod, sampleData$obs, method = 'kharin', memb = FALSE)
+\donttest{
+PlotClim(clim$clim_exp, clim$clim_obs, 
+        toptitle = paste('sea surface temperature climatologies'), 
+        ytitle = 'K', monini = 11, listexp = c('CMIP5 IC3'), 
+        listobs = c('ERSST'), biglab = FALSE, fileout = 'tos_clim.eps')
+}
 }
 

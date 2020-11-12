@@ -6,9 +6,8 @@
 \alias{s2dv-package}
 \title{A Set of Common Tools for Seasonal to Decadal Verification}
 \description{
-The advanced version of package 's2dverification', which the details can
-be found in Manubens et al. (2018) <doi:10.1016/j.envsoft.2018.01.018>.
-It is intended for 'seasonal to decadal' (s2d) climate forecast verification, but
+The advanced version of package 's2dverification'. It is
+intended for 'seasonal to decadal' (s2d) climate forecast verification, but
 it can also be used in other kinds of forecasts or general climate analysis.
 This package is specially designed for the comparison between the experimental
 and observational datasets. The functionality of the included functions covers
@@ -18,7 +17,7 @@ with the package 'startR', able to use multiple cores for computation and
 handle multi-dimensional arrays with a higher flexibility.
 }
 \references{
-\url{https://earth.bsc.es/gitlab/es/s2dverification/}
+\url{https://earth.bsc.es/gitlab/es/s2dv/}
 }
 \keyword{internal}
 

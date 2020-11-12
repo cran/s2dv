@@ -4,21 +4,25 @@
 \alias{RMS}
 \title{Compute root mean square error}
 \usage{
-RMS(exp, obs, time_dim = "sdate", memb_dim = "member", comp_dim = NULL,
+RMS(exp, obs, time_dim = "sdate", dat_dim = "dataset", comp_dim = NULL,
   limits = NULL, conf = TRUE, conf.lev = 0.95, ncores = NULL)
 }
 \arguments{
 \item{exp}{A named numeric array of experimental data, with at least two 
-dimensions 'time_dim' and 'memb_dim'.}
+dimensions 'time_dim' and 'dat_dim'. It can also be a vector with the 
+same length as 'obs', then the vector will automatically be 'time_dim' and 
+'dat_dim' will be 1.}
 
 \item{obs}{A named numeric array of observational data, same dimensions as
-parameter 'exp' except along memb_dim.}
+parameter 'exp' except along dat_dim. It can also be a vector with the same
+length as 'exp', then the vector will automatically be 'time_dim' and 
+'dat_dim' will be 1.}
 
 \item{time_dim}{A character string indicating the name of dimension along
 which the correlations are computed. The default value is 'sdate'.}
 
-\item{memb_dim}{A character string indicating the name of member (nobs/nexp) 
-dimension. The default value is 'member'.}
+\item{dat_dim}{A character string indicating the name of member (nobs/nexp) 
+dimension. The default value is 'dataset'.}
 
 \item{comp_dim}{A character string indicating the name of dimension along which
 obs is taken into account only if it is complete. The default value
@@ -39,8 +43,8 @@ computation. The default value is NULL.}
 \value{
 A list containing the numeric arrays with dimension:\cr 
  c(nexp, nobs, all other dimensions of exp except time_dim).\cr
-nexp is the number of experiment (i.e., memb_dim in exp), and nobs is the 
-number of observation (i.e., memb_dim in obs).\cr
+nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
+number of observation (i.e., dat_dim in obs).\cr
 \item{$rms}{
  The root mean square error. 
 }
@@ -63,14 +67,16 @@ all leadtimes.\cr
 The confidence interval is computed by the chi2 distribution.\cr
 }
 \examples{
+# Load sample data as in Load() example:
  set.seed(1)
- exp1 <- array(rnorm(120), dim = c(member = 3, sdate = 5, ftime = 2, lon = 1, lat = 4))
+ exp1 <- array(rnorm(120), dim = c(dataset = 3, sdate = 5, ftime = 2, lon = 1, lat = 4))
  set.seed(2)
- obs1 <- array(rnorm(80),  dim = c(member = 2, sdate = 5, ftime = 2, lon = 1, lat = 4))
+ obs1 <- array(rnorm(80),  dim = c(dataset = 2, sdate = 5, ftime = 2, lon = 1, lat = 4))
  set.seed(2)
  na <- floor(runif(10, min = 1, max = 80))
  obs1[na] <- NA
  res <- RMS(exp1, obs1, comp_dim = 'ftime')
+ # Renew example when Ano and Smoothing are ready
 
 }
 

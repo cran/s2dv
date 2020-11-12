@@ -4,23 +4,27 @@
 \alias{RMSSS}
 \title{Compute root mean square error skill score}
 \usage{
-RMSSS(exp, obs, time_dim = "sdate", memb_dim = "member", pval = TRUE,
+RMSSS(exp, obs, time_dim = "sdate", dat_dim = "dataset", pval = TRUE,
   ncores = NULL)
 }
 \arguments{
 \item{exp}{A named numeric array of experimental data which contains at least
-two dimensions for memb_dim and time_dim.}
+two dimensions for dat_dim and time_dim. It can also be a vector with the 
+same length as 'obs', then the vector will automatically be 'time_dim' and 
+'dat_dim' will be 1.}
 
 \item{obs}{A named numeric array of observational data which contains at least
-two dimensions for memb_dim and time_dim. The dimensions should be the same 
-as paramter 'exp' except the length of 'memb_dim' dimension. The order of 
-dimension can be different.}
+two dimensions for dat_dim and time_dim. The dimensions should be the same 
+as paramter 'exp' except the length of 'dat_dim' dimension. The order of 
+dimension can be different. It can also be a vector with the same length as
+'exp', then the vector will automatically be 'time_dim' and 'dat_dim' will
+be 1.}
 
 \item{time_dim}{A character string indicating the name of dimension along
 which the RMSSS are computed. The default value is 'sdate'.}
 
-\item{memb_dim}{A character string indicating the name of member (nobs/nexp) 
-dimension. The default value is 'member'.}
+\item{dat_dim}{A character string indicating the name of dataset (nobs/nexp) 
+dimension. The default value is 'dataset'.}
 
 \item{pval}{A logical value indicating whether to compute or not the p-value 
 of the test Ho: RMSSS = 0. If pval = TRUE, the insignificant RMSSS will 
@@ -32,8 +36,8 @@ computation. The default value is NULL.}
 \value{
 A list containing the numeric arrays with dimension:\cr 
  c(nexp, nobs, all other dimensions of exp except time_dim).\cr
-nexp is the number of experiment (i.e., memb_dim in exp), and nobs is the 
-number of observation (i.e., memb_dim in obs).\cr
+nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
+number of observation (i.e., dat_dim in obs).\cr
 \item{$rmsss}{
  The root mean square error skill score. 
 }
@@ -44,7 +48,7 @@ number of observation (i.e., memb_dim in obs).\cr
 \description{
 Compute the root mean square error skill score (RMSSS) between an array of 
 forecast 'exp' and an array of observation 'obs'. The two arrays should 
-have the same dimensions except along memb_dim, where the length can be 
+have the same dimensions except along dat_dim, where the length can be 
 different, with the number of experiments/models (nexp) and the number of 
 observational datasets (nobs).\cr
 RMSSS computes the root mean square error skill score of each jexp in 1:nexp 
@@ -56,9 +60,9 @@ The p-value is optionally provided by an one-sided Fisher test.\cr
 }
 \examples{
 set.seed(1)
-exp <- array(rnorm(15), dim = c(dat = 1, time = 3, member = 5))
+exp <- array(rnorm(30), dim = c(dataset = 2, time = 3, memb = 5))
 set.seed(2)
-obs <- array(rnorm(6), dim = c(time = 3, member = 2, dat = 1))
+obs <- array(rnorm(15), dim = c(time = 3, memb = 5, dataset = 1))
 res <- RMSSS(exp, obs, time_dim = 'time')
 
 }

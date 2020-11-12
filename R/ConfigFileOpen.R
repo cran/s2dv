@@ -147,7 +147,7 @@
 #'  ConfigEditEntry, ConfigFileOpen, ConfigShowSimilarEntries, ConfigShowTable
 #'@references
 #'[1] \url{https://stat.ethz.ch/R-manual/R-devel/library/base/html/regex.html}\cr
-#'[2] \url{http://tldp.org/LDP/abs/html/globbingref.html}
+#'[2] \url{https://tldp.org/LDP/abs/html/globbingref.html}
 #'@examples
 #'# Create an empty configuration file
 #'config_file <- paste0(tempdir(), "/example.conf")
@@ -190,7 +190,7 @@ ConfigFileOpen <- function(file_path, silent = FALSE, stop = FALSE) {
 
   ## Check that the format of the configuration file is right.
   if (length(key_positions) != 3) {
-    stop("The configuration file is corrupted or outdated: the key lines do not match the expected pattern.")
+    stop('Error: The configuration file is corrupted or outdated: the key lines do not match the expected pattern.')
   }
 
   ## Start parsing the configuration.
@@ -212,14 +212,14 @@ ConfigFileOpen <- function(file_path, silent = FALSE, stop = FALSE) {
         if ((length(which(strsplit(var_value, "")[[1]] == "$")) %% 2) == 0) {
           definitions[[var_name]] <- var_value
         } else {
-          stop("The configuration file is corrupted: there are incorrect variable definition lines in the definition zone. A closing "$" symbol may be missing.")
+          stop('Error: The configuration file is corrupted: there are incorrect variable definition lines in the definition zone. A closing "$" symbol may be missing.')
         }
       } else {
-        stop("The configuration file is corrupted: there are incorrect definition lines in the definition zone.")
+        stop('Error: The configuration file is corrupted: there are incorrect definition lines in the definition zone.')
       }
     }
   } else {
-    stop("The configuration file is corrupted: there are malformed definition lines in the definition zone.")
+    stop('Error: The configuration file is corrupted: there are malformed definition lines in the definition zone.')
   }
   mandatory_definitions <- c("DEFAULT_EXP_MAIN_PATH", "DEFAULT_EXP_FILE_PATH", 
                              "DEFAULT_NC_VAR_NAME", "DEFAULT_SUFFIX", "DEFAULT_VAR_MIN", 
@@ -266,10 +266,10 @@ ConfigFileOpen <- function(file_path, silent = FALSE, stop = FALSE) {
           entry[2] <- previous_values[2]
         }
       } else {
-        stop("The variable column must be defined in all the entries in the tables in the configuration file.")
+        stop('Error: The variable column must be defined in all the entries in the tables in the configuration file.')
       }
       if (length(entry) > length(default_values) + 2) {
-        stop(paste0("More elements than expected in the entry ", current_line, " in the configuration file."))
+        stop(paste0("Error: More elements than expected in the entry ", current_line, " in the configuration file."))
       }
       for (value_position in 1:length(default_values)) {
         if ((length(entry) > value_position + 1)) {
@@ -328,11 +328,7 @@ ConfigFileCreate <- function(file_path, confirm = TRUE) {
     DEFAULT_DIM_NAME_LONGITUDES = "longitude", DEFAULT_DIM_NAME_LATITUDES = "latitude",
     DEFAULT_DIM_NAME_MEMBERS = "ensemble")), file_path, confirm = confirm)
   if (success) {
-    .warning(paste0("You have just created an empty configuration file. You can ",
-                    "edit it with ConfigAddEntry(). You can edit the defaults ",
-                    "according to your needs with the functions ConfigFileOpen(), ",
-                    "ConfigEditDefinition() and ConfigFileSave() or edit the file ",
-                    "manually as specified in ?ConfigFileOpen."))
+    .warning("You have just created an empty configuration file. You can edit it with ConfigAddEntry(). You can edit the defaults according to your needs with the functions ConfigFileOpen(), ConfigEditDefinition() and ConfigFileSave() or edit the file manually as specified in ?ConfigFileOpen.")
   }
 }
 

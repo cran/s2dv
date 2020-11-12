@@ -796,7 +796,7 @@ to the package or check the comments in the code.
 #
 # Example 1: Providing lists of lists to 'exp' and 'obs':
 #
- \donttest{
+ \dontrun{
 data_path <- system.file('sample_data', package = 's2dv')
 exp <- list(
         name = 'experiment',
@@ -822,7 +822,7 @@ sampleData <- Load('tos', list(exp), list(obs), startDates,
 # has the proper entries to load these (see ?LoadConfigFile for details on 
 # writing a configuration file). 
 #
- \donttest{
+ \dontrun{
 data_path <- system.file('sample_data', package = 's2dv')
 expA <- list(name = 'experiment', path = file.path(data_path, 
             'model/$EXP_NAME$/$STORE_FREQ$_mean/$VAR_NAME$_3hourly',

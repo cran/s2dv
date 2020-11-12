@@ -128,6 +128,21 @@ Examples of input:
 }
 \examples{
 # See ?Load for explanations on the first part of this example
+ \dontrun{
+data_path <- system.file('sample_data', package = 's2dv')
+expA <- list(name = 'experiment', path = file.path(data_path,
+            'model/$EXP_NAME$/$STORE_FREQ$_mean/$VAR_NAME$_3hourly',
+            '$VAR_NAME$_$START_DATE$.nc'))
+obsX <- list(name = 'observation', path = file.path(data_path,
+            '$OBS_NAME$/$STORE_FREQ$_mean/$VAR_NAME$',
+            '$VAR_NAME$_$YEAR$$MONTH$.nc'))
+
+# Now we are ready to use Load().
+startDates <- c('19851101', '19901101', '19951101', '20001101', '20051101')
+sampleData <- Load('tos', list(expA), list(obsX), startDates,
+                  output = 'lonlat', latmin = 27, latmax = 48, 
+                  lonmin = -12, lonmax = 40)
+ }
  \dontshow{
 startDates <- c('19851101', '19901101', '19951101', '20001101', '20051101')
 sampleData <- s2dv:::.LoadSampleData('tos', c('experiment'),
@@ -137,14 +152,14 @@ sampleData <- s2dv:::.LoadSampleData('tos', c('experiment'),
                                       lonmin = -12, lonmax = 40)
  }
 clim <- Clim(sampleData$mod, sampleData$obs, memb = FALSE)
-tmpfile <- tempfile(tmpdir = tempdir(), fileext = ".gif")
- \donttest{
+ \dontrun{
 AnimateMap(clim$clim_exp, sampleData$lon, sampleData$lat,
  toptitle = "climatology of decadal prediction", sizetit = 1, 
  units = "degree", brks = seq(270, 300, 3), monini = 11, freq = 12, 
  msk95lev = FALSE, filled.continents = TRUE, intlon = 10, intlat = 10,
- fileout = tmpfile)
+ fileout = 'clim_dec.gif')
  }
+# More examples in s2dverification but are deleted for now
 
 }
 

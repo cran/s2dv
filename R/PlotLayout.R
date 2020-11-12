@@ -163,6 +163,21 @@
 #'
 #'@examples
 #'# See examples on Load() to understand the first lines in this example
+#'  \dontrun{
+#'data_path <- system.file('sample_data', package = 's2dv')
+#'expA <- list(name = 'experiment', path = file.path(data_path,
+#'             'model/$EXP_NAME$/$STORE_FREQ$_mean/$VAR_NAME$_3hourly',
+#'             '$VAR_NAME$_$START_DATE$.nc'))
+#'obsX <- list(name = 'observation', path = file.path(data_path,
+#'             '$OBS_NAME$/$STORE_FREQ$_mean/$VAR_NAME$',
+#'             '$VAR_NAME$_$YEAR$$MONTH$.nc'))
+#'
+#'# Now we are ready to use Load().
+#'startDates <- c('19851101', '19901101', '19951101', '20001101', '20051101')
+#'sampleData <- Load('tos', list(expA), list(obsX), startDates,
+#'                   leadtimemin = 1, leadtimemax = 4, output = 'lonlat',
+#'                   latmin = 27, latmax = 48, lonmin = -12, lonmax = 40)
+#'  }
 #'  \dontshow{
 #'startDates <- c('19851101', '19901101', '19951101', '20001101', '20051101')
 #'sampleData <- s2dv:::.LoadSampleData('tos', c('experiment'),

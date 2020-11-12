@@ -31,8 +31,8 @@
 #'@param res Resolution of the device (file or window) to plot in. See 
 #'  ?Devices and the creator function of the corresponding device.
 #'@param fileout Name of output file. Extensions allowed: eps/ps, jpeg, png, 
-#'  pdf, bmp and tiff. \cr
-#'  Default = 'output_plotclim.eps'.
+#'  pdf, bmp and tiff. The default value is NULL, which the figure is shown
+#'  in a pop-up window.
 #'@param ... Arguments to be passed to the method. Only accepts the following
 #'  graphical parameters:\cr
 #'  adj ann ask bg bty cex.sub cin col.axis col.lab col.main col.sub cra crt 
@@ -45,10 +45,9 @@
 #'# Load sample data as in Load() example:
 #'example(Load)
 #'clim <- Clim(sampleData$mod, sampleData$obs)
-#'tmpfile <- tempfile(tmpdir = tempdir(), fileext = ".eps")
 #'PlotClim(clim$clim_exp, clim$clim_obs, toptitle = paste('climatologies'), 
 #'         ytitle = 'K', monini = 11, listexp = c('CMIP5 IC3'), 
-#'         listobs = c('ERSST'), biglab = FALSE, fileout = tmpfile)
+#'         listobs = c('ERSST'), biglab = FALSE, fileout = NULL)
 #'
 #'@importFrom grDevices dev.cur dev.new dev.off 
 #'@importFrom stats ts
@@ -57,7 +56,7 @@ PlotClim <- function(exp_clim, obs_clim = NULL, toptitle = '', ytitle = '',
                      monini = 1, freq = 12, limits = NULL, 
                      listexp = c('exp1', 'exp2', 'exp3'), 
                      listobs = c('obs1', 'obs2', 'obs3'), biglab = FALSE, 
-                     leg = TRUE, sizetit = 1, fileout = 'output_plotclim.eps',
+                     leg = TRUE, sizetit = 1, fileout = NULL,
                      width = 8, height = 5, size_units = 'in', res = 100, ...) {
   # Process the user graphical parameters that may be passed in the call
   ## Graphical parameters to exclude

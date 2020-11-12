@@ -4,14 +4,14 @@
 \alias{Season}
 \title{Compute seasonal mean}
 \usage{
-Season(data, time_dim = "sdate", monini, moninf, monsup, method = mean,
+Season(data, time_dim = "ftime", monini, moninf, monsup, method = mean,
   na.rm = TRUE, ncores = NULL)
 }
 \arguments{
 \item{data}{A named numeric array with at least one dimension 'time_dim'.}
 
 \item{time_dim}{A character string indicating the name of dimension along
-which the seasonal means are computed. The default value is 'sdate'.}
+which the seasonal means are computed. The default value is 'ftime'.}
 
 \item{monini}{An integer indicating what the first month of the time series is. 
 It can be from 1 to 12.}
@@ -43,7 +43,7 @@ accounted.
 }
 \examples{
 set.seed(1)
-dat1 <- array(rnorm(144*3), dim = c(member = 2, sdate = 12*3, ftime = 2, lon = 3))
+dat1 <- array(rnorm(144*3), dim = c(member = 2, sdate = 2, ftime = 12*3, lon = 3))
 res <- Season(data = dat1, monini = 1, moninf = 1, monsup = 2)
 res <- Season(data = dat1, monini = 10, moninf = 12, monsup = 2)
 dat2 <- dat1

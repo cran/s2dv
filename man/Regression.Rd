@@ -4,7 +4,7 @@
 \alias{Regression}
 \title{Compute the regression of an array on another along one dimension.}
 \usage{
-Regression(datay, datax, time_dim = "sdate", formula = y ~ x, pval = TRUE,
+Regression(datay, datax, reg_dim = "sdate", formula = y ~ x, pval = TRUE,
   conf = TRUE, conf.lev = 0.95, na.action = na.omit, ncores = NULL)
 }
 \arguments{
@@ -14,8 +14,8 @@ which the regression is computed.}
 \item{datax}{An numeric array as predictor. The dimension should be identical
 as parameter 'datay'.}
 
-\item{time_dim}{A character string indicating the dimension along which to 
-compute the regression.}
+\item{reg_dim}{A character string indicating the dimension along which to 
+compute the regression. The default value is 'sdate'.}
 
 \item{formula}{An object of class "formula" (see function \code{link[stats]{lm}}).}
 
@@ -41,14 +41,14 @@ computation. Default value is NULL.}
 A list containing:
 \item{$regression}{
  A numeric array with same dimensions as parameter 'datay' and 'datax' except 
- the 'time_dim' dimension, which is replaced by a 'stats' dimension containing 
+ the 'reg_dim' dimension, which is replaced by a 'stats' dimension containing 
  the regression coefficients from the lowest order (i.e., intercept) to 
  the highest degree. The length of the 'stats' dimension should be 
  \code{polydeg + 1}.  
 }
 \item{$conf.lower}{
  A numeric array with same dimensions as parameter 'daty' and 'datax' except
- the 'time_dim' dimension, which is replaced by a 'stats' dimension containing 
+ the 'reg_dim' dimension, which is replaced by a 'stats' dimension containing 
  the lower value of the \code{siglev}\% confidence interval for all
  the regression coefficients with the same order as $regression. The length 
  of 'stats' dimension should be \code{polydeg + 1}. Only present if 
@@ -56,7 +56,7 @@ A list containing:
 }
 \item{$conf.upper}{
  A numeric array with same dimensions as parameter 'daty' and 'datax' except
- the 'time_dim' dimension, which is replaced by a 'stats' dimension containing 
+ the 'reg_dim' dimension, which is replaced by a 'stats' dimension containing 
  the upper value of the \code{siglev}\% confidence interval for all
  the regression coefficients with the same order as $regression. The length 
  of 'stats' dimension should be \code{polydeg + 1}. Only present if 
@@ -64,17 +64,17 @@ A list containing:
 }
 \item{$p.val}{
  A numeric array with same dimensions as parameter 'daty' and 'datax' except
- the 'time_dim' dimension, The array contains the p-value.
+ the 'reg_dim' dimension, The array contains the p-value.
 }
 \item{$filtered}{
  A numeric array with the same dimension as paramter 'datay' and 'datax', 
- the filtered datay from the regression onto datax along the 'time_dim' 
+ the filtered datay from the regression onto datax along the 'reg_dim' 
  dimension.
 }
 }
 \description{
 Compute the regression of the array 'datay' on the array 'datax' along the
-'time_dim' dimension by least square fitting (default) or self-defined model. 
+'reg_dim' dimension by least square fitting (default) or self-defined model. 
 The function provides the slope of the regression, the intercept, and the
 associated p-value and confidence interval. The filtered datay from the 
 regression onto datax is also provided.\cr
