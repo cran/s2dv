@@ -1,6 +1,6 @@
 Package: s2dv
 Title: A Set of Common Tools for Seasonal to Decadal Verification
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person("BSC-CNS", role = c("aut", "cph")),
     person("An-Chi", "Ho", , "an.ho@bsc.es", role = c("aut", "cre")),
@@ -23,7 +23,7 @@ Imports: abind, bigmemory, GEOmap, geomapdata, graphics, grDevices,
         mapproj, parallel, ClimProjDiags, stats, plyr, ncdf4,
         multiApply (>= 2.1.1)
 Suggests: easyVerification, testthat
-License: LGPL-3
+License: Apache License 2.0
 URL: https://earth.bsc.es/gitlab/es/s2dv/
 BugReports: https://earth.bsc.es/gitlab/es/s2dv/-/issues
 LazyData: true
@@ -31,7 +31,7 @@ SystemRequirements: cdo
 Encoding: UTF-8
 RoxygenNote: 5.0.0
 NeedsCompilation: no
-Packaged: 2020-11-12 08:38:07 UTC; aho
+Packaged: 2020-11-16 11:10:31 UTC; aho
 Author: BSC-CNS [aut, cph],
   An-Chi Ho [aut, cre],
   Nuria Perez-Zanon [aut],
@@ -41,4 +41,4 @@ Author: BSC-CNS [aut, cph],
   Deborah Verfaillie [ctb]
 Maintainer: An-Chi Ho <an.ho@bsc.es>
 Repository: CRAN
-Date/Publication: 2020-11-12 10:00:02 UTC
+Date/Publication: 2020-11-16 12:20:02 UTC

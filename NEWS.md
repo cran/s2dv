@@ -1,3 +1,6 @@
+# s2dv 0.1.1 (Release date: 2020-11-16)
+- Change the lincense to Apache License 2.0.
+ 
 # s2dv 0.1.0 (Release date: 2020-11-12)
 - New functions: Ano(), Composite(), PlotAno(), Smoothing(), AMV(), GSAT(), SPOD(), TPI(), GMST(), Persistence().
 - Change the default value of PlotClim() parameter 'fileout' to NULL.
