@@ -9,7 +9,7 @@
 #'@param name A character string indicating the name for the new dimension. 
 #'  The default value is NULL.
 #'@param ncores An integer indicating the number of cores to use for parallel 
-#'  computation. The default value is NULL.
+#'  computation. The default value is NULL. This parameter is deprecated now.
 #'
 #'@return An array as parameter 'data' but with the added named dimension.
 #'
@@ -62,54 +62,26 @@ InsertDim <- function(data, posdim, lendim, name = NULL, ncores = NULL) {
     }
   }
   ## ncores
-  if (!is.null(ncores)) {
-    if (!is.numeric(ncores)) {
-      stop("Parameter 'ncores' must be a positive integer.")
-    } else if (ncores %% 1 != 0 | ncores <= 0 | length(ncores) > 1) {
-      stop("Parameter 'ncores' must be a positive integer.")
-    }
-  }
+  if (!missing("ncores"))
+    warning("Argument 'ncores' is deprecated.")
 
   ###############################
   # Calculate InsertDim
+  names(lendim) <- name
 
-  ## create output dimension
-  if (posdim == 1) { # first dim
-    outdim <- c(lendim, dim(data))
-  } else {
-    if (posdim > length(dim(data))) { # last dim
-      outdim <- c(dim(data), lendim)
-    } else { # middle dim
-    outdim <- c(dim(data)[1:(posdim - 1)], lendim, dim(data)[posdim:length(dim(data))])
-    }
+  ## Put the new dim at the end first
+  data <- array(data, dim = c(dim(data), lendim))
+
+  ## Reorder dimension
+  if (posdim == 1) {
+    order <- c(length(dim(data)), 1:(length(dim(data)) - 1))
+    data <- Reorder(data, order)
+  } else if (posdim == length(dim(data))) {  # last dim
+  
+  } else { # middle dim
+    order <- c(1:(posdim - 1), length(dim(data)), posdim:(length(dim(data)) - 1))
+    data <- Reorder(data, order)
   }
 
-  ## create output array
-  outvar <- array(dim = c(outdim))
-  ## give temporary names for Apply(). The name will be replaced by data in the end
-  names(dim(outvar)) <- paste0('D', 1:length(outdim))
-  names(dim(outvar))[posdim] <- name
-
-  res <- Apply(list(outvar), 
-               margins = name, 
-               fun = .InsertDim, 
-               val = data,
-               ncores = ncores)$output1
-
-  if (posdim != 1) {
-    if (posdim < length(outdim)) {
-    res <- Reorder(res, c(1:(posdim - 1), length(outdim), posdim:(length(outdim) - 1)))
-    } else {  #posdim = length(outdim)
-        res <- Reorder(res, c(1:(posdim - 1), length(outdim)))
-    }
-  } else {
-      res <- Reorder(res, c(length(outdim), 1:(length(outdim) - 1)))
-  }
-
-  return(res)
-}
-
-.InsertDim <- function(x, val) {
-  x <- val
-  return(x)
+  return(data)
 }

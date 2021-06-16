@@ -4,8 +4,14 @@
 \alias{ConfigApplyMatchingEntries}
 \title{Apply Matching Entries To Dataset Name And Variable Name To Find Related Info}
 \usage{
-ConfigApplyMatchingEntries(configuration, var, exp = NULL, obs = NULL,
-  show_entries = FALSE, show_result = TRUE)
+ConfigApplyMatchingEntries(
+  configuration,
+  var,
+  exp = NULL,
+  obs = NULL,
+  show_entries = FALSE,
+  show_result = TRUE
+)
 }
 \arguments{
 \item{configuration}{Configuration object obtained from ConfigFileOpen() 
@@ -68,4 +74,3 @@ ConfigApplyMatchingEntries, ConfigEditDefinition,
  ConfigEditEntry, ConfigFileOpen, ConfigShowSimilarEntries, 
  ConfigShowTable
 }
-

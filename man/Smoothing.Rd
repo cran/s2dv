@@ -43,4 +43,3 @@ PlotAno(smooth_ano_exp, smooth_ano_obs, startDates,
        fileout = "tos_smoothed_ano.png")
  }
 }
-

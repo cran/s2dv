@@ -3,24 +3,20 @@
 #'This function returns the mean of an array along a set of dimensions and 
 #'preserves the dimension names if it has.
 #'
-#'@details It is recommended to use \code{'apply(x, dim, mean)'} to improve the
-#'  efficiency when the dimension to be averaged is only one. 
-#'
 #'@param data An array to be averaged.
 #'@param dims A vector of numeric or charactor string, indicating along which 
 #'  dimensions to average.
 #'@param na.rm A logical value indicating whether to ignore NA values (TRUE) or 
-#'  not (FALSE). The default value is FALSE.
-#'
+#'  not (FALSE).
 #'@return An array with the same dimension as parameter 'data' except the 'dims' 
 #'  dimensions. 
 #'  removed.
 #'
 #'@examples
-#'a <- array(rnorm(24), dim = c(a = 2, b= 3, c = 4))
-#'print(dim(MeanDims(a, 2)))
-#'print(dim(MeanDims(a, c(2, 3))))
-#'print(dim(MeanDims(a, c('a', 'b'))))
+#'a <- array(rnorm(24), dim = c(2, 3, 4))
+#'MeanDims(a, 2)
+#'MeanDims(a, c(2, 3))
+#'@import multiApply
 #'@export
 MeanDims <- function(data, dims, na.rm = FALSE) {
 
@@ -59,32 +55,17 @@ MeanDims <- function(data, dims, na.rm = FALSE) {
     stop("Parameter 'na.rm' must be one logical value.")
   }
 
-
-
   ###############################
   # Calculate MeanDims
-
-  ## Change character dims into indices
-  if (is.character(dims)) {
-    tmp <- rep(0, length(dims))
-    for (i in 1:length(dims)) {
-      tmp[i] <- which(names(dim(data)) == dims[i])
-    }
-  dims <- tmp
-  }
-
-  if (length(dim(data)) == 1) {
-    res <- mean(data, na.rm = na.rm) 
+  if (length(dims) == length(dim(data))) {
+    data <- mean(data, na.rm = na.rm)
   } else {
-
-    margins <- setdiff(c(1:length(dim(data))), dims)
-    res <- as.array(apply(data, margins, mean, na.rm = na.rm))
-    if (!is.null(names(dim(data))[margins]) & is.null(names(dim(res)))) {
-      names(dim(res)) <- names(dim(data))[margins]
+    if (is.character(dims)) {
+      dims <- which(names(dim(data)) %in% dims)
     }
+    pos <- (1:length(dim(data)))[-dims]
+    data <- apply(data, pos, mean, na.rm = na.rm)
   }
-
-  return(res)
-
+  return(data)
 }
 

@@ -65,7 +65,7 @@ Eno <- function(data, time_dim = 'sdate', na.action = na.pass, ncores = NULL) {
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }

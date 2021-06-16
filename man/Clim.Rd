@@ -4,9 +4,18 @@
 \alias{Clim}
 \title{Compute Bias Corrected Climatologies}
 \usage{
-Clim(exp, obs, time_dim = "sdate", dat_dim = c("dataset", "member"),
-  method = "clim", ftime_dim = "ftime", memb = TRUE,
-  memb_dim = "member", na.rm = TRUE, ncores = NULL)
+Clim(
+  exp,
+  obs,
+  time_dim = "sdate",
+  dat_dim = c("dataset", "member"),
+  method = "clim",
+  ftime_dim = "ftime",
+  memb = TRUE,
+  memb_dim = "member",
+  na.rm = TRUE,
+  ncores = NULL
+)
 }
 \arguments{
 \item{exp}{A named numeric array of experimental data, with at least two 
@@ -82,4 +91,3 @@ PlotClim(clim$clim_exp, clim$clim_obs,
         listobs = c('ERSST'), biglab = FALSE, fileout = 'tos_clim.eps')
 }
 }
-

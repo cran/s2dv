@@ -4,10 +4,18 @@
 \alias{ConfigShowSimilarEntries}
 \title{Find Similar Entries In Tables Of Datasets}
 \usage{
-ConfigShowSimilarEntries(configuration, dataset_name = NULL,
-  var_name = NULL, main_path = NULL, file_path = NULL,
-  nc_var_name = NULL, suffix = NULL, varmin = NULL, varmax = NULL,
-  n_results = 10)
+ConfigShowSimilarEntries(
+  configuration,
+  dataset_name = NULL,
+  var_name = NULL,
+  main_path = NULL,
+  file_path = NULL,
+  nc_var_name = NULL,
+  suffix = NULL,
+  varmin = NULL,
+  varmax = NULL,
+  n_results = 10
+)
 }
 \arguments{
 \item{configuration}{Configuration object obtained either from 
@@ -79,4 +87,3 @@ ConfigShowSimilarEntries(configuration, dataset_name = "Exper",
 ConfigApplyMatchingEntries, ConfigEditDefinition, 
  ConfigEditEntry, ConfigFileOpen, ConfigShowSimilarEntries, ConfigShowTable
 }
-

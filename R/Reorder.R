@@ -58,11 +58,7 @@ Reorder <- function(data, order) {
 
   ## If order is character string, find the indices
   if (is.character(order)) {
-    tmp <- rep(0, length(order))
-    for (i in 1:length(order)) {
-      tmp[i] <- which(names(dim(data)) == order[i])
-    }
-  order <- tmp
+    order <- match(order, names(dim(data)))
   }
 
   ## reorder

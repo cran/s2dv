@@ -157,7 +157,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
@@ -181,7 +181,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
                   fun = .Composite,
                   output_dims = output_dims,
                   occ = occ, time_dim = time_dim, space_dim = space_dim,
-                  K = K, lag = lag, eno = eno,
+                  K = K, lag = lag, eno = eno, ncores_input = ncores,
                   ncores = ncores)
 
   if (!is.null(fileout)) {
@@ -192,7 +192,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
 }
 
 .Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'), 
-                       K = NULL, lag = 0, eno = FALSE) {
+                       K = NULL, lag = 0, eno = FALSE, ncores_input = NULL) {
 # data: [lon, lat, time]
 # occ: [time]
   if (is.null(K)) {
@@ -204,7 +204,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
   pval <- array(dim = c(dim(data)[1:2], composite = K))
 
   if (eno == TRUE) { 
-    n_tot <- Eno(data, time_dim = time_dim)
+    n_tot <- Eno(data, time_dim = time_dim, ncores = ncores_input)
   } else {
     n_tot <- length(occ)
   }
@@ -224,7 +224,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
     if (eno == TRUE) {
         data_tmp <- data[, , indices]
         names(dim(data_tmp)) <- names(dim(data))
-        n_k <- Eno(data_tmp, time_dim = time_dim)
+        n_k <- Eno(data_tmp, time_dim = time_dim, ncores = ncores_input)
     } else {
         n_k <- length(indices)
     }

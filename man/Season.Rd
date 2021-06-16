@@ -4,8 +4,16 @@
 \alias{Season}
 \title{Compute seasonal mean}
 \usage{
-Season(data, time_dim = "ftime", monini, moninf, monsup, method = mean,
-  na.rm = TRUE, ncores = NULL)
+Season(
+  data,
+  time_dim = "ftime",
+  monini,
+  moninf,
+  monsup,
+  method = mean,
+  na.rm = TRUE,
+  ncores = NULL
+)
 }
 \arguments{
 \item{data}{A named numeric array with at least one dimension 'time_dim'.}
@@ -53,4 +61,3 @@ dat2[na] <- NA
 res <- Season(data = dat2, monini = 3, moninf = 1, monsup = 2)
 res <- Season(data = dat2, monini = 3, moninf = 1, monsup = 2, na.rm = FALSE)
 }
-

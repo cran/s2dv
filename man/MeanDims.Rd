@@ -13,7 +13,7 @@ MeanDims(data, dims, na.rm = FALSE)
 dimensions to average.}
 
 \item{na.rm}{A logical value indicating whether to ignore NA values (TRUE) or 
-not (FALSE). The default value is FALSE.}
+not (FALSE).}
 }
 \value{
 An array with the same dimension as parameter 'data' except the 'dims' 
@@ -24,14 +24,8 @@ An array with the same dimension as parameter 'data' except the 'dims'
 This function returns the mean of an array along a set of dimensions and 
 preserves the dimension names if it has.
 }
-\details{
-It is recommended to use \code{'apply(x, dim, mean)'} to improve the
- efficiency when the dimension to be averaged is only one.
-}
 \examples{
-a <- array(rnorm(24), dim = c(a = 2, b= 3, c = 4))
-print(dim(MeanDims(a, 2)))
-print(dim(MeanDims(a, c(2, 3))))
-print(dim(MeanDims(a, c('a', 'b'))))
+a <- array(rnorm(24), dim = c(2, 3, 4))
+MeanDims(a, 2)
+MeanDims(a, c(2, 3))
 }
-

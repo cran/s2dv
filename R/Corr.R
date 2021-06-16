@@ -19,7 +19,7 @@
 #'@param exp A named numeric array of experimental data, with at least two 
 #'  dimensions 'time_dim' and 'dat_dim'.
 #'@param obs A named numeric array of observational data, same dimensions as  
-#'  parameter 'exp' except along dat_dim.
+#'  parameter 'exp' except along 'dat_dim' and 'memb_dim'.
 #'@param time_dim A character string indicating the name of dimension along  
 #'  which the correlations are computed. The default value is 'sdate'.
 #'@param dat_dim A character string indicating the name of dataset (nobs/nexp) 
@@ -31,6 +31,12 @@
 #'  be completed. The default is c(1, length(comp_dim dimension)).
 #'@param method A character string indicating the type of correlation: 
 #'  'pearson', 'spearman', or 'kendall'. The default value is 'pearson'.
+#'@param memb_dim A character string indicating the name of the member 
+#'  dimension. It must be one dimension in 'exp' and 'obs'. If there is no 
+#'  member dimension, set NULL. The default value is NULL.
+#'@param memb A logical value indicating whether to remain 'memb_dim' dimension
+#'  (TRUE) or do ensemble mean over 'memb_dim' (FALSE). Only functional when 
+#'  'memb_dim' is not NULL. The default value is TRUE.
 #'@param pval A logical value indicating whether to compute or not the p-value 
 #'  of the test Ho: Corr = 0. The default value is TRUE.
 #'@param conf A logical value indicating whether to retrieve the confidence 
@@ -42,9 +48,12 @@
 #'
 #'@return 
 #'A list containing the numeric arrays with dimension:\cr 
-#'  c(nexp, nobs, all other dimensions of exp except time_dim).\cr
-#'nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
-#'number of observation (i.e., dat_dim in obs).\cr
+#'  c(nexp, nobs, exp_memb, obs_memb, all other dimensions of exp except 
+#'  time_dim and memb_dim).\cr
+#'nexp is the number of experiment (i.e., 'dat_dim' in exp), and nobs is the 
+#'number of observation (i.e., 'dat_dim' in obs). exp_memb is the number of
+#'member in experiment (i.e., 'memb_dim' in exp) and obs_memb is the number of 
+#'member in observation (i.e., 'memb_dim' in obs).\cr\cr
 #'\item{$corr}{
 #'  The correlation coefficient. 
 #'}
@@ -59,20 +68,37 @@
 #'}
 #'
 #'@examples
-#'# Load sample data as in Load() example: 
+#'# Case 1: Load sample data as in Load() example: 
 #'example(Load) 
 #'clim <- Clim(sampleData$mod, sampleData$obs) 
-#'corr <- Corr(clim$clim_exp, clim$clim_obs, time_dim = 'ftime', dat_dim = 'member')
-#'# Renew the example when Ano and Smoothing is ready
+#'ano_exp <- Ano(sampleData$mod, clim$clim_exp) 
+#'ano_obs <- Ano(sampleData$obs, clim$clim_obs) 
+#'runmean_months <- 12 
 #'
-#'@rdname Corr
+#'# Smooth along lead-times   
+#'smooth_ano_exp <- Smoothing(ano_exp, runmeanlen = runmean_months) 
+#'smooth_ano_obs <- Smoothing(ano_obs, runmeanlen = runmean_months) 
+#'required_complete_row <- 3  # Discard start dates which contain any NA lead-times 
+#'leadtimes_per_startdate <- 60 
+#'corr <- Corr(MeanDims(smooth_ano_exp, 'member'),              
+#'             MeanDims(smooth_ano_obs, 'member'),              
+#'             comp_dim = 'ftime',              
+#'             limits = c(ceiling((runmean_months + 1) / 2),                         
+#'             leadtimes_per_startdate - floor(runmean_months / 2))) 
+#'
+#'# Case 2: Keep member dimension
+#'corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member')
+#'# ensemble mean
+#'corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', memb = FALSE)
+#'
 #'@import multiApply
 #'@importFrom ClimProjDiags Subset
 #'@importFrom stats cor pt qnorm 
 #'@export
 Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset', 
-                 comp_dim = NULL, limits = NULL,
-                 method = 'pearson', pval = TRUE, conf = TRUE,
+                 comp_dim = NULL, limits = NULL, method = 'pearson', 
+                 memb_dim = NULL, memb = TRUE,
+                 pval = TRUE, conf = TRUE,
                  conf.lev = 0.95, ncores = NULL) {
 
   # Check inputs 
@@ -133,6 +159,19 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   if (!(method %in% c("kendall", "spearman", "pearson"))) {
     stop("Parameter 'method' must be one of 'kendall', 'spearman' or 'pearson'.")
   }
+  ## memb_dim
+  if (!is.null(memb_dim)) {
+    if (!is.character(memb_dim) | length(memb_dim) > 1) {
+      stop("Parameter 'memb_dim' must be a character string.")
+    }
+    if (!memb_dim %in% names(dim(exp)) | !memb_dim %in% names(dim(obs))) {
+      stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.")
+    }
+  }
+  ## memb
+  if (!is.logical(memb) | length(memb) > 1) {
+    stop("Parameter 'memb' must be one logical value.")
+  }
   ## pval
   if (!is.logical(pval) | length(pval) > 1) {
     stop("Parameter 'pval' must be one logical value.")
@@ -147,7 +186,7 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
@@ -157,9 +196,13 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   name_obs <- sort(names(dim(obs)))
   name_exp <- name_exp[-which(name_exp == dat_dim)]
   name_obs <- name_obs[-which(name_obs == dat_dim)]
+  if (!is.null(memb_dim)) {
+    name_exp <- name_exp[-which(name_exp == memb_dim)]
+    name_obs <- name_obs[-which(name_obs == memb_dim)]
+  }
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimension expect 'dat_dim'."))
+                "all dimension expect 'dat_dim' and 'memb_dim'."))
   }
   if (dim(exp)[time_dim] < 3) {
     stop("The length of time_dim must be at least 3 to compute correlation.")
@@ -179,52 +222,167 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
 
   # Remove data along comp_dim dim if there is at least one NA between limits
   if (!is.null(comp_dim)) {
-    if (is.null(limits)) {
-      limits <- c(1, dim(obs)[comp_dim])
-    }
     pos <- which(names(dim(obs)) == comp_dim)
-    obs_sub <- Subset(obs, pos, list(limits[1]:limits[2]))
+    if (is.null(limits)) {
+      obs_sub <- obs
+    } else {
+      obs_sub <- ClimProjDiags::Subset(obs, pos, list(limits[1]:limits[2]))
+    }
     outrows <- is.na(MeanDims(obs_sub, pos, na.rm = FALSE))
     outrows <- InsertDim(outrows, pos, dim(obs)[comp_dim])
     obs[which(outrows)] <- NA
+    rm(obs_sub, outrows)
   }
 
- res <- Apply(list(exp, obs), 
-              target_dims = list(c(time_dim, dat_dim), 
-                                 c(time_dim, dat_dim)),
-              fun = .Corr, 
-              time_dim = time_dim, method = method,
-              pval = pval, conf = conf, conf.lev = conf.lev, 
-              ncores = ncores)
+  if (is.null(memb_dim)) {
+    # Define output_dims
+    if (conf & pval) {
+      output_dims <- list(corr = c('nexp', 'nobs'),
+                          p.val = c('nexp', 'nobs'),
+                          conf.lower = c('nexp', 'nobs'),
+                          conf.upper = c('nexp', 'nobs'))
+    } else if (conf & !pval) {
+      output_dims <- list(corr = c('nexp', 'nobs'),
+                          conf.lower = c('nexp', 'nobs'),
+                          conf.upper = c('nexp', 'nobs'))
+    } else if (!conf & pval) {
+      output_dims <- list(corr = c('nexp', 'nobs'),
+                          p.val = c('nexp', 'nobs'))
+    } else {
+      output_dims <- list(corr = c('nexp', 'nobs'))
+    }
+
+    res <- Apply(list(exp, obs), 
+                 target_dims = list(c(time_dim, dat_dim), 
+                                    c(time_dim, dat_dim)),
+                 output_dims = output_dims, 
+                 fun = .Corr, 
+                 time_dim = time_dim, method = method,
+                 pval = pval, conf = conf, conf.lev = conf.lev, 
+                 ncores = ncores)
+
+  } else {
+    if (!memb) { #ensemble mean
+      name_exp <- names(dim(exp))
+      margin_dims_ind <- c(1:length(name_exp))[-which(name_exp == memb_dim)]
+      exp <- apply(exp, margin_dims_ind, mean, na.rm = TRUE) #NOTE: remove NAs here 
+      obs <- apply(obs, margin_dims_ind, mean, na.rm = TRUE)
+
+      # Define output_dims
+      if (conf & pval) {
+        output_dims <- list(corr = c('nexp', 'nobs'),
+                            p.val = c('nexp', 'nobs'),
+                            conf.lower = c('nexp', 'nobs'),
+                            conf.upper = c('nexp', 'nobs'))
+      } else if (conf & !pval) {
+        output_dims <- list(corr = c('nexp', 'nobs'),
+                            conf.lower = c('nexp', 'nobs'),
+                            conf.upper = c('nexp', 'nobs'))
+      } else if (!conf & pval) {
+        output_dims <- list(corr = c('nexp', 'nobs'),
+                            p.val = c('nexp', 'nobs'))
+      } else {
+        output_dims <- list(corr = c('nexp', 'nobs'))
+      }
+
+      res <- Apply(list(exp, obs),
+                   target_dims = list(c(time_dim, dat_dim),
+                                      c(time_dim, dat_dim)),
+                   output_dims = output_dims,
+                   fun = .Corr,
+                   time_dim = time_dim, method = method,
+                   pval = pval, conf = conf, conf.lev = conf.lev, ncores_input = ncores,
+                   ncores = ncores)
+
+    } else {  # correlation for each member
+
+      # Define output_dims
+      if (conf & pval) {
+        output_dims <- list(corr = c('nexp', 'nobs', 'exp_memb', 'obs_memb'),
+                            p.val = c('nexp', 'nobs', 'exp_memb', 'obs_memb'),
+                            conf.lower = c('nexp', 'nobs', 'exp_memb', 'obs_memb'),
+                            conf.upper = c('nexp', 'nobs', 'exp_memb', 'obs_memb'))
+      } else if (conf & !pval) {
+        output_dims <- list(corr = c('nexp', 'nobs', 'exp_memb', 'obs_memb'),
+                            conf.lower = c('nexp', 'nobs', 'exp_memb', 'obs_memb'),
+                            conf.upper = c('nexp', 'nobs', 'exp_memb', 'obs_memb'))
+      } else if (!conf & pval) {
+        output_dims <- list(corr = c('nexp', 'nobs', 'exp_memb', 'obs_memb'),
+                            p.val = c('nexp', 'nobs', 'exp_memb', 'obs_memb'))
+      } else {
+        output_dims <- list(corr = c('nexp', 'nobs', 'exp_memb', 'obs_memb'))
+      }
+
+      res <- Apply(list(exp, obs),
+                   target_dims = list(c(time_dim, dat_dim, memb_dim),
+                                      c(time_dim, dat_dim, memb_dim)),
+                   output_dims = output_dims,
+                   fun = .Corr,
+                   time_dim = time_dim, method = method,
+                   pval = pval, conf = conf, conf.lev = conf.lev, ncores_input = ncores,
+                   ncores = ncores) 
+    } 
+  }
+
  return(res)
 }
 
 .Corr <- function(exp, obs, time_dim = 'sdate', method = 'pearson',
-                  conf = TRUE, pval = TRUE, conf.lev = 0.95) {
+                  conf = TRUE, pval = TRUE, conf.lev = 0.95, ncores_input = NULL) {
 
+  if (length(dim(exp)) == 2) {
   # exp: [sdate, dat_exp]
   # obs: [sdate, dat_obs]
   nexp <- as.numeric(dim(exp)[2])
   nobs <- as.numeric(dim(obs)[2])
   
-  CORR <- array(dim = c(nexp = nexp, nobs = nobs))
-  eno_expand <- array(dim = c(nexp = nexp, nobs = nobs))
-  p.val <- array(dim = c(nexp = nexp, nobs = nobs))
-
-  # ens_mean
-  for (i in 1:nobs) {
-
-    CORR[, i] <- sapply(1:nexp, 
-                          function(x) {
-    if (any(!is.na(exp[, x])) && sum(!is.na(obs[, i])) > 2) {
-cor(exp[, x], obs[, i],
-                                       use = "pairwise.complete.obs", 
-                                       method = method)
-} else {
-    CORR[, i] <- NA
-}
-})
+# NOTE: Use sapply to replace the for loop 
+  CORR <- sapply(1:nobs, function(i) {
+                           sapply(1:nexp, function (x) {
+      if (any(!is.na(exp[, x])) && sum(!is.na(obs[, i])) > 2) { #NOTE: Is this necessary?
+        cor(exp[, x], obs[, i],
+            use = "pairwise.complete.obs",
+            method = method)
+      } else {
+        NA #CORR[, i] <- NA
+      }
+    })
+  })
+  if (is.null(dim(CORR))) {
+  CORR <- array(CORR, dim = c(1, 1))
   }
+
+  } else {  # member
+
+  # exp: [sdate, dat_exp, memb_exp]
+  # obs: [sdate, dat_obs, memb_obs]
+  nexp <- as.numeric(dim(exp)[2])
+  nobs <- as.numeric(dim(obs)[2])
+  exp_memb <- as.numeric(dim(exp)[3])
+  obs_memb <- as.numeric(dim(obs)[3])
+
+  CORR <- array(dim = c(nexp = nexp, nobs = nobs, exp_memb = exp_memb, obs_memb = obs_memb))
+
+  for (j in 1:obs_memb) {
+    for (y in 1:exp_memb) {
+      CORR[, , y, j] <- sapply(1:nobs, function(i) {
+                          sapply(1:nexp, function (x) {
+        if (any(!is.na(exp[, x, y])) && sum(!is.na(obs[, i, j])) > 2) {
+          cor(exp[, x, y], obs[, i, j],
+              use = "pairwise.complete.obs",
+              method = method)
+        } else {
+          NA #CORR[, i] <- NA
+        }
+        })
+      })
+
+    }
+  }
+
+
+  }
+
 
 #  if (pval) {
 #    for (i in 1:nobs) {
@@ -240,16 +398,29 @@ cor(exp[, x], obs[, i],
 
   if (pval | conf) {
     if (method == "kendall" | method == "spearman") {
-      tmp <- apply(obs, 2, rank)
+      tmp <- apply(obs, c(1:length(dim(obs)))[-1], rank)  # for memb_dim = NULL, 2; for memb_dim, c(2, 3)
       names(dim(tmp))[1] <- time_dim
-      eno <- Eno(tmp, time_dim)
+      eno <- Eno(tmp, time_dim, ncores = ncores_input)
     } else if (method == "pearson") {
-      eno <- Eno(obs, time_dim)  
+      eno <- Eno(obs, time_dim, ncores = ncores_input)  
     }
-    for (i in 1:nexp) {
-      eno_expand[i, ] <- eno
+
+    if (length(dim(exp)) == 2) {
+      eno_expand <- array(dim = c(nexp = nexp, nobs = nobs))
+      for (i in 1:nexp) {
+        eno_expand[i, ] <- eno
+      }
+    } else {  #member
+      eno_expand <- array(dim = c(nexp = nexp, nobs = nobs, exp_memb = exp_memb, obs_memb = obs_memb))
+      for (i in 1:nexp) {
+        for (j in 1:exp_memb) {
+          eno_expand[i, , j, ] <- eno
+        }
+      }
     }
+
   }
+
 #############old#################
 #This doesn't return error but it's diff from cor.test() when method is spearman and kendall
   if (pval) {

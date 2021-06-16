@@ -4,25 +4,78 @@
 \alias{PlotEquiMap}
 \title{Maps A Two-Dimensional Variable On A Cylindrical Equidistant Projection}
 \usage{
-PlotEquiMap(var, lon, lat, varu = NULL, varv = NULL, toptitle = NULL,
-  sizetit = NULL, units = NULL, brks = NULL, cols = NULL,
-  bar_limits = NULL, triangle_ends = NULL, col_inf = NULL,
-  col_sup = NULL, colNA = NULL, color_fun = clim.palette(),
-  square = TRUE, filled.continents = NULL, coast_color = NULL,
-  coast_width = 1, contours = NULL, brks2 = NULL, contour_lwd = 0.5,
-  contour_color = "black", contour_lty = 1, contour_label_scale = 1,
-  dots = NULL, dot_symbol = 4, dot_size = 1,
-  arr_subsamp = floor(length(lon)/30), arr_scale = 1, arr_ref_len = 15,
-  arr_units = "m/s", arr_scale_shaft = 1, arr_scale_shaft_angle = 1,
-  axelab = TRUE, labW = FALSE, intylat = 20, intxlon = 20,
-  axes_tick_scale = 1, axes_label_scale = 1, drawleg = TRUE,
-  subsampleg = NULL, bar_extra_labels = NULL, draw_bar_ticks = TRUE,
-  draw_separators = FALSE, triangle_ends_scale = 1, bar_label_digits = 4,
-  bar_label_scale = 1, units_scale = 1, bar_tick_scale = 1,
-  bar_extra_margin = rep(0, 4), boxlim = NULL, boxcol = "purple2",
-  boxlwd = 5, margin_scale = rep(1, 4), title_scale = 1, numbfig = NULL,
-  fileout = NULL, width = 8, height = 5, size_units = "in", res = 100,
-  ...)
+PlotEquiMap(
+  var,
+  lon,
+  lat,
+  varu = NULL,
+  varv = NULL,
+  toptitle = NULL,
+  sizetit = NULL,
+  units = NULL,
+  brks = NULL,
+  cols = NULL,
+  bar_limits = NULL,
+  triangle_ends = NULL,
+  col_inf = NULL,
+  col_sup = NULL,
+  colNA = NULL,
+  color_fun = clim.palette(),
+  square = TRUE,
+  filled.continents = NULL,
+  filled.oceans = FALSE,
+  coast_color = NULL,
+  coast_width = 1,
+  lake_color = NULL,
+  contours = NULL,
+  brks2 = NULL,
+  contour_lwd = 0.5,
+  contour_color = "black",
+  contour_lty = 1,
+  contour_draw_label = TRUE,
+  contour_label_scale = 1,
+  dots = NULL,
+  dot_symbol = 4,
+  dot_size = 1,
+  arr_subsamp = floor(length(lon)/30),
+  arr_scale = 1,
+  arr_ref_len = 15,
+  arr_units = "m/s",
+  arr_scale_shaft = 1,
+  arr_scale_shaft_angle = 1,
+  axelab = TRUE,
+  labW = FALSE,
+  lab_dist_x = NULL,
+  lab_dist_y = NULL,
+  degree_sym = FALSE,
+  intylat = 20,
+  intxlon = 20,
+  axes_tick_scale = 1,
+  axes_label_scale = 1,
+  drawleg = TRUE,
+  subsampleg = NULL,
+  bar_extra_labels = NULL,
+  draw_bar_ticks = TRUE,
+  draw_separators = FALSE,
+  triangle_ends_scale = 1,
+  bar_label_digits = 4,
+  bar_label_scale = 1,
+  units_scale = 1,
+  bar_tick_scale = 1,
+  bar_extra_margin = rep(0, 4),
+  boxlim = NULL,
+  boxcol = "purple2",
+  boxlwd = 5,
+  margin_scale = rep(1, 4),
+  title_scale = 1,
+  numbfig = NULL,
+  fileout = NULL,
+  width = 8,
+  height = 5,
+  size_units = "in",
+  res = 100,
+  ...
+)
 }
 \arguments{
 \item{var}{Array with the values at each cell of a grid on a regular 
@@ -89,11 +142,18 @@ the spaces in between with colours (FALSE). In the latter case,
 Takes the value gray(0.5) by default or, if 'square = FALSE', takes the 
 value FALSE. If set to FALSE, continents are not filled in.}
 
+\item{filled.oceans}{A logical value or the color name to fill in drawn 
+projected oceans. The default value is FALSE. If it is TRUE, the default 
+colour is "light blue".}
+
 \item{coast_color}{Colour of the coast line of the drawn projected continents.
 Takes the value gray(0.5) by default.}
 
 \item{coast_width}{Line width of the coast line of the drawn projected 
 continents. Takes the value 1 by default.}
+
+\item{lake_color}{Colour of the lake or other water body inside continents.
+The default value is NULL.}
 
 \item{contours}{Array of same dimensions as 'var' to be added to the plot 
 and displayed with contours. Parameter 'brks2' is required to define the 
@@ -110,6 +170,9 @@ and 'brks2', or if 'square = FALSE'.}
 
 \item{contour_lty}{Line type of the contour curves. Takes 1 (solid) by 
 default. See help on 'lty' in par() for other accepted values.}
+
+\item{contour_draw_label}{A logical value indicating whether to draw the 
+contour labels or not. The default value is TRUE.}
 
 \item{contour_label_scale}{Scale factor for the superimposed labels when 
 drawing contour levels.}
@@ -158,6 +221,16 @@ TRUE by default.}
 
 \item{labW}{Whether to label the longitude axis with a 'W' instead of minus 
 for negative values. Defaults to FALSE.}
+
+\item{lab_dist_x}{A numeric of the distance of the longitude labels to the 
+box borders. The default value is NULL and is automatically adjusted by 
+the function.}
+
+\item{lab_dist_y}{A numeric of the distance of the latitude labels to the 
+box borders. The default value is NULL and is automatically adjusted by 
+the function.}
+
+\item{degree_sym}{A logical indicating whether to include degree symbol (30° N) or not (30N; default).}
 
 \item{intylat}{Interval between latitude ticks on y-axis, in degrees. 
 Defaults to 20.}
@@ -244,8 +317,9 @@ grid cells. Only the region for which data has been provided is displayed.
 A colour bar (legend) can be plotted and adjusted. It is possible to draw 
 superimposed arrows, dots, symbols, contour lines and boxes. A number of 
 options is provided to adjust the position, size and colour of the 
-components. This plot function is compatible with figure layouts if colour 
-bar is disabled.
+components. Some parameters are provided to add and adjust the masks that
+include continents, oceans, and lakes. This plot function is compatible with
+figure layouts if colour bar is disabled.
 }
 \examples{
 # See examples on Load() to understand the first lines in this example
@@ -278,4 +352,3 @@ PlotEquiMap(sampleData$mod[1, 1, 1, 1, , ], sampleData$lon, sampleData$lat,
            toptitle = 'Predicted sea surface temperature for Nov 1960 from 1st Nov',
            sizetit = 0.5)
 }
-

@@ -4,8 +4,17 @@
 \alias{Composite}
 \title{Compute composites}
 \usage{
-Composite(data, occ, time_dim = "time", space_dim = c("lon", "lat"),
-  lag = 0, eno = FALSE, K = NULL, fileout = NULL, ncores = NULL)
+Composite(
+  data,
+  occ,
+  time_dim = "time",
+  space_dim = c("lon", "lat"),
+  lag = 0,
+  eno = FALSE,
+  K = NULL,
+  fileout = NULL,
+  ncores = NULL
+)
 }
 \arguments{
 \item{data}{A numeric array containing two spatial and one temporal 
@@ -101,4 +110,3 @@ occ <- c(1, 1, 2, 2, 3, 3)
 res <- Composite(data, occ, time_dim = 'case',  K = 4)
 
 }
-

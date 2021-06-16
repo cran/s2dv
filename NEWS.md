@@ -1,3 +1,20 @@
+# s2dv 1.0.0 (Release date: 2021-06-16)
+- New functions:
+ACC, Ano_CrossValid, BrierScore, CDORemap, Cluster, Consistent_Trend, EOF, EuroAtlanticTC, Filter, Histo2Hindcast, 
+NAO, Plot2VarsVsLTime, PlotACC, PlotBoxWhisker, PlotVsLTime, ProbBins, ProjectField, RatioRMS, 
+RatioSDRMS, REOF, Spectrum, Spread, StatSeasAtlHurr, UltimateBrier
+- Season(): Accept one-dimension input.  
+- Persistence(): Add parameters checks for 'start' and 'end'; correct the output 'AR.lowCI' and 'AR.highCI'.  
+- Corr(): Add parameter 'member' and 'memb_dim'. They allow the existence of the member dimension
+ which can have different length between exp and obs, and users can choose to do the ensemble mean 
+first before correlation or calculate the correlation for individual member. 
+- InsertDim(): Remove Apply() to improve the efficiency.  
+- Reorder(): Improve efficiency.  
+- Indices functions take the case without 'memb_dim' into consideration. The climatology calculation for the anomaly is member-dependent if member exists.  
+- PlotStereoMap(): Add contour and arrow feature.  
+- PlotAno(): Add parameter check for 'sdates'.  
+- PlotEquiMap(): Add new arguments 'contour_draw_label', 'lake_color', 'lab_dist_x', 'lab_dist_y', and 'degree_sym'. Fix the border error; the border grids are fully plotted now. Add ocean mask feature.
+
 # s2dv 0.1.1 (Release date: 2020-11-16)
 - Change the lincense to Apache License 2.0.
  

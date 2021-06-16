@@ -136,7 +136,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
@@ -191,7 +191,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
                   fun = .Clim,
                   method = method, time_dim = time_dim, 
                   dat_dim = dat_dim, memb_dim = memb_dim,
-                  memb = memb, na.rm = na.rm,
+                  memb = memb, na.rm = na.rm, ncores_input = ncores,
                   ncores = ncores)
     # Add member dimension name back
     if (memb) {
@@ -207,7 +207,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
                   fun = .Clim,
                   method = method, time_dim = time_dim,
                   dat_dim = dat_dim, ftime_dim = ftime_dim, memb_dim = memb_dim,
-                  memb = memb, na.rm = na.rm, 
+                  memb = memb, na.rm = na.rm, ncores_input = ncores,
                   ncores = ncores)
 
   } else if (method == 'NDV') {
@@ -216,7 +216,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
                   fun = .Clim,
                   method = method, time_dim = time_dim,
                   dat_dim = dat_dim, ftime_dim = ftime_dim, memb_dim = memb_dim,
-                  memb = memb, na.rm = na.rm, 
+                  memb = memb, na.rm = na.rm, ncores_input = ncores,
                   ncores = ncores)
   } 
 
@@ -227,7 +227,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
 .Clim <- function(exp, obs, method = 'clim',
                   time_dim = 'sdate', dat_dim = c('dataset', 'member'),
                   ftime_dim = 'ftime', memb_dim = 'member', memb = TRUE,
-                  na.rm = TRUE) {
+                  na.rm = TRUE, ncores_input = NULL) {
 
   if (method == 'clim') {
   # exp: [sdate, dat_dim_exp]
@@ -269,9 +269,9 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
   # exp clim
   ##--- NEW trend ---##
     tmp_obs <- Trend(data = obs, time_dim = time_dim, interval = 1, 
-                     polydeg = 1, conf = FALSE)$trend
+                     polydeg = 1, conf = FALSE, ncores = ncores_input)$trend
     tmp_exp <- Trend(data = exp, time_dim = time_dim, interval = 1, 
-                     polydeg = 1, conf = FALSE)$trend
+                     polydeg = 1, conf = FALSE, ncores = ncores_input)$trend
     # tmp_exp: [stats, dat_dim)]
 
     tmp_obs_mean <- apply(tmp_obs, 1, mean)  #average out dat_dim (dat and member)
@@ -337,10 +337,10 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
     #ini_: [sdate, dat_dim, ftime]
     tmp_exp <- Regression(datay = exp, datax = ini_exp, reg_dim = time_dim,
                           na.action = na.omit,
-                          pval = FALSE, conf = FALSE)$regression
+                          pval = FALSE, conf = FALSE, ncores = ncores_input)$regression
     tmp_obs <- Regression(datay = obs, datax = ini_obs, reg_dim = time_dim, 
                           na.action = na.omit, 
-                          pval = FALSE, conf = FALSE)$regression
+                          pval = FALSE, conf = FALSE, ncores = ncores_input)$regression
     #tmp_: [stats = 2, dat_dim, ftime]
     tmp_obs_mean <- apply(tmp_obs, c(1, length(dim(tmp_obs))), mean)  #average out dat_dim (dat and member)
     #tmp_obs_mean: [stats = 2, ftime]

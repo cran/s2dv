@@ -6,6 +6,10 @@ This document intends to be the first reference for any doubts that you may have
 1. **How to**
    1. [Global Map with non-standard longitudinal boundaries](#1-global-map-with-non-standard-longitudinal-boundaries)
 
+2. **Something goes wrong...**  
+   1. [CDORemap() returns errors or warnings with specific module versions](#1-cdoremap-returns-errors-or-warnings-with-specific-module-versions)
+
+
 ## 1. How to
 
 ### 1. Global Map with non-standard longitudinal boundaries
@@ -39,4 +43,28 @@ ColorBar(var_limits = c(1, max(a)))
 Note: You can adjust many parameters to visualize the plot, here we are just showing how to move the boundaries.
 
 If you want to add other information to the plot (e.g.: hatching, points, countours, ...), you can add it just before ColorBar() function.
+
+
+
+## 2. Something goes wrong...  
+
+### 1. CDORemap() returns errors or warnings with specific module versions  
+CDORemap() uses cdo and ncdf4 inside, and the performance is impacted by those tools a lot. 
+Some instances may work with a specific set of module combination but not with another. 
+Since the incompatibility is not from the R code, it is hard to improve or prevent the failure. 
+Here are some detected cases that specific versions need to be used.  
+(1) The 'grid' parameter is a file  
+- The workable version combination:  
+CDO/1.9.8-foss-2015a  
+R/3.6.1-foss-2015a-bare  
+HDF5/1.8.14-foss-2015a  
+- The unworkable version combination:
+_It returns a warning about HDF5._  
+CDO/1.6.3-foss-2015a  
+R/3.6.1-foss-2015a-bare  
+HDF5/1.10.5-foss-2015a  
+
+
+
+
 

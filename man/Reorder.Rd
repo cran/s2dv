@@ -26,4 +26,3 @@ Reorder the dimension order of a multi-dimensional array
  dat2 <- array(c(1:10), dim = c(2, 1, 5))
  print(dim(Reorder(dat2, c(2, 1, 3))))
 }
-

@@ -4,29 +4,43 @@
 \alias{GMST}
 \title{Compute the Global Mean Surface Temperature (GMST) anomalies}
 \usage{
-GMST(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_value, type,
-  mask = NULL, lat_dim = "lat", lon_dim = "lon", monini = 11,
-  fmonth_dim = "fmonth", sdate_dim = "sdate", indices_for_clim = NULL,
-  year_dim = "year", month_dim = "month", member_dim = "member")
+GMST(
+  data_tas,
+  data_tos,
+  data_lats,
+  data_lons,
+  mask_sea_land,
+  sea_value,
+  type,
+  mask = NULL,
+  lat_dim = "lat",
+  lon_dim = "lon",
+  monini = 11,
+  fmonth_dim = "fmonth",
+  sdate_dim = "sdate",
+  indices_for_clim = NULL,
+  year_dim = "year",
+  month_dim = "month",
+  na.rm = TRUE,
+  ncores = NULL
+)
 }
 \arguments{
-\item{data_tas}{A numerical array indicating the surface air temperature data
-to be used for the index computation with the dimensions: 1) latitude, 
-longitude, start date, forecast month, and member (in case of decadal 
-predictions), 2) latitude, longitude, year, month and member (in case of 
-historical simulations), or 3) latitude, longitude, year and month (in case
-of observations or reanalyses). This data has to be provided, at least, 
-over the whole region needed to compute the index. The dimensions must be 
-identical to those of data_tos.}
+\item{data_tas}{A numerical array  with the surface air temperature data
+to be used for the index computation with, at least, the
+dimensions: 1) latitude, longitude, start date and forecast month 
+(in case of decadal predictions), 2) latitude, longitude, year and month 
+(in case of historical simulations or observations). This data has to be 
+provided, at least, over the whole region needed to compute the index.
+The dimensions must be identical to thos of data_tos.}
 
-\item{data_tos}{A numerical array indicating the sea surface temperature data
-to be used for the index computation with the dimensions: 1) latitude, 
-longitude, start date, forecast month, and member (in case of decadal 
-predictions), 2) latitude, longitude, year, month and member (in case of 
-historical simulations), or 3) latitude, longitude, year and month (in case
-of observations or reanalyses). This data has to be provided, at least, 
-over the whole region needed to compute the index. The dimensions must be
-identical to those of data_tas.}
+\item{data_tos}{A numerical array  with the sea surface temperature data
+to be used for the index computation with, at least, the
+dimensions: 1) latitude, longitude, start date and forecast month 
+(in case of decadal predictions), 2) latitude, longitude, year and month 
+(in case of historical simulations or observations). This data has to be 
+provided, at least, over the whole region needed to compute the index.
+The dimensions must be identical to thos of data_tas.}
 
 \item{data_lats}{A numeric vector indicating the latitudes of the data.}
 
@@ -74,7 +88,7 @@ climatology is calculated over the whole period. If the data are already
 anomalies, set it to FALSE. The default value is NULL.\cr
 In case of parameter 'type' is 'dcpp', 'indices_for_clim' must be relative 
 to the first forecast year, and the climatology is automatically computed 
-over the actual common period for the different forecast years.}
+over the common calendar period for the different forecast years.}
 
 \item{year_dim}{A character string indicating the name of the year dimension
 The default value is 'year'. Only used if parameter 'type' is 'hist' or 
@@ -84,20 +98,23 @@ The default value is 'year'. Only used if parameter 'type' is 'hist' or
 dimension. The default value is 'month'. Only used if parameter 'type' is 
 'hist' or 'obs'.}
 
-\item{member_dim}{A character string indicating the name of the member 
-dimension. The default value is 'member'. Only used if parameter 'type' is
-'dcpp' or 'hist'.}
+\item{na.rm}{A logical value indicanting whether to remove NA values. The default 
+value is TRUE.}
+
+\item{ncores}{An integer indicating the number of cores to use for parallel 
+computation. The default value is NULL.}
 }
 \value{
-A numerical array of the GMST anomalies with the dimensions of:
- 1) sdate, forecast year, and member (in case of decadal predictions);
- 2) year and member (in case of historical simulations); or
- 3) year (in case of observations or reanalyses).
+A numerical array with the GMST anomalies with the same dimensions as data_tas except 
+ the lat_dim, lon_dim and fmonth_dim (month_dim) in case of decadal predictions 
+ (historical simulations or observations). In case of decadal predictions, a new dimension
+ 'fyear' is added.
 }
 \description{
 The Global Mean Surface Temperature (GMST) anomalies are computed as the
 weighted-averaged surface air temperature anomalies over land and sea surface
-temperature anomalies over the ocean.
+temperature anomalies over the ocean. If different members and/or datasets are provided, 
+the climatology (used to calculate the anomalies) is computed individually for all of them.
 }
 \examples{
 ## Observations or reanalyses
@@ -134,4 +151,3 @@ index_dcpp <- GMST(data_tas = dcpp_tas, data_tos = dcpp_tos, data_lats = lat,
                    sea_value = sea_value)
 
 }
-

@@ -47,4 +47,3 @@ sampleData <- Load('tos', list(exp), list(obs), startDates,
  }
 Check the documentation on 'Load()' in the package 's2dv' for more information.
 }
-

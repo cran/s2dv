@@ -115,16 +115,15 @@ Trend <- function(data, time_dim = 'ftime', interval = 1, polydeg = 1,
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
-      length(ncores) > 1) {
+    if (!is.numeric(ncores)) {
+      stop("Parameter 'ncores' must be a positive integer.")
+    } else if (ncores %% 1 != 0 | ncores <= 0 | length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
   }
 
   ###############################
   # Calculate Trend
-  dim_names <- names(dim(data))
-
   if (conf & pval) {
     output_dims <- list(trend = 'stats', conf.lower = 'stats',
                         conf.upper = 'stats', p.val = 'stats', detrended = time_dim)
@@ -136,22 +135,22 @@ Trend <- function(data, time_dim = 'ftime', interval = 1, polydeg = 1,
   } else {
     output_dims <- list(trend = 'stats', detrended = time_dim)
   }
-
-
+  
   output <- Apply(list(data),
                   target_dims = time_dim,
                   fun = .Trend,
                   output_dims = output_dims,
-                  time_dim = time_dim, interval = interval, 
+                  interval = interval, 
                   polydeg = polydeg, conf = conf,
                   conf.lev = conf.lev, pval = pval,
                   ncores = ncores)
 
-  return(output)
+  return(invisible(output))
 }
 
-.Trend <- function(x, time_dim = 'ftime', interval = 1, polydeg = 1,
+.Trend <- function(x, interval = 1, polydeg = 1,
                    conf = TRUE, conf.lev = 0.95, pval = TRUE) {
+  # x: [ftime]
 
   mon <- seq(x) * interval
 
@@ -193,7 +192,6 @@ Trend <- function(data, time_dim = 'ftime', interval = 1, polydeg = 1,
     }
 
   }
-
   if (conf & pval) {
     return(list(trend = trend, conf.lower = conf.lower, conf.upper = conf.upper, 
                 p.val = p.val, detrended = detrended))

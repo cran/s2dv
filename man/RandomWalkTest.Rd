@@ -49,4 +49,3 @@ skill_B <- abs(fcst_B - reference)
 RandomWalkTest(skill_A = skill_A, skill_B = skill_B, time_dim = 'sdate', ncores = 1)
 
 }
-

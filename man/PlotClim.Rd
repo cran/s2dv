@@ -4,11 +4,26 @@
 \alias{PlotClim}
 \title{Plots Climatologies}
 \usage{
-PlotClim(exp_clim, obs_clim = NULL, toptitle = "", ytitle = "",
-  monini = 1, freq = 12, limits = NULL, listexp = c("exp1", "exp2",
-  "exp3"), listobs = c("obs1", "obs2", "obs3"), biglab = FALSE,
-  leg = TRUE, sizetit = 1, fileout = NULL, width = 8, height = 5,
-  size_units = "in", res = 100, ...)
+PlotClim(
+  exp_clim,
+  obs_clim = NULL,
+  toptitle = "",
+  ytitle = "",
+  monini = 1,
+  freq = 12,
+  limits = NULL,
+  listexp = c("exp1", "exp2", "exp3"),
+  listobs = c("obs1", "obs2", "obs3"),
+  biglab = FALSE,
+  leg = TRUE,
+  sizetit = 1,
+  fileout = NULL,
+  width = 8,
+  height = 5,
+  size_units = "in",
+  res = 100,
+  ...
+)
 }
 \arguments{
 \item{exp_clim}{Matrix containing the experimental data with dimensions:\cr
@@ -79,4 +94,3 @@ PlotClim(clim$clim_exp, clim$clim_obs, toptitle = paste('climatologies'),
         listobs = c('ERSST'), biglab = FALSE, fileout = NULL)
 
 }
-

@@ -4,12 +4,30 @@
 \alias{PlotAno}
 \title{Plot Anomaly time series}
 \usage{
-PlotAno(exp_ano, obs_ano = NULL, sdates, toptitle = rep("", 15),
-  ytitle = rep("", 15), limits = NULL, legends = NULL, freq = 12,
-  biglab = FALSE, fill = TRUE, memb = TRUE, ensmean = TRUE,
-  linezero = FALSE, points = FALSE, vlines = NULL, sizetit = 1,
-  fileout = NULL, width = 8, height = 5, size_units = "in", res = 100,
-  ...)
+PlotAno(
+  exp_ano,
+  obs_ano = NULL,
+  sdates,
+  toptitle = rep("", 15),
+  ytitle = rep("", 15),
+  limits = NULL,
+  legends = NULL,
+  freq = 12,
+  biglab = FALSE,
+  fill = TRUE,
+  memb = TRUE,
+  ensmean = TRUE,
+  linezero = FALSE,
+  points = FALSE,
+  vlines = NULL,
+  sizetit = 1,
+  fileout = NULL,
+  width = 8,
+  height = 5,
+  size_units = "in",
+  res = 100,
+  ...
+)
 }
 \arguments{
 \item{exp_ano}{A numerical array containing the experimental data:\cr
@@ -100,4 +118,3 @@ PlotAno(smooth_ano_exp, smooth_ano_obs, startDates,
        legends = 'ERSST', biglab = FALSE)
 
 }
-

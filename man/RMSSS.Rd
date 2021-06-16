@@ -4,8 +4,14 @@
 \alias{RMSSS}
 \title{Compute root mean square error skill score}
 \usage{
-RMSSS(exp, obs, time_dim = "sdate", dat_dim = "dataset", pval = TRUE,
-  ncores = NULL)
+RMSSS(
+  exp,
+  obs,
+  time_dim = "sdate",
+  dat_dim = "dataset",
+  pval = TRUE,
+  ncores = NULL
+)
 }
 \arguments{
 \item{exp}{A named numeric array of experimental data which contains at least
@@ -66,4 +72,3 @@ obs <- array(rnorm(15), dim = c(time = 3, memb = 5, dataset = 1))
 res <- RMSSS(exp, obs, time_dim = 'time')
 
 }
-

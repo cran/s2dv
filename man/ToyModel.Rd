@@ -7,8 +7,18 @@ components of a forecast: (1) predictabiltiy (2) forecast error (3)
 non-stationarity and (4) ensemble generation. The forecast can be computed 
 for real observations or observations generated artifically.}
 \usage{
-ToyModel(alpha = 0.1, beta = 0.4, gamma = 1, sig = 1, trend = 0,
-  nstartd = 30, nleadt = 4, nmemb = 10, obsini = NULL, fxerr = NULL)
+ToyModel(
+  alpha = 0.1,
+  beta = 0.4,
+  gamma = 1,
+  sig = 1,
+  trend = 0,
+  nstartd = 30,
+  nleadt = 4,
+  nmemb = 10,
+  obsini = NULL,
+  fxerr = NULL
+)
 }
 \arguments{
 \item{alpha}{Predicabiltiy of the forecast on the observed residuals 
@@ -120,4 +130,3 @@ toyforecast <- ToyModel(alpha = a, beta = b, gamma = g, nmemb = nm,
 #  }
 
 }
-

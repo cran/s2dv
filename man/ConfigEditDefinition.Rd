@@ -57,4 +57,3 @@ match_info <- ConfigApplyMatchingEntries(configuration, 'tas',
  [ConfigEditEntry()], [ConfigFileOpen()], [ConfigShowSimilarEntries()], 
  [ConfigShowTable()].
 }
-

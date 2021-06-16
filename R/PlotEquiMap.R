@@ -6,8 +6,9 @@
 #'A colour bar (legend) can be plotted and adjusted. It is possible to draw 
 #'superimposed arrows, dots, symbols, contour lines and boxes. A number of 
 #'options is provided to adjust the position, size and colour of the 
-#'components. This plot function is compatible with figure layouts if colour 
-#'bar is disabled.
+#'components. Some parameters are provided to add and adjust the masks that
+#'include continents, oceans, and lakes. This plot function is compatible with
+#'figure layouts if colour bar is disabled.
 #'
 #'@param var Array with the values at each cell of a grid on a regular 
 #'  rectangular or gaussian grid. The array is expected to have two 
@@ -60,10 +61,15 @@
 #'@param filled.continents Colour to fill in drawn projected continents. 
 #'  Takes the value gray(0.5) by default or, if 'square = FALSE', takes the 
 #'  value FALSE. If set to FALSE, continents are not filled in.
+#'@param filled.oceans A logical value or the color name to fill in drawn 
+#'  projected oceans. The default value is FALSE. If it is TRUE, the default 
+#'  colour is "light blue".
 #'@param coast_color Colour of the coast line of the drawn projected continents.
 #'   Takes the value gray(0.5) by default.
 #'@param coast_width Line width of the coast line of the drawn projected 
 #'  continents. Takes the value 1 by default.
+#'@param lake_color Colour of the lake or other water body inside continents.
+#'  The default value is NULL. 
 #'@param contours Array of same dimensions as 'var' to be added to the plot 
 #'  and displayed with contours. Parameter 'brks2' is required to define the 
 #'  magnitude breaks for each contour curve. Disregarded if 'square = FALSE'.
@@ -75,6 +81,8 @@
 #'  and 'brks2', or if 'square = FALSE'.
 #'@param contour_lty Line type of the contour curves. Takes 1 (solid) by 
 #'  default. See help on 'lty' in par() for other accepted values.
+#'@param contour_draw_label A logical value indicating whether to draw the 
+#'  contour labels or not. The default value is TRUE.
 #'@param contour_label_scale Scale factor for the superimposed labels when 
 #'  drawing contour levels.
 #'@param dots Array of same dimensions as 'var' or with dimensions 
@@ -111,6 +119,13 @@
 #'  TRUE by default.
 #'@param labW Whether to label the longitude axis with a 'W' instead of minus 
 #'  for negative values. Defaults to FALSE.
+#'@param lab_dist_x A numeric of the distance of the longitude labels to the 
+#'  box borders. The default value is NULL and is automatically adjusted by 
+#'  the function.
+#'@param lab_dist_y A numeric of the distance of the latitude labels to the 
+#'  box borders. The default value is NULL and is automatically adjusted by 
+#'  the function.
+#'@param degree_sym A logical indicating whether to include degree symbol (30° N) or not (30N; default).
 #'@param intylat Interval between latitude ticks on y-axis, in degrees. 
 #'  Defaults to 20.
 #'@param intxlon Interval between latitude ticks on x-axis, in degrees. 
@@ -213,15 +228,17 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
                         triangle_ends = NULL, col_inf = NULL, col_sup = NULL, 
                         colNA = NULL, color_fun = clim.palette(),
                         square = TRUE, filled.continents = NULL,
-                        coast_color = NULL, coast_width = 1,
+                        filled.oceans = FALSE,
+                        coast_color = NULL, coast_width = 1, lake_color = NULL,
                         contours = NULL, brks2 = NULL, contour_lwd = 0.5,
                         contour_color = 'black', contour_lty = 1,
-                        contour_label_scale = 1,
+                        contour_draw_label = TRUE, contour_label_scale = 1,
                         dots = NULL, dot_symbol = 4, dot_size = 1, 
                         arr_subsamp = floor(length(lon) / 30), arr_scale = 1, 
                         arr_ref_len = 15, arr_units = "m/s", 
                         arr_scale_shaft = 1, arr_scale_shaft_angle = 1,
                         axelab = TRUE, labW = FALSE, 
+                        lab_dist_x = NULL, lab_dist_y = NULL, degree_sym = FALSE,
                         intylat = 20, intxlon = 20, 
                         axes_tick_scale = 1, axes_label_scale = 1,
                         drawleg = TRUE, subsampleg = NULL, 
@@ -403,8 +420,18 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   } else if (!is.logical(filled.continents)) {
     continent_color <- filled.continents
     filled.continents <- TRUE
-  } else if (filled.continents) {
+  } else {
     continent_color <- gray(0.5)
+  }
+
+  # Check filled.oceans
+  if (!.IsColor(filled.oceans) & !is.logical(filled.oceans)) {
+    stop("Parameter 'filled.oceans' must be logical or a colour identifier.")
+  } else if (!is.logical(filled.oceans)) {
+    ocean_color <- filled.oceans
+    filled.oceans <- TRUE
+  } else if (filled.oceans) {
+    ocean_color <- "light blue"
   }
 
   # Check coast_color
@@ -422,6 +449,17 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   # Check coast_width
   if (!is.numeric(coast_width)) {
     stop("Parameter 'coast_width' must be numeric.")
+  }
+
+  # Check lake_color
+  if (!is.null(lake_color)) {
+#    if (filled.continents) {
+#      lake_color <- 'white'
+#    }
+#  } else {
+    if (!.IsColor(lake_color)) {
+      stop("Parameter 'lake_color' must be a valid colour identifier.")
+    }
   }
 
   # Check contours
@@ -458,6 +496,11 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   # Check contour_lty
   if (!is.numeric(contour_lty) && !is.character(contour_lty)) {
     stop("Parameter 'contour_lty' must be either a number or a character string.")
+  }
+
+  # Check contour_draw_label
+  if (!is.logical(contour_draw_label)) {
+    stop("Parameter 'contour_draw_label' must be logical.")
   }
 
   # Check contour_label_scale
@@ -514,6 +557,16 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   }
   if (!is.logical(labW)) {
     stop("Parameter 'labW' must be logical.")
+  }
+  if (!is.null(lab_dist_x)) {
+    if (!is.numeric(lab_dist_x)) {
+      stop("Parameter 'lab_dist_x' must be numeric.")
+    }
+  }
+  if (!is.null(lab_dist_y)) {
+    if (!is.numeric(lab_dist_y)) {
+      stop("Parameter 'lab_dist_y' must be numeric.")
+    }
   }
   if (!is.numeric(intylat)) {
     stop("Parameter 'intylat' must be numeric.")
@@ -648,6 +701,7 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     margin_scale[1] <- margin_scale[1] - 1
   }
   margins <- rep(0.4, 4) * margin_scale
+  margins[4] <- margins[4] + 1
   cex_title <- 2 * title_scale
   cex_axes_labels <- 1.3 * axes_label_scale
   cex_axes_ticks <- -0.5 * axes_tick_scale
@@ -656,20 +710,34 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     ypos <- seq(latmin, latmax, intylat)
     xpos <- seq(lonmin, lonmax, intxlon)
     letters <- array('', length(ypos))
-    letters[ypos < 0] <- 'S'
-    letters[ypos > 0] <- 'N'
+    if (degree_sym == FALSE) {
+      letters[ypos < 0] <- 'S'
+      letters[ypos > 0] <- 'N'
+    } else {
+      letters[ypos < 0] <- paste(intToUtf8(176), 'S')
+      letters[ypos > 0] <- paste(intToUtf8(176), 'N')
+    }
     ylabs <- paste(as.character(abs(ypos)), letters, sep = '')
     letters <- array('', length(xpos))
     if (labW) {
       xpos2 <- xpos  
       xpos2[xpos2 > 180] <- 360 - xpos2[xpos2 > 180]
     }
-    letters[xpos < 0] <- 'W'
-    letters[xpos > 0] <- 'E'
+    if (degree_sym == FALSE) {
+      letters[xpos < 0] <- 'W'
+      letters[xpos > 0] <- 'E'
+    } else {
+      letters[xpos < 0] <- paste(intToUtf8(176), 'W')
+      letters[xpos > 0] <- paste(intToUtf8(176), 'E')
+    }
     if (labW) {
       letters[xpos == 0] <- ' '
       letters[xpos == 180] <- ' '
-      letters[xpos > 180] <- 'W'  
+      if (degree_sym == FALSE) {
+        letters[xpos > 180] <- 'W'
+      } else {
+        letters[xpos > 180] <- paste(intToUtf8(176), 'W')
+      }  
       xlabs <- paste(as.character(abs(xpos2)), letters, sep = '')
     } else {
       xlabs <- paste(as.character(abs(xpos)), letters, sep = '')
@@ -695,13 +763,31 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   par(userArgs)
   par(mar = margins, cex.main = cex_title, cex.axis = cex_axes_labels,
       mgp = c(0, spaceticklab, 0), las = 0)
-  plot.window(xlim = range(lonb$x, finite = TRUE), ylim = range(latb$x, finite = TRUE),
-              xaxs = 'i', yaxs = 'i')
+
+  #NOTE: Here creates the window for later plot. If 'usr' for par() is not specified,
+  #      use the lat/lon as the borders. If 'usr' is specified, use the assigned values.
+  if (is.null(userArgs$usr)) { 
+    #NOTE: The grids are assumed to be equally spaced
+    xlim_cal <- c(lonb$x[1] - (lonb$x[2] - lonb$x[1]) / 2, 
+                  lonb$x[length(lonb$x)] + (lonb$x[2] - lonb$x[1]) / 2)
+    ylim_cal <- c(latb$x[1] - (latb$x[2] - latb$x[1]) / 2,
+                  latb$x[length(latb$x)] + (latb$x[2] - latb$x[1]) / 2)
+    plot.window(xlim =  xlim_cal, ylim = ylim_cal, xaxs = 'i', yaxs = 'i')
+# Below is Old code. The border grids are only half plotted.
+#    plot.window(xlim = range(lonb$x, finite = TRUE), ylim = range(latb$x, finite = TRUE),
+#                xaxs = 'i', yaxs = 'i')
+  } else {
+    plot.window(xlim = par("usr")[1:2], ylim  = par("usr")[3:4], xaxs = 'i', yaxs = 'i')
+  }
+
   if (axelab) {
+    lab_distance_y <- ifelse(is.null(lab_dist_y), spaceticklab + 0.2, lab_dist_y)
+    lab_distance_x <- ifelse(is.null(lab_dist_x), spaceticklab + cex_axes_labels / 2 - 0.3, lab_dist_x)
+
     axis(2, at = ypos, labels = ylabs, cex.axis = cex_axes_labels, tcl = cex_axes_ticks,
-         mgp = c(0, spaceticklab + 0.2, 0))
+         mgp = c(0, lab_distance_y, 0))
     axis(1, at = xpos, labels = xlabs, cex.axis = cex_axes_labels, tcl = cex_axes_ticks,
-         mgp = c(0, spaceticklab + cex_axes_labels / 2 - 0.3, 0))
+         mgp = c(0, lab_distance_x, 0))
   }
   title(toptitle, cex.main = cex_title)
   rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = colNA)
@@ -717,10 +803,16 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
                     col = c(col_inf_image, cols, col_sup_image))
   }
   if (!is.null(contours)) {
+#NOTE: 'labcex' is the absolute size of contour labels. Parameter 'contour_label_scale'
+#      is provided in PlotEquiMap() but it was not used. Here, 'cex_axes_labels' was used
+#      and it was calculated from 'axes_label_scale', the size of lat/lon axis label.
+#      It is changed to use contour_label_scale*par('cex').
     contour(lonb$x, latb$x, contours[lonb$ix, latb$ix], levels = brks2,
-            method = "edge", add = TRUE, 
-            labcex = cex_axes_labels, lwd = contour_lwd, lty = contour_lty,
-            col = contour_color)
+            method = "edge", add = TRUE,
+#            labcex = cex_axes_labels,
+            labcex = contour_label_scale * par("cex"),
+            lwd = contour_lwd, lty = contour_lty,
+            col = contour_color, drawlabels = contour_draw_label)
   }
 
   #
@@ -740,30 +832,77 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   #
   #  Plotting continents
   # ~~~~~~~~~~~~~~~~~~~~~
-  # 
-  coast <- map(continents, interior = FALSE, wrap = TRUE,
-               fill = filled.continents, add = TRUE, plot = FALSE)
-  if (filled.continents) {
-    old_lwd <- par('lwd')
-    par(lwd = coast_width)
-    if (min(lon) >= 0) {
-      ylat <- latmin:latmax
-      xlon <- lonmin:lonmax
-      proj <- GEOmap::setPROJ(1, LON0 = mean(xlon),
-                              LAT0 = mean(ylat), LATS = ylat, LONS = xlon)
-      lakes <- which(coastmap$STROKES$col == "blue")
+  #
+  # maps::map has the global map range [0, 360] or [-180, 180].
+  # Set xlim so lon = 0 won't show a straight line when lon = [0, 359]. 
+  # NOTE: It works except Antartic area. Don't know why. ylim is also set 
+  #       but it doesn't work.
+  if (continents == 'world') {  # [-180, 180]
+    xlim_conti <- c(-179.99, 179.99)
+  } else {  # [0, 360]
+    xlim_conti <- c(0.01, 359.99)
+  }
+  old_lwd <- par('lwd')
+  par(lwd = coast_width)
+  # If [0, 360], use GEOmap; if [-180, 180], use maps
+  if (min(lon) >= 0) {
+    ylat <- latmin:latmax
+    xlon <- lonmin:lonmax
+    proj <- GEOmap::setPROJ(1, LON0 = mean(xlon),
+                            LAT0 = mean(ylat), LATS = ylat, LONS = xlon)
+    lakes <- which(coastmap$STROKES$col == "blue")
+    par(new = TRUE)
+    if (filled.continents) {
       coastmap$STROKES$col[which(coastmap$STROKES$col != "blue")] <- continent_color
-      coastmap$STROKES$col[lakes] <- "white"
-      par(new = TRUE)
+      if (is.null(lake_color)) {
+        coastmap$STROKES$col[lakes] <- continent_color
+      } else {
+        coastmap$STROKES$col[lakes] <- lake_color #"white"
+      }
       GEOmap::plotGEOmap(coastmap, PROJ = proj, border = coast_color, 
                          add = TRUE, lwd = coast_width)
     } else {
-      polygon(coast, col = continent_color, border = coast_color, lwd = coast_width)
+      coastmap$STROKES$col[which(coastmap$STROKES$col != "blue")] <- coast_color
+      if (is.null(lake_color)) {
+        coastmap$STROKES$col[lakes] <- coast_color
+      } else {
+        coastmap$STROKES$col[lakes] <- lake_color #"white"
+      }
+      GEOmap::plotGEOmap(coastmap, PROJ = proj, #MAPcol = coast_color,
+                         add = TRUE, lwd = coast_width, MAPstyle = 2)
     }
-    par(lwd = old_lwd)
+
   } else {
-    lines(coast, col = coast_color, lwd = coast_width)
+    # [-180, 180]
+    coast <- map(continents, interior = FALSE, wrap = TRUE,
+                 xlim = xlim_conti, ylim = c(-89.99, 89.99),
+                 fill = filled.continents, add = TRUE, plot = FALSE)
+    if (filled.continents) {
+      polygon(coast, col = continent_color, border = coast_color, lwd = coast_width)
+    } else {
+      lines(coast, col = coast_color, lwd = coast_width)
+    }
+    if (!is.null(lake_color)) {
+      map('lakes', add = TRUE, fill = filled.continents, col = lake_color) 
+    }
   }
+  par(lwd = old_lwd)
+
+  # filled.oceans
+  if (filled.oceans) {
+      old_lwd <- par('lwd')
+      par(lwd = coast_width)
+
+      outline <- map(continents, fill = T, plot = FALSE)  # must be fill = T
+      xbox <- xlim_conti + c(-2, 2)
+      ybox <- c(-92, 92) 
+      outline$x <- c(outline$x, NA, c(xbox, rev(xbox), xbox[1]))
+      outline$y <- c(outline$y, NA, rep(ybox, each = 2), ybox[1])
+      polypath(outline, col = ocean_color, rule = 'evenodd', border = NA)
+
+      par(lwd = old_lwd)
+  }
+
   box()
   # Draw rectangle on the map
   if (!is.null(boxlim)) {
@@ -803,8 +942,8 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   #
   if (!is.null(varu) && !is.null(varv)) {
     # Create a two dimention array of longitude and latitude
-    lontab <- InsertDim(lonb$x, 2, length( latb$x))
-    lattab <- InsertDim(latb$x, 1, length( lonb$x))
+    lontab <- InsertDim(lonb$x, 2, length(latb$x), name = 'lat')
+    lattab <- InsertDim(latb$x, 1, length(lonb$x), name = 'lon')
     varplotu <- varu[lonb$ix, latb$ix]
     varplotv <- varv[lonb$ix, latb$ix]
 

@@ -4,13 +4,14 @@
 #'Nino-Southern Oscillation (ENSO) and the Inderdecadal Pacific Oscillation 
 #'(IPO). The SPOD index is computed as the difference of weighted-averaged SST
 #'anomalies over 20ºS-48ºS, 165ºE-190ºE (NW pole) and the weighted-averaged SST
-#' anomalies over 44ºS-65ºS, 220ºE-260ºE (SE pole) (Saurral et al., 2020).
+#'anomalies over 44ºS-65ºS, 220ºE-260ºE (SE pole) (Saurral et al., 2020). 
+#'If different members and/or datasets are provided, the climatology (used to 
+#'calculate the anomalies) is computed individually for all of them.
 #'
-#'@param data A numerical array to be used for the index computation with the
-#'  dimensions: 1) latitude, longitude, start date, forecast month, and member 
-#'  (in case of decadal predictions), 2) latitude, longitude, year, month and 
-#'  member (in case of historical simulations), or 3) latitude, longitude, year
-#'  and month (in case of observations or reanalyses). This data has to be 
+#'@param data A numerical array to be used for the index computation with, at least, the
+#'  dimensions: 1) latitude, longitude, start date and forecast month 
+#'  (in case of decadal predictions), 2) latitude, longitude, year and month 
+#'  (in case of historical simulations or observations). This data has to be 
 #'  provided, at least, over the whole region needed to compute the index.
 #'@param data_lats A numeric vector indicating the latitudes of the data.
 #'@param data_lons A numeric vector indicating the longitudes of the data.
@@ -43,21 +44,22 @@
 #'  anomalies, set it to FALSE. The default value is NULL.\cr
 #'  In case of parameter 'type' is 'dcpp', 'indices_for_clim' must be relative 
 #'  to the first forecast year, and the climatology is automatically computed 
-#'  over the actual common period for the different forecast years.
+#'  over the common calendar period for the different forecast years.
 #'@param year_dim A character string indicating the name of the year dimension
 #'  The default value is 'year'. Only used if parameter 'type' is 'hist' or 
 #'  'obs'.
 #'@param month_dim A character string indicating the name of the month
 #'  dimension. The default value is 'month'. Only used if parameter 'type' is 
 #'  'hist' or 'obs'.
-#'@param member_dim A character string indicating the name of the member 
-#'  dimension. The default value is 'member'. Only used if parameter 'type' is
-#'  'dcpp' or 'hist'.
+#'@param na.rm A logical value indicanting whether to remove NA values. The default 
+#'  value is TRUE.
+#'@param ncores An integer indicating the number of cores to use for parallel 
+#'  computation. The default value is NULL.
 #'
-#'@return A numerical array of the SPOD index with the dimensions of:
-#'  1) sdate, forecast year, and member (in case of decadal predictions); 
-#'  2) year and member (in case of historical simulations); or
-#'  3) year (in case of observations or reanalyses).
+#'@return A numerical array with the SPOD index with the same dimensions as data except 
+#'  the lat_dim, lon_dim and fmonth_dim (month_dim) in case of decadal predictions 
+#'  (historical simulations or observations). In case of decadal predictions, a new dimension
+#'  'fyear' is added.
 #'
 #'@examples
 #' ## Observations or reanalyses
@@ -84,7 +86,7 @@
 SPOD <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'lon', 
                  mask = NULL, monini = 11, fmonth_dim = 'fmonth', sdate_dim = 'sdate', 
                  indices_for_clim = NULL, year_dim = 'year', month_dim = 'month', 
-                 member_dim = 'member') {
+                 na.rm = TRUE, ncores = NULL) {
   
   ## Input Checks
   # data
@@ -128,6 +130,13 @@ SPOD <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'l
     stop(paste0("The longitude dimension of parameter 'data' must be the same",
                 " length of parameter 'data_lons'."))
   }
+  # ncores
+  if (!is.null(ncores)) {
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
+      length(ncores) > 1) {
+      stop("Parameter 'ncores' must be a positive integer.")
+    }
+  }
   # mask 
   if (!is.null(mask)) {
     if (is.array(mask) & identical(names(dim(mask)), c(lat_dim,lon_dim)) &
@@ -139,7 +148,7 @@ SPOD <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'l
         return(data)
       }
       data <- multiApply::Apply(data = data, target_dims = c(lat_dim, lon_dim),
-                                fun = fun_mask, mask = mask)$output1
+                                fun = fun_mask, mask = mask, ncores = ncores)$output1
     } else {
       stop(paste0("Parameter 'mask' must be NULL (no mask) or a numerical array ",
                   "with c(lat_dim, lon_dim) dimensions and 0 in those grid ",
@@ -198,14 +207,9 @@ SPOD <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'l
       stop("Parameter 'month_dim' is not found in 'data' dimension.")
     }
   }
-  # member_dim
-  if (type == 'hist' | type == 'dcpp') {
-    if (!(is.character(member_dim) & length(member_dim) == 1)) {
-      stop("Parameter 'member_dim' must be a character string.")
-    }
-    if (!member_dim %in% names(dim(data))) {
-      stop("Parameter 'member_dim' is not found in 'data' dimension.")
-    }
+  # na.rm
+  if (!na.rm %in% c(TRUE,FALSE)) {
+    stop("Parameter 'na.rm' must be TRUE or FALSE")
   }
 
   ## Regions for IPO_SPOD (Saurral et al., 2020)
@@ -229,9 +233,16 @@ SPOD <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'l
   data <- ClimProjDiags::CombineIndices(indices = list(mean_1,mean_2), 
                                         weights = NULL, operation = 'subtract') # (mean_1 - mean_2)
   
-  INDEX <- .Indices(data = data, type = type, monini = monini,
-                    indices_for_clim = indices_for_clim, fmonth_dim = fmonth_dim,
-                    sdate_dim = sdate_dim, year_dim = year_dim, 
-                    month_dim = month_dim, member_dim = member_dim)
+  if (type == 'dcpp'){
+    target_dims <- c(sdate_dim, fmonth_dim)
+  } else if (type %in% c('hist','obs')){
+    target_dims <- c(year_dim, month_dim)
+  }
+  
+  INDEX <- multiApply::Apply(data = data, target_dims = target_dims, fun = .Indices,
+                             type = type, monini = monini, indices_for_clim = indices_for_clim,
+                             fmonth_dim = fmonth_dim, sdate_dim = sdate_dim, 
+                             year_dim = year_dim, month_dim = month_dim, 
+                             na.rm = na.rm, ncores = ncores)$output1
   return(INDEX)
 }

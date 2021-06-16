@@ -17,7 +17,7 @@ InsertDim(data, posdim, lendim, name = NULL, ncores = NULL)
 The default value is NULL.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
-computation. The default value is NULL.}
+computation. The default value is NULL. This parameter is deprecated now.}
 }
 \value{
 An array as parameter 'data' but with the added named dimension.
@@ -32,4 +32,3 @@ res <- InsertDim(InsertDim(a, posdim = 2, lendim = 1, name = 'e'), 4, c(f = 2))
 dim(res)
 
 }
-

@@ -28,4 +28,3 @@ variable 'tos', i.e. sea surface temperature, from the decadal climate
 prediction experiment run at IC3 in the context of the CMIP5 project.\cr 
 Its name within IC3 local database is 'i00k'.
 }
-

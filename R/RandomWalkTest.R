@@ -57,7 +57,7 @@ RandomWalkTest <- function(skill_A, skill_B, time_dim = 'sdate', ncores = NULL){
     stop("Parameter 'time_dim' is not found in 'skill_A' or 'skill_B' dimensions.")
   }
   if (!is.null(ncores)){
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 | length(ncores) > 1){
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 | length(ncores) > 1){
       stop("Parameter 'ncores' must be a positive integer.")
     }
   }

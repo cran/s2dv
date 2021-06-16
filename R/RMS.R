@@ -143,7 +143,7 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
@@ -190,12 +190,13 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
                                   c(time_dim, dat_dim)),
                fun = .RMS, 
                time_dim = time_dim, dat_dim = dat_dim,
-               conf = conf, conf.lev = conf.lev, ncores = ncores)
+               conf = conf, conf.lev = conf.lev, ncores_input = ncores,
+               ncores = ncores)
   return(res)
 }
 
 .RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
-                 conf = TRUE, conf.lev = 0.95) { 
+                 conf = TRUE, conf.lev = 0.95, ncores_input = NULL) { 
 
   # exp: [sdate, dat_exp]
   # obs: [sdate, dat_obs]
@@ -220,7 +221,7 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
 
   if (conf) {
     #eno <- Eno(dif, 1) #count effective sample along sdate. dim = c(nexp, nobs)
-    eno <- Eno(dif, time_dim) #change to this line when Eno() is done
+    eno <- Eno(dif, time_dim, ncores = ncores_input) #change to this line when Eno() is done
 
     # conf.lower
     chi <- sapply(1:nobs, function(i) {

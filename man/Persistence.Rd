@@ -4,9 +4,19 @@
 \alias{Persistence}
 \title{Compute persistence}
 \usage{
-Persistence(data, dates, time_dim = "time", start, end, ft_start,
-  ft_end = ft_start, max_ft = 10, nmemb = 1, na.action = 10,
-  ncores = NULL)
+Persistence(
+  data,
+  dates,
+  time_dim = "time",
+  start,
+  end,
+  ft_start,
+  ft_end = ft_start,
+  max_ft = 10,
+  nmemb = 1,
+  na.action = 10,
+  ncores = NULL
+)
 }
 \arguments{
 \item{data}{A numeric array corresponding to the observational data
@@ -14,17 +24,19 @@ including the time dimension along which the autoregression is computed.
 The data should start at least 40 time steps (years or days) before 
 'start'.}
 
-\item{dates}{A sequence of 4-digit integers (YYYY) or dates (YYYY-MM-DD) 
-indicating the dates available in the observations.}
+\item{dates}{A sequence of 4-digit integers (YYYY) or string (YYYY-MM-DD) 
+in class 'Date' indicating the dates available in the observations.}
 
 \item{time_dim}{A character string indicating the dimension along which to 
 compute the autoregression. The default value is 'time'.}
 
-\item{start}{A 4-digit integer (YYYY) or a date in the ISOdate format 
-(YYYY-MM-DD) indicating the first start date of the persistence forecast.}
+\item{start}{A 4-digit integer (YYYY) or a string (YYYY-MM-DD) in class 'Date'
+indicating the first start date of the persistence forecast. It must be 
+between 1850 and 2020.}
 
-\item{end}{A 4-digit integer (YYYY) or a date in the ISOdate format
-(YYYY-MM-DD) indicating the last start date of the persistence forecast.}
+\item{end}{A 4-digit integer (YYYY) or a string (YYYY-MM-DD) in class 'Date'
+indicating the last start date of the persistence forecast. It must be
+between 1850 and 2020.}
 
 \item{ft_start}{An integer indicating the forecast time for which the 
 persistence forecast should be calculated, or the first forecast time of
@@ -89,13 +101,21 @@ observational data along the time dimension, with a measure of forecast
 uncertainty (prediction interval) based on Coelho et al., 2004.\cr\cr
 }
 \examples{
-#Building an example dataset with yearly start dates from 1920 to 2009
+# Case 1: year
+# Building an example dataset with yearly start dates from 1920 to 2009
 set.seed(1)
-obs1 <- rnorm(1 * 70 * 6 * 7)
-dim(obs1) <- c(member = 1, time = 70, lat = 6, lon = 7)
-dates <- seq(1940, 2009, 1)
-persist <- Persistence(obs1, dates = dates, start = 1961, end = 2005, ft_start = 1,
-                      nmemb = 40)
+obs1 <- rnorm(1 * 70 * 2 * 2)
+dim(obs1) <- c(member = 1, time = 70, lat = 2, lon = 2)
+dates <- seq(1920, 1989, 1)
+res <- Persistence(obs1, dates = dates, start = 1961, end = 1980, ft_start = 1,
+                  nmemb = 2)
+# Case 2: day
+dates <- seq(as.Date(ISOdate(1990, 1, 1)), as.Date(ISOdate(1990, 4, 1)) ,1)
+start <- as.Date(ISOdate(1990, 2, 15))
+end <-  as.Date(ISOdate(1990, 4, 1))
+set.seed(1)
+data <- rnorm(1 * length(dates))
+dim(data) <- c(member = 1, time = length(dates))
+res <- Persistence(data, dates = dates, start = start, end = end, ft_start = 1)
 
 }
-

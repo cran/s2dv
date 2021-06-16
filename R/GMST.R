@@ -2,24 +2,23 @@
 #'
 #'The Global Mean Surface Temperature (GMST) anomalies are computed as the
 #'weighted-averaged surface air temperature anomalies over land and sea surface
-#'temperature anomalies over the ocean.
+#'temperature anomalies over the ocean. If different members and/or datasets are provided, 
+#'the climatology (used to calculate the anomalies) is computed individually for all of them.
 #'
-#'@param data_tas A numerical array indicating the surface air temperature data
-#'  to be used for the index computation with the dimensions: 1) latitude, 
-#'  longitude, start date, forecast month, and member (in case of decadal 
-#'  predictions), 2) latitude, longitude, year, month and member (in case of 
-#'  historical simulations), or 3) latitude, longitude, year and month (in case
-#'  of observations or reanalyses). This data has to be provided, at least, 
-#'  over the whole region needed to compute the index. The dimensions must be 
-#'  identical to those of data_tos.
-#'@param data_tos A numerical array indicating the sea surface temperature data
-#'  to be used for the index computation with the dimensions: 1) latitude, 
-#'  longitude, start date, forecast month, and member (in case of decadal 
-#'  predictions), 2) latitude, longitude, year, month and member (in case of 
-#'  historical simulations), or 3) latitude, longitude, year and month (in case
-#'  of observations or reanalyses). This data has to be provided, at least, 
-#'  over the whole region needed to compute the index. The dimensions must be
-#'  identical to those of data_tas.
+#'@param data_tas A numerical array  with the surface air temperature data
+#'  to be used for the index computation with, at least, the
+#'  dimensions: 1) latitude, longitude, start date and forecast month 
+#'  (in case of decadal predictions), 2) latitude, longitude, year and month 
+#'  (in case of historical simulations or observations). This data has to be 
+#'  provided, at least, over the whole region needed to compute the index.
+#'  The dimensions must be identical to thos of data_tos.
+#'@param data_tos A numerical array  with the sea surface temperature data
+#'  to be used for the index computation with, at least, the
+#'  dimensions: 1) latitude, longitude, start date and forecast month 
+#'  (in case of decadal predictions), 2) latitude, longitude, year and month 
+#'  (in case of historical simulations or observations). This data has to be 
+#'  provided, at least, over the whole region needed to compute the index.
+#'  The dimensions must be identical to thos of data_tas.
 #'@param data_lats A numeric vector indicating the latitudes of the data.
 #'@param data_lons A numeric vector indicating the longitudes of the data.
 #'@param mask_sea_land An array with dimensions [lat_dim = data_lats, lon_dim =
@@ -55,21 +54,22 @@
 #'  anomalies, set it to FALSE. The default value is NULL.\cr
 #'  In case of parameter 'type' is 'dcpp', 'indices_for_clim' must be relative 
 #'  to the first forecast year, and the climatology is automatically computed 
-#'  over the actual common period for the different forecast years.
+#'  over the common calendar period for the different forecast years.
 #'@param year_dim A character string indicating the name of the year dimension
 #'  The default value is 'year'. Only used if parameter 'type' is 'hist' or 
 #'  'obs'.
 #'@param month_dim A character string indicating the name of the month
 #'  dimension. The default value is 'month'. Only used if parameter 'type' is 
 #'  'hist' or 'obs'.
-#'@param member_dim A character string indicating the name of the member 
-#'  dimension. The default value is 'member'. Only used if parameter 'type' is
-#'  'dcpp' or 'hist'.
+#'@param na.rm A logical value indicanting whether to remove NA values. The default 
+#'  value is TRUE.
+#'@param ncores An integer indicating the number of cores to use for parallel 
+#'  computation. The default value is NULL.
 #'
-#'@return A numerical array of the GMST anomalies with the dimensions of:
-#'  1) sdate, forecast year, and member (in case of decadal predictions);
-#'  2) year and member (in case of historical simulations); or
-#'  3) year (in case of observations or reanalyses).
+#'@return A numerical array with the GMST anomalies with the same dimensions as data_tas except 
+#'  the lat_dim, lon_dim and fmonth_dim (month_dim) in case of decadal predictions 
+#'  (historical simulations or observations). In case of decadal predictions, a new dimension
+#'  'fyear' is added.
 #'
 #'@examples
 #' ## Observations or reanalyses
@@ -111,7 +111,7 @@
 GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_value, 
                  type, mask = NULL, lat_dim = 'lat', lon_dim = 'lon', monini = 11,
                  fmonth_dim = 'fmonth', sdate_dim = 'sdate', indices_for_clim = NULL, 
-                 year_dim = 'year', month_dim = 'month', member_dim = 'member') {
+                 year_dim = 'year', month_dim = 'month', na.rm = TRUE, ncores = NULL) {
   
   ## Input Checks
   # data_tas and data_tos
@@ -234,13 +234,15 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
       stop("Parameter 'month_dim' is not found in 'data_tas' or 'data_tos' dimension.")
     }
   }
-  # member_dim
-  if (type == 'hist' | type == 'dcpp') {
-    if (!(is.character(member_dim) & length(member_dim) == 1)) {
-      stop("Parameter 'member_dim' must be a character string.")
-    }
-    if (!member_dim %in% names(dim(data_tas)) | !member_dim %in% names(dim(data_tos))) {
-      stop("Parameter 'member_dim' is not found in 'data_tas' or 'data_tos' dimension.")
+  # na.rm
+  if (!na.rm %in% c(TRUE,FALSE)) {
+    stop("Parameter 'na.rm' must be TRUE or FALSE")
+  }
+  # ncores
+  if (!is.null(ncores)) {
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
+      length(ncores) > 1) {
+      stop("Parameter 'ncores' must be a positive integer.")
     }
   }
 
@@ -254,7 +256,7 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
   data <- multiApply::Apply(data = list(data_tas, data_tos), 
                             target_dims = c(lat_dim, lon_dim), 
                             fun = mask_tas_tos, mask_sea_land = mask_sea_land, 
-                            sea_value = sea_value)$output1
+                            sea_value = sea_value, ncores = ncores)$output1
   data <- drop(data)
   rm(data_tas, data_tos)
 
@@ -266,7 +268,7 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
       return(data)
     }
     data <- multiApply::Apply(data = data, target_dims = c(lat_dim, lon_dim),
-                              fun = fun_mask, mask = mask)$output1
+                              fun = fun_mask, mask = mask, ncores = ncores)$output1
   }
 
   data <- ClimProjDiags::WeightedMean(data = data, lon = data_lons, lat = data_lats, 
@@ -274,9 +276,16 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
                                       londim = which(names(dim(data)) == lon_dim), 
                                       latdim = which(names(dim(data)) == lat_dim))
   
-  INDEX <- .Indices(data = data, type = type, monini = monini,
-                    indices_for_clim = indices_for_clim, fmonth_dim = fmonth_dim,
-                    sdate_dim = sdate_dim, year_dim = year_dim, 
-                    month_dim = month_dim, member_dim = member_dim)
+  if (type == 'dcpp'){
+    target_dims <- c(sdate_dim, fmonth_dim)
+  } else if (type %in% c('hist','obs')){
+    target_dims <- c(year_dim, month_dim)
+  }
+  
+  INDEX <- multiApply::Apply(data = data, target_dims = target_dims, fun = .Indices,
+                             type = type, monini = monini, indices_for_clim = indices_for_clim,
+                             fmonth_dim = fmonth_dim, sdate_dim = sdate_dim, 
+                             year_dim = year_dim, month_dim = month_dim, 
+                             na.rm = na.rm, ncores = ncores)$output1
   return(INDEX)
 }

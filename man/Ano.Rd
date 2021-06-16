@@ -20,8 +20,7 @@ same length.}
 computation. The default value is NULL.}
 }
 \value{
-An array with same dimensions as parameter 'data' but with different 
- dimension order. The dimensions in parameter 'clim' are ordered first.
+An array with same dimensions as parameter 'data'.
 }
 \description{
 This function computes anomalies from a multidimensional data array and a 
@@ -33,12 +32,9 @@ example(Load)
 clim <- Clim(sampleData$mod, sampleData$obs)
 ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 ano_obs <- Ano(sampleData$obs, clim$clim_obs)
-ano_exp <- Reorder(ano_exp, c(1, 2, 4, 3))
-ano_obs <- Reorder(ano_obs, c(1, 2, 4, 3))
 \donttest{
 PlotAno(ano_exp, ano_obs, startDates, 
        toptitle = 'Anomaly', ytitle = c('K', 'K', 'K'), 
        legends = 'ERSST', biglab = FALSE, fileout = 'tos_ano.png')
 }
 }
-

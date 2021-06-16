@@ -4,8 +4,17 @@
 \alias{Regression}
 \title{Compute the regression of an array on another along one dimension.}
 \usage{
-Regression(datay, datax, reg_dim = "sdate", formula = y ~ x, pval = TRUE,
-  conf = TRUE, conf.lev = 0.95, na.action = na.omit, ncores = NULL)
+Regression(
+  datay,
+  datax,
+  reg_dim = "sdate",
+  formula = y ~ x,
+  pval = TRUE,
+  conf = TRUE,
+  conf.lev = 0.95,
+  na.action = na.omit,
+  ncores = NULL
+)
 }
 \arguments{
 \item{datay}{An numeric array as predictand including the dimension along
@@ -92,4 +101,3 @@ res1 <- Regression(datay, datax, formula = y~poly(x, 2, raw = TRUE))
 res2 <- Regression(datay, datax, conf.lev = 0.9)
 
 }
-

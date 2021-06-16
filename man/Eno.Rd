@@ -39,4 +39,3 @@ data[na] <- NA
 res <- Eno(data)
 
 }
-

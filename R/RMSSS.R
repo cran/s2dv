@@ -108,7 +108,7 @@ RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
@@ -143,13 +143,14 @@ RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
                                   c(time_dim, dat_dim)),
                fun = .RMSSS, 
                time_dim = time_dim, dat_dim = dat_dim,
-               pval = pval, #conf = conf, conf.lev = conf.lev,
+               pval = pval, ncores_input = ncores,
                ncores = ncores)
   
   return(res)
 }
 
-.RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset', pval = TRUE) {
+.RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset', pval = TRUE, 
+                   ncores_input = NULL) {
   # exp: [sdate, dat_exp]
   # obs: [sdate, dat_obs]
   nexp <- as.numeric(dim(exp)[2])
@@ -189,8 +190,8 @@ RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
 
   ## pval and conf 
   if (pval) {
-    eno1 <- Eno(dif1, time_dim)  
-    eno2 <- Eno(obs, time_dim)  
+    eno1 <- Eno(dif1, time_dim, ncores = ncores_input)  
+    eno2 <- Eno(obs, time_dim, ncores = ncores_input)  
     eno2 <- array(eno2, dim = c(nobs = nobs, nexp = nexp))
     eno2 <- Reorder(eno2, c(2, 1))
   }

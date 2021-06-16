@@ -4,8 +4,17 @@
 \alias{RMS}
 \title{Compute root mean square error}
 \usage{
-RMS(exp, obs, time_dim = "sdate", dat_dim = "dataset", comp_dim = NULL,
-  limits = NULL, conf = TRUE, conf.lev = 0.95, ncores = NULL)
+RMS(
+  exp,
+  obs,
+  time_dim = "sdate",
+  dat_dim = "dataset",
+  comp_dim = NULL,
+  limits = NULL,
+  conf = TRUE,
+  conf.lev = 0.95,
+  ncores = NULL
+)
 }
 \arguments{
 \item{exp}{A named numeric array of experimental data, with at least two 
@@ -79,4 +88,3 @@ The confidence interval is computed by the chi2 distribution.\cr
  # Renew example when Ano and Smoothing are ready
 
 }
-

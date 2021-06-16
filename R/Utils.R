@@ -327,11 +327,9 @@
         if ((grid_lons != common_grid_lons) || 
             (grid_lats != common_grid_lats) || 
             (grid_type != common_grid_type) ||
-            ((lon[1] != first_common_grid_lon) 
-             && !work_piece[['single_dataset']])) {
+            (lon[1] != first_common_grid_lon)) { 
           if (grid_lons == common_grid_lons && grid_lats == common_grid_lats &&
-              grid_type == common_grid_type && lon[1] != first_common_grid_lon &&
-              !work_piece[['single_dataset']]) {
+              grid_type == common_grid_type && lon[1] != first_common_grid_lon) {
             remove_shift <- TRUE
           }
           remap_needed <- TRUE
@@ -420,7 +418,9 @@
         filecopy <- tempfile(pattern = "load", fileext = ".nc")
         file.copy(filein, filecopy)
         filein <- tempfile(pattern = "loadRegridded", fileext = ".nc")
-        system(paste0("cdo -s remap", work_piece[['remap']], ",", 
+        # "-L" is to serialize I/O accesses. It prevents potential segmentation fault in the 
+        # underlying hdf5 library.
+        system(paste0("cdo -L -s remap", work_piece[['remap']], ",", 
                       common_grid_name, 
                       " -selname,", namevar, " ", filecopy, " ", filein, 
                       " 2>/dev/null", sep = ""))
@@ -600,9 +600,6 @@
         nltime <- fnc$var[[namevar]][['dim']][[match(time_dimname, var_dimnames)]]$len
         expected_dims <- c(expected_dims, time_dimname)
         dim_matches <- match(expected_dims, var_dimnames)
-        first_time_step_in_file <- fnc$var[[namevar]][['dim']][[match(time_dimname,
-                                        var_dimnames)]]$vals[1]
-        time_units <- fnc$var[[namevar]][['dim']][[match(time_dimname, var_dimnames)]]$units
       } else {
         if (!is.null(old_members_dimname)) {
           expected_dims[which(expected_dims == 'lev')] <- old_members_dimname
@@ -755,7 +752,7 @@
               ncatt_put(fnc2, ncdf_var, 'scale_factor', scale_factor)
             }
             nc_close(fnc2)
-            system(paste0("cdo -s -sellonlatbox,", if (lonmin > lonmax) {
+            system(paste0("cdo -L -s -sellonlatbox,", if (lonmin > lonmax) {
                                                      "0,360,"
                                                    } else {
                                                      paste0(lonmin, ",", lonmax, ",")
@@ -797,7 +794,7 @@
               fnc_mask <- nc_create(mask_file, list(ncdf_var))
               ncvar_put(fnc_mask, ncdf_var, array(rep(0, 4), dim = c(2, 2)))
               nc_close(fnc_mask)
-              system(paste0("cdo -s remap", work_piece[['remap']], ",", common_grid_name, 
+              system(paste0("cdo -L -s remap", work_piece[['remap']], ",", common_grid_name, 
                      " ", mask_file, " ", mask_file_remap, " 2>/dev/null", sep = ""))
               fnc_mask <- nc_open(mask_file_remap)
               mask_lons <- ncvar_get(fnc_mask, 'lon')
@@ -950,9 +947,7 @@
   if (explore_dims) {
     list(dims = dims, is_2d_var = is_2d_var, grid = grid_name, 
          units = units, var_long_name = var_long_name, 
-         data_across_gw = data_across_gw, array_across_gw = array_across_gw,
-         time_dim = list(first_time_step_in_file = first_time_step_in_file,
-                        time_units = time_units))
+         data_across_gw = data_across_gw, array_across_gw = array_across_gw)
   } else {
     ###if (!silent && !is.null(progress_connection) && !is.null(work_piece[['progress_amount']])) {
     ###  foobar <- writeBin(work_piece[['progress_amount']], progress_connection)
@@ -1670,107 +1665,58 @@
 }
 
 # to be used in AMV.R, TPI.R, SPOD.R, GSAT.R and GMST.R
-.Indices <- function(data, type, monini, indices_for_clim,
-                    fmonth_dim, sdate_dim, year_dim, month_dim, member_dim) {
+.Indices <- function(data, type, monini, indices_for_clim, 
+                     fmonth_dim, sdate_dim, year_dim, month_dim, na.rm) {
   
-  data = drop(data)
-  
-  if(member_dim %in% names(dim(data))){
-    if (type == 'dcpp'){
-      data = s2dv::Reorder(data = data, order = c(sdate_dim,fmonth_dim,member_dim))
-    } else if (type %in% c('hist','obs')){
-      data = s2dv::Reorder(data = data, order = c(year_dim,month_dim,member_dim))
-    }
-  }
-  
-  if (type == 'dcpp'){
+  if (type == 'dcpp') {
     
-    data = s2dv::Season(data = data, time_dim = fmonth_dim,
-                        monini = monini, moninf = 1, monsup = 12,
-                        method = mean, na.rm = FALSE)
-    names(dim(data))[which(names(dim(data))==fmonth_dim)] = 'fyear'
-    if (member_dim %in% names(dim(data))){
-      data = s2dv::Reorder(data = data, order = c('fyear',sdate_dim,member_dim))
-    } else {
-      data = s2dv::Reorder(data = data, order = c('fyear',sdate_dim))
-    }
+    fyear_dim <- 'fyear'
+    data <- s2dv::Season(data = data, time_dim = fmonth_dim,
+                         monini = monini, moninf = 1, monsup = 12,
+                         method = mean, na.rm = na.rm)
+    names(dim(data))[which(names(dim(data))==fmonth_dim)] <- fyear_dim
     
-    if (is.logical(indices_for_clim)) { 
-      if(!any(indices_for_clim)) {
-      # indices_for_clim == FALSE -> anomalies are directly given
-        anom = data
-      }      
+    if (identical(indices_for_clim, FALSE)) { ## data is already anomalies
       
-    } else {
-    
-      ## Different indices_for_clim for each forecast year (same actual years)
+      anom <- data
       
-      n_fyears = as.numeric(dim(data)['fyear'])
-      n_sdates = as.numeric(dim(data)[sdate_dim])
+    } else { ## Different indices_for_clim for each forecast year (to use the same calendar years)
       
-      if (is.null(indices_for_clim)){
-        
-        # indices_for_clim == NULL -> anomalies based on the whole (common) period
-        first_years_for_clim = n_fyears : 1
-        last_years_for_clim = n_sdates : (n_sdates - n_fyears + 1)
-        
-      } else {
-        
-        first_years_for_clim = seq(from = indices_for_clim[1], by = -1, length.out = n_fyears)
-        last_years_for_clim = seq(from = indices_for_clim[length(indices_for_clim)], by = -1, length.out = n_fyears) 
-        
+      n_fyears <- as.numeric(dim(data)[fyear_dim])
+      n_sdates <- as.numeric(dim(data)[sdate_dim])
+      
+      if (is.null(indices_for_clim)) { ## climatology over the whole (common) period
+        first_years_for_clim <- n_fyears : 1
+        last_years_for_clim <- n_sdates : (n_sdates - n_fyears + 1)
+      } else { ## indices_for_clim specified as a numeric vector
+        first_years_for_clim <- seq(from = indices_for_clim[1], by = -1, length.out = n_fyears)
+        last_years_for_clim <- seq(from = indices_for_clim[length(indices_for_clim)], by = -1, length.out = n_fyears) 
       }
-
-      anom = array(data = NA, dim = dim(data))
-      if (member_dim %in% names(dim(data))){
-        clim = array(data = NA, dim = c(dim(data)['fyear'],dim(data)[member_dim]))
-      } else {
-        clim = array(data = NA, dim = c(dim(data)['fyear']))
-      }
-      for (i in 1:n_fyears){
-        if (member_dim %in% names(dim(data))){
-          for (m in 1:as.numeric(dim(data)[member_dim])){
-            clim[i,m] = mean(data[i,first_years_for_clim[i]:last_years_for_clim[i],m])
-            anom[i,,m] = data[i,,m] - clim[i,m]
-          }
-        } else {
-          clim = mean(data[i,first_years_for_clim[i]:last_years_for_clim[i]])
-          anom[i,] = data[i,] - clim
-        }
+      
+      data <- s2dv::Reorder(data = data, order = c(fyear_dim, sdate_dim))
+      anom <- array(data = NA, dim = dim(data))
+      for (i in 1:n_fyears) {
+        clim <- mean(data[i,first_years_for_clim[i]:last_years_for_clim[i]], na.rm = na.rm)
+        anom[i,] <- data[i,] - clim
       }
     }
     
-  } else if (type %in% c('obs','hist')){
+  } else if (type %in% c('obs','hist')) {
     
-    data = multiApply::Apply(data = data, target_dims = month_dim, fun = mean)$output1
+    data <- multiApply::Apply(data = data, target_dims = month_dim, fun = mean, na.rm = na.rm)$output1
     
-    if (is.logical(indices_for_clim)) {
-      if(!any(indices_for_clim)) {      
-        anom = data
-      }
-
-    } else {
-      
-      if (is.null(indices_for_clim)){
-        
-        clim = multiApply::Apply(data = data, target_dims = year_dim, fun = mean)$output1
-      
-      } else {
-        
-        if (member_dim %in% names(dim(data))){
-          target_dims = c(year_dim,member_dim)
-        } else {
-          target_dims = year_dim
-        }
-        clim = multiApply::Apply(data = ClimProjDiags::Subset(x = data, along = year_dim, indices = indices_for_clim),
-                                 target_dims = target_dims, fun = mean)$output1
-      }
-      anom = multiApply::Apply(data = data, target_dims = year_dim, 
-                               fun = function(data,clim){data-clim}, clim = clim)$output1
+    if (identical(indices_for_clim, FALSE)) { ## data is already anomalies
+      clim <- 0
+    } else if (is.null(indices_for_clim)) { ## climatology over the whole period
+      clim <- multiApply::Apply(data = data, target_dims = year_dim, fun = mean, na.rm = na.rm)$output1
+    } else { ## indices_for_clim specified as a numeric vector
+      clim <- multiApply::Apply(data = ClimProjDiags::Subset(x = data, along = year_dim, indices = indices_for_clim),
+                                target_dims = year_dim, fun = mean, na.rm = na.rm)$output1
     }
+    
+    anom <- data - clim
     
   } else {stop('type must be dcpp, hist or obs')}
   
   return(anom)
 }
-

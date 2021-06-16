@@ -8,14 +8,16 @@
 #'  including the time dimension along which the autoregression is computed.
 #'  The data should start at least 40 time steps (years or days) before 
 #'  'start'.
-#'@param dates A sequence of 4-digit integers (YYYY) or dates (YYYY-MM-DD) 
-#'  indicating the dates available in the observations.
+#'@param dates A sequence of 4-digit integers (YYYY) or string (YYYY-MM-DD) 
+#'  in class 'Date' indicating the dates available in the observations.
 #'@param time_dim A character string indicating the dimension along which to 
 #'  compute the autoregression. The default value is 'time'.
-#'@param start A 4-digit integer (YYYY) or a date in the ISOdate format 
-#'  (YYYY-MM-DD) indicating the first start date of the persistence forecast.
-#'@param end A 4-digit integer (YYYY) or a date in the ISOdate format
-#'  (YYYY-MM-DD) indicating the last start date of the persistence forecast.
+#'@param start A 4-digit integer (YYYY) or a string (YYYY-MM-DD) in class 'Date'
+#'  indicating the first start date of the persistence forecast. It must be 
+#'  between 1850 and 2020.
+#'@param end A 4-digit integer (YYYY) or a string (YYYY-MM-DD) in class 'Date'
+#'  indicating the last start date of the persistence forecast. It must be
+#'  between 1850 and 2020.
 #'@param ft_start An integer indicating the forecast time for which the 
 #'  persistence forecast should be calculated, or the first forecast time of
 #'  the average forecast times for which persistence should be calculated.
@@ -69,13 +71,22 @@
 #'}
 #'
 #'@examples
-#'#Building an example dataset with yearly start dates from 1920 to 2009
+#'# Case 1: year
+#'# Building an example dataset with yearly start dates from 1920 to 2009
 #'set.seed(1)
-#'obs1 <- rnorm(1 * 70 * 6 * 7)
-#'dim(obs1) <- c(member = 1, time = 70, lat = 6, lon = 7)
-#'dates <- seq(1940, 2009, 1)
-#'persist <- Persistence(obs1, dates = dates, start = 1961, end = 2005, ft_start = 1,
-#'                       nmemb = 40)
+#'obs1 <- rnorm(1 * 70 * 2 * 2)
+#'dim(obs1) <- c(member = 1, time = 70, lat = 2, lon = 2)
+#'dates <- seq(1920, 1989, 1)
+#'res <- Persistence(obs1, dates = dates, start = 1961, end = 1980, ft_start = 1,
+#'                   nmemb = 2)
+#'# Case 2: day
+#'dates <- seq(as.Date(ISOdate(1990, 1, 1)), as.Date(ISOdate(1990, 4, 1)) ,1)
+#'start <- as.Date(ISOdate(1990, 2, 15))
+#'end <-  as.Date(ISOdate(1990, 4, 1))
+#'set.seed(1)
+#'data <- rnorm(1 * length(dates))
+#'dim(data) <- c(member = 1, time = length(dates))
+#'res <- Persistence(data, dates = dates, start = start, end = end, ft_start = 1)
 #'
 #'@import multiApply
 #'@export
@@ -95,7 +106,7 @@ Persistence <- function(data, dates, time_dim = 'time', start, end, ft_start,
     dim(data) <- c(length(data))
     names(dim(data)) <- time_dim
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if(any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## time_dim
@@ -106,27 +117,79 @@ Persistence <- function(data, dates, time_dim = 'time', start, end, ft_start,
     stop("Parameter 'time_dim' is not found in 'data' dimension.")
   }
   ## dates
+  if (is.numeric(dates)) { #(YYYY)
+    if (any(nchar(dates) != 4) | any(dates %% 1 != 0) | any(dates <= 0)) {
+    stop(paste0("Parameter 'dates' must be a sequence of integer (YYYY) or ",
+                "string (YYYY-MM-DD) in class 'Date'."))
+    }
+  } else if (class(dates) == 'Date') { #(YYYY-MM-DD)
+    
+  } else {
+    stop(paste0("Parameter 'dates' must be a sequence of integer (YYYY) or ",
+                "string (YYYY-MM-DD) in class 'Date'."))
+  }
   if (length(dates) != dim(data)[time_dim]) {
     stop("Parameter 'dates' must have the same length as in 'time_dim'.")
   }
+  ## dates, start, and end
+  if (!all(sapply(list(class(dates), class(start)), function(x) x == class(end)))) {
+    stop("Parameter 'dates', 'start', and 'end' should be the same format.")
+  }
   ## start
-#  if (!is.numeric(start) | start %% 1 != 0 | start < 0 |
-#      length(start) > 1 | start < 1850 | start > 2020) {
-#        stop("Parameter 'start' must be an integer between 1850 and 2020.")
-#  }
-#  if (start < dates[1] + 40) {
-#        stop("Parameter 'start' must start at least 40 time steps after the 
-#             first start date of 'data'.")
-#  }
+  if (is.numeric(start)) { #(YYYY)
+    if (length(start) > 1 | any(start %% 1 != 0) | any(start < 1850) | any(start > 2020)) {
+      stop(paste0("Parameter 'start' must be an integer or a string in class ",
+                  "'Date' between 1850 and 2020."))
+    }
+    if (is.na(match(start, dates))) {
+      stop("Parameter 'start' must be one of the values of 'dates'.")
+    }
+    if (start < dates[1] + 40) {
+      stop(paste0("Parameter 'start' must start at least 40 time steps after ",
+                  "the first 'dates'."))
+    } 
+  } else if (class(start) == 'Date') {
+    if (length(start) > 1 | any(start < as.Date(ISOdate(1850, 1, 1))) | 
+        any(start > as.Date(ISOdate(2021, 1, 1)))) {
+      stop(paste0("Parameter 'start' must be an integer or a string in class ",
+                  "'Date' between 1850 and 2020."))
+    }
+    if (is.na(match(start, dates))) {
+      stop("Parameter 'start' must be one of the values of 'dates'.")
+    }
+    if (start < dates[1] + 40) {
+      stop(paste0("Parameter 'start' must start at least 40 time steps after ",
+                  "the first 'dates'."))
+    } 
+  } else {
+    stop(paste0("Parameter 'start' must be an integer or a string in class ",
+                "'Date' between 1850 and 2020."))
+  }
+
   ## end
-#  if (!is.numeric(end) | end %% 1 != 0 | end < 0 |
-#      length(end) > 1 | end < 1850 | end > 2020) {
-#        stop("Parameter 'end' must be an integer between 1850 and 2020.")
-#  }
-#  if (end > dates[length(dates)] + 1) {
-#        stop("Parameter 'end' must end at most 1 time step after the 
-#             last start date of 'data'.")
-#  }
+  if (is.numeric(end)) { #(YYYY)
+    if (length(end) > 1 | any(end %% 1 != 0) | any(end < 1850) | any(end > 2020)) {
+      stop(paste0("Parameter 'end' must be an integer or a string in class ",
+                  "'Date' between 1850 and 2020."))
+    }
+    if (end > dates[length(dates)] + 1) {
+      stop(paste0("Parameter 'end' must end at most 1 time steps after ",
+                  "the last 'dates'."))
+    } 
+  } else if (class(end) == 'Date') {
+    if (length(end) > 1 | any(end < as.Date(ISOdate(1850, 1, 1))) | 
+        any(end > as.Date(ISOdate(2020, 12, 31)))) {
+      stop(paste0("Parameter 'end' must be an integer or a string in class ",
+                  "'Date' between 1850 and 2020."))
+    }
+    if (end > dates[length(dates)] + 1) {
+      stop(paste0("Parameter 'end' must end at most 1 time steps after ",
+                  "the last 'dates'."))
+    }
+  } else {
+    stop(paste0("Parameter 'end' must be an integer or a string in class ",
+                "'Date' between 1850 and 2020."))
+  }
   ## ft_start
   if (!is.numeric(ft_start) | ft_start %% 1 != 0 | ft_start < 0 |
       length(ft_start) > 1) {
@@ -195,7 +258,6 @@ Persistence <- function(data, dates, time_dim = 'time', start, end, ft_start,
 # ft_start/ft_end are indices
 .Persistence <- function(x, dates, time_dim = 'time', start, end, ft_start = 1, 
            ft_end = 1, max_ft = 10, nmemb = 1, na.action = 10) {
-
   tm <- end - start + 1
   max_date <- match(start, dates)
   interval <- ft_end - ft_start
@@ -204,7 +266,7 @@ Persistence <- function(data, dates, time_dim = 'time', start, end, ft_start,
   persistence <- matrix(NA, nrow = nmemb, ncol = tm)
   names(dim(persistence)) <- c('realization', time_dim)
 
-  for (sdate in tm:1){
+  for (sdate in tm:1) {
     min_y = max_ft + ft_start
     max_y = max_date + sdate - 2
     min_x = max_ft        # for extreme case: ex. forecast years 1-10, interval = 9
@@ -243,9 +305,9 @@ Persistence <- function(data, dates, time_dim = 'time', start, end, ft_start,
     persistence.predint[sdate] <- stdev_reg * sqrt(1 + 1 / n + X_sq / S_sq)
     AR.slope[sdate] <- a
     AR.intercept[sdate] <- b
-    AR.lowCI[sdate] <- reg$regression[1]
-    AR.highCI[sdate] <- reg$regression[3]
-    persistence[ ,sdate] <- rnorm(n = nmemb, mean = persistence.mean[sdate],
+    AR.lowCI[sdate] <- reg$conf.lower[2]
+    AR.highCI[sdate] <- reg$conf.upper[2]
+    persistence[ , sdate] <- rnorm(n = nmemb, mean = persistence.mean[sdate],
                                   sd = persistence.predint[sdate])
   }
 

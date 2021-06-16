@@ -96,7 +96,7 @@ Season <- function(data, time_dim = 'ftime', monini, moninf, monsup,
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
@@ -127,16 +127,21 @@ Season <- function(data, time_dim = 'ftime', monini, moninf, monsup,
     }
 
     if (use_apply) {
-      time_dim_ind <- match(time_dim, names(dim(data)))
-      res <- apply(data, c(1:length(dim(data)))[-time_dim_ind], .Season,
-                   monini = monini, moninf = moninf, monsup = monsup,
-                   method = method, na.rm = na.rm)
-      if (length(dim(res)) < length(dim(data))) {
-        res <- InsertDim(res, posdim = 1, lendim = 1, name = time_dim)
+      if (length(dim(data)) == 1) {
+        res <- .Season(data, monini = monini, moninf = moninf, monsup = monsup,
+                       method = method, na.rm = na.rm)
+        names(dim(res)) <- time_dim
       } else {
-        names(dim(res))[1] <- time_dim
+        time_dim_ind <- match(time_dim, names(dim(data)))
+        res <- apply(data, c(1:length(dim(data)))[-time_dim_ind], .Season,
+                     monini = monini, moninf = moninf, monsup = monsup,
+                     method = method, na.rm = na.rm)
+        if (length(dim(res)) < length(dim(data))) {
+          res <- InsertDim(res, posdim = 1, lendim = 1, name = time_dim)
+        } else {
+          names(dim(res))[1] <- time_dim
+        }
       }
-
     } else {
     res <- Apply(list(data), 
                  target_dims = time_dim, 

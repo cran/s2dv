@@ -13,8 +13,7 @@
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
-#'@return An array with same dimensions as parameter 'data' but with different 
-#'  dimension order. The dimensions in parameter 'clim' are ordered first.
+#'@return An array with same dimensions as parameter 'data'.
 #'
 #'@examples 
 #'# Load sample data as in Load() example:
@@ -22,8 +21,6 @@
 #'clim <- Clim(sampleData$mod, sampleData$obs)
 #'ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 #'ano_obs <- Ano(sampleData$obs, clim$clim_obs)
-#'ano_exp <- Reorder(ano_exp, c(1, 2, 4, 3))
-#'ano_obs <- Reorder(ano_obs, c(1, 2, 4, 3))
 #'\donttest{
 #'PlotAno(ano_exp, ano_obs, startDates, 
 #'        toptitle = 'Anomaly', ytitle = c('K', 'K', 'K'), 
@@ -62,38 +59,62 @@
   if (any(is.null(names(dim(clim))))| any(nchar(names(dim(clim))) == 0)) {
     stop("Parameter 'clim' must have dimension names.")
   }
-  for (i in 1:length(dim(clim))) {
-    if (!(names(dim(clim))[i] %in% names(dim(data)))) {
-      stop("Parameter 'data' must have all the dimensions of parameter 'clim'.")
-    } else {
-      pos <- names(dim(data))[which(names(dim(clim))[i] == names(dim(data)))]
-      if ((dim(clim)[i] != dim(data)[pos])) {
-        stop("Some dimensions of parameter 'clim' have different length from parameter 'data'.")
-      }
+  ## data and clim
+  if (!all(names(dim(clim)) %in% names(dim(data)))) {
+    stop("Parameter 'data' must have all the dimensions of parameter 'clim'.")
+  } else {
+    pos <- names(dim(data))[match(names(dim(clim)), names(dim(data)))]
+    if (any(dim(clim) != dim(data)[pos])) {
+      stop("Some dimensions of parameter 'clim' have different length from parameter 'data'.")
     }
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
-      length(ncores) > 1) {
+    if (!is.numeric(ncores)) {
+      stop("Parameter 'ncores' must be a positive integer.")
+    } else if (ncores %% 1 != 0 | ncores <= 0 | length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
   }
 
   ###############################
   # Calculate Ano
+  parallel_compute <- TRUE
+  if (is.null(ncores)) {
+    parallel_compute <- FALSE
+  } else if (ncores == 1) {
+    parallel_compute <- FALSE
+  } 
+  if (!parallel_compute) {
+    target_dims_ind <- match(names(dim(clim)), names(dim(data)))
+    if (any(target_dims_ind != sort(target_dims_ind))) {
+      clim <- Reorder(clim, match(sort(target_dims_ind), target_dims_ind))
+    }
+    if (length(dim(data)) == length(dim(clim))) {
+      res <- data - clim
+    } else {
+      target_dims_ind <- match(names(dim(clim)), names(dim(data)))
+      margin_dims_ind <- c(1:length(dim(data)))[-target_dims_ind]
+      res <- apply(data, margin_dims_ind, .Ano, clim)
+      res <- array(res, dim = dim(data)[c(target_dims_ind, margin_dims_ind)])
+    }
+  } else {
+    res <- Apply(list(data),
+                 target_dims = names(dim(clim)),
+                 output_dims = names(dim(clim)),
+                 fun = .Ano,
+                 clim = clim,
+                 ncores = ncores)$output1
+  }
 
-  res <- Apply(list(data),
-               target_dims = names(dim(clim)),
-               output_dims = names(dim(clim)),
-               fun = .Ano,
-               clim = clim,
-               ncores = ncores)$output1
+  # Reorder dim back to data
+  if (any(dim(res) != dim(data))) {
+    res <- Reorder(res, names(dim(data)))
+  }
 
-    return(invisible(res))
+  return(invisible(res))
   }
 
   .Ano <- function(data, clim) {
-    ano <- data - clim
-    return(ano)
+    data - clim
   }

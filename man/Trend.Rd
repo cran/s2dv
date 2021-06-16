@@ -4,8 +4,16 @@
 \alias{Trend}
 \title{Compute the trend}
 \usage{
-Trend(data, time_dim = "ftime", interval = 1, polydeg = 1, conf = TRUE,
-  conf.lev = 0.95, pval = TRUE, ncores = NULL)
+Trend(
+  data,
+  time_dim = "ftime",
+  interval = 1,
+  polydeg = 1,
+  conf = TRUE,
+  conf.lev = 0.95,
+  pval = TRUE,
+  ncores = NULL
+)
 }
 \arguments{
 \item{data}{An numeric array including the dimension along which the trend 
@@ -80,4 +88,3 @@ months_between_startdates <- 60
 trend <- Trend(sampleData$obs, polydeg = 2, interval = months_between_startdates)
 
 }
-
