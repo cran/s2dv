@@ -1,3 +1,13 @@
+# s2dv 1.1.0 (Release date: 2021-12-14)
+- New functions: RatioPredictableComponents, SignalNoiseRatio  
+- CDORemap(): Able to interpolate irregular grid to regular grid; include new cdo methods 'con2', 'laf' and 'nn'
+- PlotEquiMap(): Discard the dependency on 'GEOmap' and 'geomapdata' and only use package 'map' now;
+new parameters 'country.borders', 'shapefile', 'shapefile_color', and 'shapefile_lwd' for plotting the national borders and shapefile  
+- PlotLayout(): new parameter 'layout_by_rows' for changing the layout order  
+- MeanDims(): new parameter 'drop' to choose whether to drop the averaged dimension or not;
+Bugfix for making the result as array even if the result is only a number  
+- Season(): Add dimension name even if the result is only a number
+
 # s2dv 1.0.0 (Release date: 2021-06-16)
 - New functions:
 ACC, Ano_CrossValid, BrierScore, CDORemap, Cluster, Consistent_Trend, EOF, EuroAtlanticTC, Filter, Histo2Hindcast, 

@@ -21,8 +21,7 @@ CDORemap(
 provided, it must have at least a longitude and a latitude dimensions, 
 identified by the array dimension names. The names for these dimensions 
 must be one of the recognized by s2dverification (can be checked with 
-\code{s2dverification:::.KnownLonNames()} and 
-\code{s2dverification:::.KnownLatNames()}).}
+\code{s2dv:::.KnownLonNames()} and \code{s2dv:::.KnownLatNames()}).}
 
 \item{lons}{Numeric vector or array of longitudes of the centers of the grid 
 cells. Its size must match the size of the longitude/latitude dimensions 
@@ -38,9 +37,9 @@ NetCDF file which to read the target grid from (a single grid must be
 defined in such file).}
 
 \item{method}{Character string specifying an interpolation method 
-(recognized by CDO; e.g.: 'con', 'bil', 'bic', 'dis'). The following 
-long names are also supported: 'conservative', 'bilinear', 'bicubic' and 
-'distance-weighted'.}
+(recognized by CDO; e.g.: 'con', 'bil', 'bic', 'dis', 'con2', 'laf', 'nn').
+The following long names are also supported: 'conservative', 'bilinear', 
+'bicubic' and 'distance-weighted'.}
 
 \item{avoid_writes}{The step of permutation is needed when the input array 
 has more than 3 dimensions and none of the longitude or latitude dimensions

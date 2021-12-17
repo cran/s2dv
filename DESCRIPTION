@@ -1,6 +1,6 @@
 Package: s2dv
 Title: A Set of Common Tools for Seasonal to Decadal Verification
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: c(
     person("BSC-CNS", role = c("aut", "cph")),
     person("An-Chi", "Ho", , "an.ho@bsc.es", role = c("aut", "cre")),
@@ -20,9 +20,9 @@ Description: The advanced version of package 's2dverification'. It is
     with the package 'startR', able to use multiple cores for computation and 
     handle multi-dimensional arrays with a higher flexibility.
 Depends: maps, methods, R (>= 3.6.0)
-Imports: abind, bigmemory, GEOmap, geomapdata, graphics, grDevices,
-        mapproj, parallel, ClimProjDiags, stats, plyr, ncdf4, NbClust,
-        multiApply (>= 2.1.1), SpecsVerification (>= 0.5.0), easyNCDF
+Imports: abind, bigmemory, graphics, grDevices, mapproj, parallel,
+        ClimProjDiags, stats, plyr, ncdf4, NbClust, multiApply (>=
+        2.1.1), SpecsVerification (>= 0.5.0), easyNCDF
 Suggests: easyVerification, testthat
 License: Apache License 2.0
 URL: https://earth.bsc.es/gitlab/es/s2dv/
@@ -32,7 +32,7 @@ SystemRequirements: cdo
 Encoding: UTF-8
 RoxygenNote: 7.0.1
 NeedsCompilation: no
-Packaged: 2021-06-16 14:49:52 UTC; aho
+Packaged: 2021-12-17 16:28:38 UTC; aho
 Author: BSC-CNS [aut, cph],
   An-Chi Ho [aut, cre],
   Nuria Perez-Zanon [aut],
@@ -43,4 +43,4 @@ Author: BSC-CNS [aut, cph],
   Deborah Verfaillie [ctb]
 Maintainer: An-Chi Ho <an.ho@bsc.es>
 Repository: CRAN
-Date/Publication: 2021-06-16 15:40:02 UTC
+Date/Publication: 2021-12-17 17:00:02 UTC

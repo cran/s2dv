@@ -8,17 +8,21 @@
 #'  dimensions to average.
 #'@param na.rm A logical value indicating whether to ignore NA values (TRUE) or 
 #'  not (FALSE).
-#'@return An array with the same dimension as parameter 'data' except the 'dims' 
-#'  dimensions. 
-#'  removed.
+#'@param drop A logical value indicating whether to keep the averaged 
+#'  dimension (FALSE) or drop it (TRUE). The default value is TRUE.
+#'@return An array with the same dimension as parameter 'data' except the 
+#'  'dims' dimensions. If 'drop' is TRUE, 'dims' will be removed; if 'drop' is
+#'  FALSE, 'dims' will be preserved and the length will be 1.
 #'
 #'@examples
-#'a <- array(rnorm(24), dim = c(2, 3, 4))
-#'MeanDims(a, 2)
-#'MeanDims(a, c(2, 3))
+#'a <- array(rnorm(24), dim = c(dat = 2, member = 3, time = 4))
+#'ens_mean <- MeanDims(a, 'member')
+#'dim(ens_mean)
+#'ens_time_mean <- MeanDims(a, c(2, 3), drop = FALSE)
+#'dim(ens_time_mean)
 #'@import multiApply
 #'@export
-MeanDims <- function(data, dims, na.rm = FALSE) {
+MeanDims <- function(data, dims, na.rm = FALSE, drop = TRUE) {
 
   # Check inputs 
   ## data
@@ -54,18 +58,42 @@ MeanDims <- function(data, dims, na.rm = FALSE) {
   if (!is.logical(na.rm) | length(na.rm) > 1) {
     stop("Parameter 'na.rm' must be one logical value.")
   }
+  ## drop
+  if (!is.logical(drop) | length(drop) > 1) {
+    stop("Parameter 'drop' must be one logical value.")
+  }
 
   ###############################
   # Calculate MeanDims
-  if (length(dims) == length(dim(data))) {
-    data <- mean(data, na.rm = na.rm)
+  dim_data <- dim(data)
+
+  if (length(dims) == length(dim_data)) {
+    if (drop) {
+      data <- as.array(mean(data, na.rm = na.rm))
+    } else {
+      data <- array(mean(data, na.rm = na.rm), 
+                    dim = rep(1, length(dim_data)))
+      names(dim(data)) <- names(dim_data)
+    }
   } else {
     if (is.character(dims)) {
-      dims <- which(names(dim(data)) %in% dims)
+      dims <- which(names(dim_data) %in% dims)
     }
-    pos <- (1:length(dim(data)))[-dims]
+    pos <- (1:length(dim_data))[-dims]
     data <- apply(data, pos, mean, na.rm = na.rm)
+
+    # If data is vector
+    if (is.null(dim(data))) {
+      data <- array(data, dim = dim_data[-dims])
+    }
+    if (!drop) {
+      restore_dim <- as.array(rep(1, length(dims)))
+      names(restore_dim) <- names(dim_data)[dims]
+      data <- array(data, dim = c(dim(data), restore_dim))
+      data <- Reorder(data, names(dim_data))
+    }
   }
+
   return(data)
 }
 

@@ -37,9 +37,8 @@ smooth_ano_exp <- Smoothing(ano_exp, time_dim = 'ftime', runmeanlen = 12)
 smooth_ano_obs <- Smoothing(ano_obs, time_dim = 'ftime', runmeanlen = 12)
 smooth_ano_exp <- Reorder(smooth_ano_exp, c(2, 3, 4, 1))
 smooth_ano_obs <- Reorder(smooth_ano_obs, c(2, 3, 4, 1))
- \donttest{
+ \dontrun{
 PlotAno(smooth_ano_exp, smooth_ano_obs, startDates, 
-       toptitle = "Smoothed Mediterranean mean SST", ytitle = "K",
-       fileout = "tos_smoothed_ano.png")
+       toptitle = "Smoothed Mediterranean mean SST", ytitle = "K")
  }
 }

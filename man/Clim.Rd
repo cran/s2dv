@@ -84,10 +84,10 @@ the 'exp' and 'obs' are excluded when computing the climatologies.
 example(Load)
 clim <- Clim(sampleData$mod, sampleData$obs)
 clim2 <- Clim(sampleData$mod, sampleData$obs, method = 'kharin', memb = FALSE)
-\donttest{
+\dontrun{
 PlotClim(clim$clim_exp, clim$clim_obs, 
         toptitle = paste('sea surface temperature climatologies'), 
         ytitle = 'K', monini = 11, listexp = c('CMIP5 IC3'), 
-        listobs = c('ERSST'), biglab = FALSE, fileout = 'tos_clim.eps')
+        listobs = c('ERSST'), biglab = FALSE)
 }
 }

@@ -62,14 +62,23 @@
 #'  Takes the value gray(0.5) by default or, if 'square = FALSE', takes the 
 #'  value FALSE. If set to FALSE, continents are not filled in.
 #'@param filled.oceans A logical value or the color name to fill in drawn 
-#'  projected oceans. The default value is FALSE. If it is TRUE, the default 
+#'  projected oceans. The default value is FALSE. If it is TRUE, the default
 #'  colour is "light blue".
+#'@param country.borders A logical value indicating if the country borders 
+#'  should be plotted (TRUE) or not (FALSE). It only works when 
+#'  'filled.continents' is FALSE. The default value is FALSE.
 #'@param coast_color Colour of the coast line of the drawn projected continents.
 #'   Takes the value gray(0.5) by default.
 #'@param coast_width Line width of the coast line of the drawn projected 
 #'  continents. Takes the value 1 by default.
 #'@param lake_color Colour of the lake or other water body inside continents.
-#'  The default value is NULL. 
+#'  The default value is NULL.
+#'@param shapefile A character string of the path to a .rds file or a list 
+#'  object containinig shape file data. If it is a .rds file, it should contain
+#'  a list. The list should contains 'x' and 'y' at least, which indicate the 
+#'  location of the shape. The default value is NULL.
+#'@param shapefile_color Line color of the shapefile.
+#'@param shapefile_lwd Line width of the shapefile. The default value is 1. 
 #'@param contours Array of same dimensions as 'var' to be added to the plot 
 #'  and displayed with contours. Parameter 'brks2' is required to define the 
 #'  magnitude breaks for each contour curve. Disregarded if 'square = FALSE'.
@@ -218,7 +227,7 @@
 #'PlotEquiMap(sampleData$mod[1, 1, 1, 1, , ], sampleData$lon, sampleData$lat, 
 #'            toptitle = 'Predicted sea surface temperature for Nov 1960 from 1st Nov',
 #'            sizetit = 0.5)
-#'@import graphics GEOmap geomapdata maps
+#'@import graphics maps
 #'@importFrom grDevices dev.cur dev.new dev.off gray
 #'@importFrom stats cor
 #'@export
@@ -228,8 +237,9 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
                         triangle_ends = NULL, col_inf = NULL, col_sup = NULL, 
                         colNA = NULL, color_fun = clim.palette(),
                         square = TRUE, filled.continents = NULL,
-                        filled.oceans = FALSE,
+                        filled.oceans = FALSE, country.borders = FALSE,
                         coast_color = NULL, coast_width = 1, lake_color = NULL,
+                        shapefile = NULL, shapefile_color = NULL, shapefile_lwd = 1,
                         contours = NULL, brks2 = NULL, contour_lwd = 0.5,
                         contour_color = 'black', contour_lty = 1,
                         contour_draw_label = TRUE, contour_label_scale = 1,
@@ -434,6 +444,11 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     ocean_color <- "light blue"
   }
 
+  # Check country.borders
+  if (!is.logical(country.borders)) {
+    stop("Parameter 'country.borders' must be logical.")
+  }
+
   # Check coast_color
   if (is.null(coast_color)) {
     if (filled.continents) {
@@ -453,13 +468,55 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
 
   # Check lake_color
   if (!is.null(lake_color)) {
-#    if (filled.continents) {
-#      lake_color <- 'white'
-#    }
-#  } else {
     if (!.IsColor(lake_color)) {
       stop("Parameter 'lake_color' must be a valid colour identifier.")
     }
+  }
+
+  # Check shapefile
+  if (!is.null(shapefile)) {
+    if (is.list(shapefile)) {
+      shape <- shapefile
+      if (any(!c('x', 'y') %in% names(shape))) {
+        stop("The list names of the object in 'shapefile' .rds file should ", 
+             "have at least 'x' and 'y'.")
+      }
+      if (length(shape$x) != length(shape$y)) {
+        stop("The length of x and y in 'shapefile' list should be equal.")
+      }
+    } else if (!is.character(shapefile)) {
+      stop("Parameter 'shapefile' must be a .rds file or a list.")
+    } else {  # .rds file
+      if (!file.exists(shapefile)) {
+        stop("Parameter 'shapefile' is not a valid file.")
+      }
+      if (!grepl("\\.rds$", shapefile)) {
+        stop("Parameter 'shapefile' must be a .rds file or a list.")
+      }
+      shape <- readRDS(file = shapefile)
+      if (!is.list(shape)) {
+        stop("Parameter 'shapefile' should be a .rds file of a list object.")
+      }
+      if (any(!c('x', 'y') %in% names(shape))) {
+        stop("The list names of the object in 'shapefile' .rds file should ",
+             "have at least 'x' and 'y'.")
+      }
+      if (length(shape$x) != length(shape$y)) {
+        stop("The length of x and y in 'shapefile' list should be equal.")
+      }
+    }
+  }
+
+  # Check shapefile_col
+  if (is.null(shapefile_color)) {
+    if (filled.continents) {
+      shapefile_color <- continent_color
+    } else {
+      shapefile_color <- 'black'
+    }
+  }
+  if (!.IsColor(shapefile_color)) {
+    stop("Parameter 'shapefile_color' must be a valid colour identifier.")
   }
 
   # Check contours
@@ -656,10 +713,6 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     }
   }
 
-  #library(GEOmap)
-  #library(geomapdata)
-  #library(maps)
-  utils::data(coastmap, package = 'GEOmap', envir = environment())
   #
   #  Input arguments 
   # ~~~~~~~~~~~~~~~~~
@@ -844,47 +897,21 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   }
   old_lwd <- par('lwd')
   par(lwd = coast_width)
-  # If [0, 360], use GEOmap; if [-180, 180], use maps
-  if (min(lon) >= 0) {
-    ylat <- latmin:latmax
-    xlon <- lonmin:lonmax
-    proj <- GEOmap::setPROJ(1, LON0 = mean(xlon),
-                            LAT0 = mean(ylat), LATS = ylat, LONS = xlon)
-    lakes <- which(coastmap$STROKES$col == "blue")
-    par(new = TRUE)
-    if (filled.continents) {
-      coastmap$STROKES$col[which(coastmap$STROKES$col != "blue")] <- continent_color
-      if (is.null(lake_color)) {
-        coastmap$STROKES$col[lakes] <- continent_color
-      } else {
-        coastmap$STROKES$col[lakes] <- lake_color #"white"
-      }
-      GEOmap::plotGEOmap(coastmap, PROJ = proj, border = coast_color, 
-                         add = TRUE, lwd = coast_width)
-    } else {
-      coastmap$STROKES$col[which(coastmap$STROKES$col != "blue")] <- coast_color
-      if (is.null(lake_color)) {
-        coastmap$STROKES$col[lakes] <- coast_color
-      } else {
-        coastmap$STROKES$col[lakes] <- lake_color #"white"
-      }
-      GEOmap::plotGEOmap(coastmap, PROJ = proj, #MAPcol = coast_color,
-                         add = TRUE, lwd = coast_width, MAPstyle = 2)
-    }
-
-  } else {
-    # [-180, 180]
-    coast <- map(continents, interior = FALSE, wrap = TRUE,
+  # If [0, 360], use GEOmap; if [-180, 180], use maps::map
+  # UPDATE: Use maps::map for both cases. The difference between GEOmap and
+  #         maps is trivial. The only thing we can see for now is that 
+  #         GEOmap has better lakes.
+    coast <- maps::map(continents, interior = country.borders, wrap = TRUE,
                  xlim = xlim_conti, ylim = c(-89.99, 89.99),
                  fill = filled.continents, add = TRUE, plot = FALSE)
-    if (filled.continents) {
-      polygon(coast, col = continent_color, border = coast_color, lwd = coast_width)
-    } else {
-      lines(coast, col = coast_color, lwd = coast_width)
-    }
-    if (!is.null(lake_color)) {
-      map('lakes', add = TRUE, fill = filled.continents, col = lake_color) 
-    }
+
+  if (filled.continents) {
+    polygon(coast, col = continent_color, border = coast_color, lwd = coast_width)
+  } else {
+    lines(coast, col = coast_color, lwd = coast_width)
+  }
+  if (!is.null(lake_color)) {
+    maps::map('lakes', add = TRUE, fill = filled.continents, col = lake_color) 
   }
   par(lwd = old_lwd)
 
@@ -893,7 +920,7 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
       old_lwd <- par('lwd')
       par(lwd = coast_width)
 
-      outline <- map(continents, fill = T, plot = FALSE)  # must be fill = T
+      outline <- maps::map(continents, fill = T, plot = FALSE)  # must be fill = T
       xbox <- xlim_conti + c(-2, 2)
       ybox <- c(-92, 92) 
       outline$x <- c(outline$x, NA, c(xbox, rev(xbox), xbox[1]))
@@ -901,6 +928,14 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
       polypath(outline, col = ocean_color, rule = 'evenodd', border = NA)
 
       par(lwd = old_lwd)
+  }
+
+  # Plot shapefile
+  if (!is.null(shapefile)) {
+    maps::map(shape, interior = country.borders, #wrap = TRUE,
+              xlim = xlim_conti, ylim = c(-89.99, 89.99),
+              fill = filled.continents, add = TRUE, plot = TRUE, 
+              lwd = shapefile_lwd, col = shapefile_color)
   }
 
   box()

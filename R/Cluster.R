@@ -181,7 +181,7 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
       if (!(length(space_dim) == length(dim(weights)) & all(space_dim %in% names(dim(weights))))) {
         stop("Parameter 'weights' must have dimension names the same as 'space_dim'.")
       }
-      if (space_dim != names(dim(weights))) {
+      if (any(space_dim != names(dim(weights)))) {
         space_dim <- names(dim(weights))
       }
     }

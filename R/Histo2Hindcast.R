@@ -66,7 +66,7 @@ Histo2Hindcast <- function(data, sdatesin, sdatesout, nleadtimesout,
   if (is.null(sdatesin)) {
     stop("Parameter 'sdatesin' cannot be NULL.")
   }
-  if (!is.character(sdatesin) | length(sdatesin) > 1) {
+  if (!is.character(sdatesin) || length(sdatesin) > 1) {
     stop(paste0("Parameter 'sdatesin' must be a character string in the format",
                 " 'YYYYMMDD' or 'YYYYMM'."))
   } else if (!nchar(sdatesin) %in% c(6, 8) | is.na(as.numeric(sdatesin))) {
@@ -88,12 +88,12 @@ Histo2Hindcast <- function(data, sdatesin, sdatesout, nleadtimesout,
   if (is.null(nleadtimesout)) {
     stop("Parameter 'nleadtimesout' cannot be NULL.")
   }
-  if (!is.numeric(nleadtimesout) | nleadtimesout %% 1 != 0 | 
-      nleadtimesout < 0 | length(nleadtimesout) > 1) {
+  if (!is.numeric(nleadtimesout) | any(nleadtimesout %% 1 != 0) | 
+      any(nleadtimesout < 0) | length(nleadtimesout) > 1) {
     stop("Parameter 'nleadtimesout' must be a positive integer.")
   }
   # sdate_dim
-  if (!is.character(sdate_dim) | length(sdate_dim) > 1) {
+  if (!is.character(sdate_dim) || length(sdate_dim) > 1) {
     stop("Parameter 'sdate_dim' must be a character string.")
   }
   if (!sdate_dim %in% names(dim(data))) {
@@ -103,7 +103,7 @@ Histo2Hindcast <- function(data, sdatesin, sdatesout, nleadtimesout,
     stop("The dimension length of sdate_dim of 'data' must be 1.")
   }
   # ftime_dim
-  if (!is.character(ftime_dim) | length(ftime_dim) > 1) {
+  if (!is.character(ftime_dim) || length(ftime_dim) > 1) {
     stop("Parameter 'ftime_dim' must be a character string.")
   }
   if (!ftime_dim %in% names(dim(data))) {
@@ -111,7 +111,7 @@ Histo2Hindcast <- function(data, sdatesin, sdatesout, nleadtimesout,
   }
   # ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
+    if (!is.numeric(ncores) || ncores %% 1 != 0 || ncores <= 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }

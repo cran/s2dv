@@ -32,9 +32,9 @@ example(Load)
 clim <- Clim(sampleData$mod, sampleData$obs)
 ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 ano_obs <- Ano(sampleData$obs, clim$clim_obs)
-\donttest{
+\dontrun{
 PlotAno(ano_exp, ano_obs, startDates, 
        toptitle = 'Anomaly', ytitle = c('K', 'K', 'K'), 
-       legends = 'ERSST', biglab = FALSE, fileout = 'tos_ano.png')
+       legends = 'ERSST', biglab = FALSE)
 }
 }

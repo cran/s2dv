@@ -1671,9 +1671,9 @@
   if (type == 'dcpp') {
     
     fyear_dim <- 'fyear'
-    data <- s2dv::Season(data = data, time_dim = fmonth_dim,
-                         monini = monini, moninf = 1, monsup = 12,
-                         method = mean, na.rm = na.rm)
+    data <- Season(data = data, time_dim = fmonth_dim,
+                   monini = monini, moninf = 1, monsup = 12,
+                   method = mean, na.rm = na.rm)
     names(dim(data))[which(names(dim(data))==fmonth_dim)] <- fyear_dim
     
     if (identical(indices_for_clim, FALSE)) { ## data is already anomalies

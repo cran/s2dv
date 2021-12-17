@@ -122,6 +122,8 @@
 #'@param extra_margin Extra margins to be added around the layout, in the 
 #'  format c(y1, x1, y2, x2). The units are margin lines. Takes rep(0, 4) 
 #'  by default.
+#'@param layout_by_rows Logical indicating wether the panels should be filled 
+#'  by columns (FALSE) or by raws (TRUE, default).
 #'@param fileout File where to save the plot. If not specified (default) a 
 #'  graphics device will pop up. Extensions allowed: eps/ps, jpeg, png, pdf, 
 #'  bmp and tiff.
@@ -196,7 +198,7 @@
 #'@importFrom grDevices dev.cur dev.new dev.off
 #'@export
 PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL, 
-                       nrow = NULL, ncol = NULL, toptitle = NULL, 
+                       nrow = NULL, ncol = NULL, toptitle = NULL,
                        row_titles = NULL, col_titles = NULL, bar_scale = 1, 
                        title_scale = 1, title_margin_scale = 1,
                        title_left_shift_scale = 1,
@@ -210,11 +212,11 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
                        units = NULL, units_scale = 1, bar_label_scale = 1, 
                        bar_tick_scale = 1, bar_extra_margin = rep(0, 4), 
                        bar_left_shift_scale = 1, bar_label_digits = 4, 
-                       extra_margin = rep(0, 4),
+                       extra_margin = rep(0, 4), layout_by_rows = TRUE,
                        fileout = NULL, width = NULL, height = NULL, 
                        size_units = 'in', res = 100, close_device = TRUE) {
   # If there is any filenames to store the graphics, process them
-  # to select the right device 
+  # to select the right device
   if (!is.null(fileout)) {
     deviceInfo <- .SelectDevice(fileout = fileout, width = width, height = height, units = size_units, res = res)
     saveToFile <- deviceInfo$fun
@@ -278,6 +280,10 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
       stop("Parameter 'ncol' must be numeric or NULL.")
     }
     ncol <- round(ncol)
+  }
+  # Check layout_by_rows
+  if (!is.logical(layout_by_rows)) {
+     stop("Parameter 'layout_by_rows' must be logical.")
   }
 
   # Check toptitle
@@ -522,7 +528,7 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
   subtitle_cex <- 1.5 * subtitle_scale
   subtitle_margin <- 0.5 * sqrt(nrow * ncol) * subtitle_cex * subtitle_margin_scale
   mat_layout <- 1:(nrow * ncol) + ifelse(drawleg != FALSE, 1, 0)
-  mat_layout <- matrix(mat_layout, nrow, ncol, byrow = TRUE)
+  mat_layout <- matrix(mat_layout, nrow, ncol, byrow = layout_by_rows)
   fsu <- figure_size_units <- 10  # unitless
   widths <- rep(fsu, ncol)
   heights <- rep(fsu, nrow)

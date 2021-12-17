@@ -67,11 +67,10 @@ rsdrms <- RatioSDRMS(sampleData$mod, sampleData$obs)
 rsdrms_plot <- array(dim = c(dim(rsdrms$ratio)[1:2], 4, dim(rsdrms$ratio)[3]))
 rsdrms_plot[, , 2, ] <- rsdrms$ratio
 rsdrms_plot[, , 4, ] <- rsdrms$p.val
-\donttest{
+\dontrun{
 PlotVsLTime(rsdrms_plot, toptitle = "Ratio ensemble spread / RMSE", ytitle = "", 
            monini = 11, limits = c(-1, 1.3), listexp = c('CMIP5 IC3'), 
-           listobs = c('ERSST'), biglab = FALSE, siglev = TRUE, 
-           fileout = 'tos_rsdrms.eps')
+           listobs = c('ERSST'), biglab = FALSE, siglev = TRUE) 
 }
 
 }

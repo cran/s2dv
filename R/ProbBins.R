@@ -100,7 +100,7 @@ ProbBins <- function(data, thr, fcyr = 'all', time_dim = 'sdate', memb_dim = 'me
     stop("Parameter 'memb_dim' is not found in 'data' dimension.")
   }
   ## fcyr
-  if (fcyr != 'all') {
+  if (!identical(fcyr, 'all')) {
     if (!is.numeric(fcyr) | !is.vector(fcyr)) {
       stop("Parameter 'fcyr' must be a numeric vector or 'all'.")
     } else if (any(fcyr %% 1 != 0) | min(fcyr) < 1 | max(fcyr) > dim(data)[time_dim]) {

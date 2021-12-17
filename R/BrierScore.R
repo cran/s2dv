@@ -174,7 +174,7 @@ BrierScore <- function(exp, obs, thresholds = seq(0.1, 0.9, 0.1), time_dim = 'sd
     name_exp <- name_exp[-which(name_exp == dat_dim)]
     name_obs <- name_obs[-which(name_obs == dat_dim)]
   }
-  if (any(name_exp != name_obs)) {
+  if (any(!name_exp %in% name_obs) | any(!name_obs %in% name_exp)) {
     stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
                 "of all the dimensions expect 'dat_dim' and 'memb_dim'."))
   }

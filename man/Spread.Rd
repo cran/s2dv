@@ -74,27 +74,27 @@ smooth_ano_exp_m_sub <- smooth_ano_exp - InsertDim(MeanDims(smooth_ano_exp, 'mem
                                                   name = 'member')
 spread <- Spread(smooth_ano_exp_m_sub, compute_dim = c('member', 'sdate'))
 
-\donttest{
+\dontrun{
 PlotVsLTime(Reorder(spread$iqr, c('dataset', 'stats', 'ftime')), 
            toptitle = "Inter-Quartile Range between ensemble members",
            ytitle = "K", monini = 11, limits = NULL, 
            listexp = c('CMIP5 IC3'), listobs = c('ERSST'), biglab = FALSE, 
-           hlines = c(0), fileout = 'tos_iqr.png')
+           hlines = c(0))
 PlotVsLTime(Reorder(spread$maxmin, c('dataset', 'stats', 'ftime')), 
            toptitle = "Maximum minus minimum of the members", 
            ytitle = "K", monini = 11, limits = NULL, 
            listexp = c('CMIP5 IC3'), listobs = c('ERSST'), biglab = FALSE, 
-           hlines = c(0), fileout = 'tos_maxmin.png')
+           hlines = c(0))
 PlotVsLTime(Reorder(spread$sd, c('dataset', 'stats', 'ftime')), 
            toptitle = "Standard deviation of the members", 
            ytitle = "K", monini = 11, limits = NULL, 
            listexp = c('CMIP5 IC3'), listobs = c('ERSST'), biglab = FALSE, 
-           hlines = c(0), fileout = 'tos_sd.png')
+           hlines = c(0))
 PlotVsLTime(Reorder(spread$mad, c('dataset', 'stats', 'ftime')), 
            toptitle = "Median Absolute Deviation of the members",
            ytitle = "K", monini = 11, limits = NULL, 
            listexp = c('CMIP5 IC3'), listobs = c('ERSST'), biglab = FALSE, 
-           hlines = c(0), fileout = 'tos_mad.png')
+           hlines = c(0))
 }
 
 }

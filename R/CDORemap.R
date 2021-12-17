@@ -20,8 +20,7 @@
 #'  provided, it must have at least a longitude and a latitude dimensions, 
 #'  identified by the array dimension names. The names for these dimensions 
 #'  must be one of the recognized by s2dverification (can be checked with 
-#'  \code{s2dverification:::.KnownLonNames()} and 
-#'  \code{s2dverification:::.KnownLatNames()}).
+#'  \code{s2dv:::.KnownLonNames()} and \code{s2dv:::.KnownLatNames()}).
 #'@param lons Numeric vector or array of longitudes of the centers of the grid 
 #'  cells. Its size must match the size of the longitude/latitude dimensions 
 #'  of the input array.
@@ -33,9 +32,9 @@
 #'  NetCDF file which to read the target grid from (a single grid must be 
 #'  defined in such file).
 #'@param method Character string specifying an interpolation method 
-#'  (recognized by CDO; e.g.: 'con', 'bil', 'bic', 'dis'). The following 
-#'  long names are also supported: 'conservative', 'bilinear', 'bicubic' and 
-#'  'distance-weighted'.
+#'  (recognized by CDO; e.g.: 'con', 'bil', 'bic', 'dis', 'con2', 'laf', 'nn').
+#'  The following long names are also supported: 'conservative', 'bilinear', 
+#'  'bicubic' and 'distance-weighted'.
 #'@param avoid_writes The step of permutation is needed when the input array 
 #'  has more than 3 dimensions and none of the longitude or latitude dimensions
 #'   in the right-most position (CDO would not accept it without permuting 
@@ -251,22 +250,27 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
       array_dims <- c(length(lats), length(lons))
       new_lon_dim_name <- 'lon'
       new_lat_dim_name <- 'lat'
-    } else {
+
+      if (!is.null(names(dim(lons)))) {
+        if (any(known_lon_names %in% names(dim(lons)))) {
+          new_lon_dim_name <- known_lon_names[which(known_lon_names %in% names(dim(lons)))[1]]
+        }
+      }
+      if (!is.null(names(dim(lats)))) {
+        if (any(known_lat_names %in% names(dim(lats)))) {
+          new_lat_dim_name <- known_lat_names[which(known_lat_names %in% names(dim(lats)))[1]]
+        }
+      }
+      names(array_dims) <- c(new_lat_dim_name, new_lon_dim_name)
+
+    } else {  # irregular
       array_dims <- dim(lons)
-      new_lon_dim_name <- 'i'
-      new_lat_dim_name <- 'j'
-    }
-    if (!is.null(names(dim(lons)))) {
-      if (any(known_lon_names %in% names(dim(lons)))) {
-        new_lon_dim_name <- known_lon_names[which(known_lon_names %in% names(dim(lons)))[1]]
+      if (is.null(names(array_dims))) {
+        new_lon_dim_name <- 'i'
+        new_lat_dim_name <- 'j'
       }
     }
-    if (!is.null(names(dim(lats)))) {
-      if (any(known_lat_names %in% names(dim(lats)))) {
-        new_lat_dim_name <- known_lat_names[which(known_lat_names %in% names(dim(lats)))[1]]
-      }
-    }
-    names(array_dims) <- c(new_lat_dim_name, new_lon_dim_name)
+
     data_array <- array(as.numeric(NA), array_dims)
   }
   if (!(is.logical(data_array) || is.numeric(data_array)) || !is.array(data_array)) {
@@ -385,8 +389,14 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     method <- 'con'
   } else if (method %in% c('dis', 'distance-weighted')) {
     method <- 'dis'
+  } else if (method %in% 'nn') {
+    method <- 'nn'
+  } else if (method %in% 'laf') {
+    method <- 'laf'
+  } else if (method %in% 'con2') {
+    method <- 'con2'
   } else {
-    stop("Unsupported CDO remap method. 'bilinear', 'bicubic', 'conservative' or 'distance-weighted' supported only.")
+    stop("Unsupported CDO remap method. Only 'bilinear', 'bicubic', 'conservative', 'distance-weighted', 'nn', 'laf', and 'con2' are supported.")
   }
   # Check avoid_writes
   if (!is.logical(avoid_writes)) {
@@ -890,7 +900,16 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
       } else {
         new_dims <- dim(data_array)
         new_dims[c(lon_dim, lat_dim)] <- c(found_lon_dim_size, found_lat_dim_size)
-
+        if (is_irregular) {
+          lon_pos <- which(names(new_dims) == lon_dim)
+          lat_pos <- which(names(new_dims) == lat_dim)
+          if (lon_pos > lat_pos) {
+            new_pos <- 1:length(new_dims)
+            new_pos[lon_pos] <- lat_pos
+            new_pos[lat_pos] <- lon_pos
+            new_dims <- new_dims[new_pos]
+          }
+        }
         result_array <- ncvar_get(ncdf_remapped, 'var', collapse_degen = FALSE)
         dim(result_array) <- new_dims
       }

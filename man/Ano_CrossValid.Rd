@@ -69,6 +69,6 @@ anomalies <- Ano_CrossValid(sampleData$mod, sampleData$obs)
 \dontrun{
 PlotAno(anomalies$exp, anomalies$obs, startDates, 
        toptitle = paste('anomalies'), ytitle = c('K', 'K', 'K'), 
-       legends = 'ERSST', biglab = FALSE, fileout = 'tos_ano_crossvalid.eps')
+       legends = 'ERSST', biglab = FALSE)
 }
 }

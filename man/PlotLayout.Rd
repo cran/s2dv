@@ -43,6 +43,7 @@ PlotLayout(
   bar_left_shift_scale = 1,
   bar_label_digits = 4,
   extra_margin = rep(0, 4),
+  layout_by_rows = TRUE,
   fileout = NULL,
   width = NULL,
   height = NULL,
@@ -179,6 +180,9 @@ disregarded if no 'row_titles' are provided.}
 \item{extra_margin}{Extra margins to be added around the layout, in the 
 format c(y1, x1, y2, x2). The units are margin lines. Takes rep(0, 4) 
 by default.}
+
+\item{layout_by_rows}{Logical indicating wether the panels should be filled 
+by columns (FALSE) or by raws (TRUE, default).}
 
 \item{fileout}{File where to save the plot. If not specified (default) a 
 graphics device will pop up. Extensions allowed: eps/ps, jpeg, png, pdf, 

@@ -136,6 +136,9 @@ Season <- function(data, time_dim = 'ftime', monini, moninf, monsup,
         res <- apply(data, c(1:length(dim(data)))[-time_dim_ind], .Season,
                      monini = monini, moninf = moninf, monsup = monsup,
                      method = method, na.rm = na.rm)
+        if (is.null(dim(res))) {
+          res <- array(res, dim = dim(data)[-time_dim_ind])
+        }
         if (length(dim(res)) < length(dim(data))) {
           res <- InsertDim(res, posdim = 1, lendim = 1, name = time_dim)
         } else {

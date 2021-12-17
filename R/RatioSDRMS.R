@@ -44,11 +44,10 @@
 #'rsdrms_plot <- array(dim = c(dim(rsdrms$ratio)[1:2], 4, dim(rsdrms$ratio)[3]))
 #'rsdrms_plot[, , 2, ] <- rsdrms$ratio
 #'rsdrms_plot[, , 4, ] <- rsdrms$p.val
-#'\donttest{
+#'\dontrun{
 #'PlotVsLTime(rsdrms_plot, toptitle = "Ratio ensemble spread / RMSE", ytitle = "", 
 #'            monini = 11, limits = c(-1, 1.3), listexp = c('CMIP5 IC3'), 
-#'            listobs = c('ERSST'), biglab = FALSE, siglev = TRUE, 
-#'            fileout = 'tos_rsdrms.eps')
+#'            listobs = c('ERSST'), biglab = FALSE, siglev = TRUE) 
 #'}
 #'
 #'@import multiApply
@@ -183,7 +182,7 @@ RatioSDRMS <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member',
 
       if (pval) {
         F <- (enosd[jexp] * std[jexp]^2 / (enosd[jexp] - 1)) / (enorms * rms^2 / (enorms - 1))
-        if (!is.na(F) & !is.na(enosd) & !is.na(enorms) & enosd > 2 && enorms > 2) {
+        if (!is.na(F) & !is.na(enosd[jexp]) & !is.na(enorms) & any(enosd > 2) & enorms > 2) {
           p.val[jexp, jobs] <- 1 - pf(F, enosd[jexp] - 1, enorms - 1)
         } else {
           ratiosdrms[jexp, jobs] <- NA

@@ -24,9 +24,13 @@ PlotEquiMap(
   square = TRUE,
   filled.continents = NULL,
   filled.oceans = FALSE,
+  country.borders = FALSE,
   coast_color = NULL,
   coast_width = 1,
   lake_color = NULL,
+  shapefile = NULL,
+  shapefile_color = NULL,
+  shapefile_lwd = 1,
   contours = NULL,
   brks2 = NULL,
   contour_lwd = 0.5,
@@ -143,8 +147,12 @@ Takes the value gray(0.5) by default or, if 'square = FALSE', takes the
 value FALSE. If set to FALSE, continents are not filled in.}
 
 \item{filled.oceans}{A logical value or the color name to fill in drawn 
-projected oceans. The default value is FALSE. If it is TRUE, the default 
+projected oceans. The default value is FALSE. If it is TRUE, the default
 colour is "light blue".}
+
+\item{country.borders}{A logical value indicating if the country borders 
+should be plotted (TRUE) or not (FALSE). It only works when 
+'filled.continents' is FALSE. The default value is FALSE.}
 
 \item{coast_color}{Colour of the coast line of the drawn projected continents.
 Takes the value gray(0.5) by default.}
@@ -154,6 +162,15 @@ continents. Takes the value 1 by default.}
 
 \item{lake_color}{Colour of the lake or other water body inside continents.
 The default value is NULL.}
+
+\item{shapefile}{A character string of the path to a .rds file or a list 
+object containinig shape file data. If it is a .rds file, it should contain
+a list. The list should contains 'x' and 'y' at least, which indicate the 
+location of the shape. The default value is NULL.}
+
+\item{shapefile_color}{Line color of the shapefile.}
+
+\item{shapefile_lwd}{Line width of the shapefile. The default value is 1.}
 
 \item{contours}{Array of same dimensions as 'var' to be added to the plot 
 and displayed with contours. Parameter 'brks2' is required to define the 
