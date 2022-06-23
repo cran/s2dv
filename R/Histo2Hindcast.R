@@ -80,7 +80,7 @@ Histo2Hindcast <- function(data, sdatesin, sdatesout, nleadtimesout,
   if (!is.character(sdatesout) | !is.vector(sdatesout)) {
     stop(paste0("Parameter 'sdatesout' must be a vector of character in the ",
                 "format 'YYYYMMDD' or 'YYYYMM'."))
-  } else if (!all(nchar(sdatesout) %in% c(6, 8)) | any(is.na(as.numeric(sdatesin)))) {
+  } else if (!all(nchar(sdatesout) %in% c(6, 8)) | anyNA(as.numeric(sdatesin))) {
     stop(paste0("Parameter 'sdatesout' must be a vector of character in the ",
                 "format 'YYYYMMDD' or 'YYYYMM'."))
   }

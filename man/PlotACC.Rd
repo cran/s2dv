@@ -110,8 +110,8 @@ sampleData$obs <- Season(sampleData$obs, monini = 11, moninf = 12, monsup = 2)
 clim <- Clim(sampleData$mod, sampleData$obs)
 ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 ano_obs <- Ano(sampleData$obs, clim$clim_obs)
-acc <- ACC(ano_exp, ano_obs)
-acc_bootstrap <- ACC(ano_exp, ano_obs, conftype = 'bootstrap')
+acc <- ACC(ano_exp, ano_obs, lat = sampleData$lat)
+acc_bootstrap <- ACC(ano_exp, ano_obs, lat = sampleData$lat, conftype = 'bootstrap')
 # Combine acc results for PlotACC
 res <- array(c(acc$conf.lower, acc$acc, acc$conf.upper, acc$p.val), 
             dim = c(dim(acc$acc), 4))

@@ -122,7 +122,7 @@ Persistence <- function(data, dates, time_dim = 'time', start, end, ft_start,
     stop(paste0("Parameter 'dates' must be a sequence of integer (YYYY) or ",
                 "string (YYYY-MM-DD) in class 'Date'."))
     }
-  } else if (class(dates) == 'Date') { #(YYYY-MM-DD)
+  } else if (inherits(dates, 'Date')) { #(YYYY-MM-DD)
     
   } else {
     stop(paste0("Parameter 'dates' must be a sequence of integer (YYYY) or ",
@@ -148,7 +148,7 @@ Persistence <- function(data, dates, time_dim = 'time', start, end, ft_start,
       stop(paste0("Parameter 'start' must start at least 40 time steps after ",
                   "the first 'dates'."))
     } 
-  } else if (class(start) == 'Date') {
+  } else if (inherits(start, 'Date')) {
     if (length(start) > 1 | any(start < as.Date(ISOdate(1850, 1, 1))) | 
         any(start > as.Date(ISOdate(2021, 1, 1)))) {
       stop(paste0("Parameter 'start' must be an integer or a string in class ",
@@ -176,7 +176,7 @@ Persistence <- function(data, dates, time_dim = 'time', start, end, ft_start,
       stop(paste0("Parameter 'end' must end at most 1 time steps after ",
                   "the last 'dates'."))
     } 
-  } else if (class(end) == 'Date') {
+  } else if (inherits(end, 'Date')) {
     if (length(end) > 1 | any(end < as.Date(ISOdate(1850, 1, 1))) | 
         any(end > as.Date(ISOdate(2020, 12, 31)))) {
       stop(paste0("Parameter 'end' must be an integer or a string in class ",

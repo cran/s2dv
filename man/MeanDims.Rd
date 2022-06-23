@@ -19,9 +19,10 @@ not (FALSE).}
 dimension (FALSE) or drop it (TRUE). The default value is TRUE.}
 }
 \value{
-An array with the same dimension as parameter 'data' except the 
- 'dims' dimensions. If 'drop' is TRUE, 'dims' will be removed; if 'drop' is
- FALSE, 'dims' will be preserved and the length will be 1.
+A numeric or an array with the same dimension as parameter 'data'
+ except the 'dims' dimensions. If 'drop' is TRUE, 'dims' will be removed; if
+'drop' is FALSE, 'dims' will be preserved and the length will be 1. If all
+ the dimensions are averaged out, a numeric is returned.
 }
 \description{
 This function returns the mean of an array along a set of dimensions and 

@@ -5,7 +5,8 @@
 \alias{sampleDepthData}
 \title{Sample of Experimental Data for Forecast Verification In Function Of 
 Latitudes And Depths}
-\format{The data set provides with a variable named 'sampleDepthData'.\cr\cr
+\format{
+The data set provides with a variable named 'sampleDepthData'.\cr\cr
 
 sampleDepthData$exp is an array that contains the experimental data and the 
 dimension meanings and values are:\cr
@@ -18,7 +19,8 @@ but in this sample is not defined (NULL).\cr\cr
 
 sampleDepthData$depths is an array with the 7 longitudes covered by the data.\cr\cr
 
-sampleDepthData$lat is an array with the 21 latitudes covered by the data.\cr\cr}
+sampleDepthData$lat is an array with the 21 latitudes covered by the data.\cr\cr
+}
 \usage{
 data(sampleDepthData)
 }

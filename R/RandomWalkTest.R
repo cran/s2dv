@@ -1,8 +1,8 @@
 #'Random walk test for skill differences
 #'
 #'Forecast comparison of the skill obtained with 2 forecasts (with respect to a 
-#'common reference) based on Random Walks, with significance estimate at the 5%
-#'confidence level, as in DelSole and Tippett (2015).
+#'common reference) based on Random Walks, with significance estimate at the 95%
+#'confidence level, as in DelSole and Tippett (2016).
 #'
 #'@param skill_A A numerical array of the time series of the skill with the 
 #'  forecaster A's.

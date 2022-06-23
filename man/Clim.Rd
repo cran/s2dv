@@ -18,11 +18,11 @@ Clim(
 )
 }
 \arguments{
-\item{exp}{A named numeric array of experimental data, with at least two 
-dimensions 'time_dim' and 'dat_dim'.}
+\item{exp}{A named numeric array of experimental data with at least dimension
+'time_dim'.}
 
-\item{obs}{A named numeric array of observational data, same dimensions as
-parameter 'exp' except along 'dat_dim'.}
+\item{obs}{A named numeric array of observational data that has the same 
+dimension as 'exp' except 'dat_dim'.}
 
 \item{time_dim}{A character string indicating the name of dimension along
 which the climatologies are computed. The default value is 'sdate'.}
@@ -30,16 +30,20 @@ which the climatologies are computed. The default value is 'sdate'.}
 \item{dat_dim}{A character vector indicating the name of the dataset and 
 member dimensions. If data at one startdate (i.e., 'time_dim') are not 
 complete along 'dat_dim', this startdate along 'dat_dim' will be discarded.
-The default value is "c('dataset', 'member')".}
+If there is no dataset dimension, it can be NULL, however, it will be more 
+efficient to simply use mean() to do the calculation. The default value is 
+"c('dataset', 'member')".}
 
 \item{method}{A character string indicating the method to be used. The 
-options include 'clim', 'kharin', and 'NDV'. The default value is 'clim'.}
+options include 'clim' (per-pair method), 'kharin' (Kharin method), and 
+'NDV' (Fuckar method). The default value is 'clim'.}
 
 \item{ftime_dim}{A character string indicating the name of forecast time
 dimension. Only used when method = 'NDV'. The default value is 'ftime'.}
 
 \item{memb}{A logical value indicating whether to remain 'memb_dim' dimension
-(TRUE) or do ensemble mean over 'memb_dim' (FALSE). The default value is TRUE.}
+(TRUE) or do ensemble mean over 'memb_dim' (FALSE). The default value is 
+TRUE.}
 
 \item{memb_dim}{A character string indicating the name of the member 
 dimension. Only used when parameter 'memb' is FALSE. It must be one element
@@ -61,7 +65,7 @@ A list of 2:
  dimension 'memb_dim' is also removed.
 }
 \item{$clim_obs}{
- A numeric array with the same dimensions as  parameter 'exp' 
+ A numeric array with the same dimensions as  parameter 'obs' 
  except dimension 'time_dim' is removed. If parameter 'memb' is FALSE,
  dimension 'memb_dim' is also removed.
 }
@@ -70,14 +74,17 @@ A list of 2:
 This function computes per-pair climatologies for the experimental 
 and observational data using one of the following methods:
 \enumerate{
- \item{per-pair method (Garcia-Serrano and Doblas-Reyes, CD, 2012)}
- \item{Kharin method (Karin et al, GRL, 2012)}
- \item{Fuckar method (Fuckar et al, GRL, 2014)}
+ \item{per-pair method (Garcia-Serrano and Doblas-Reyes, CD, 2012 https://doi.org/10.1007/s00382-012-1413-1)}
+ \item{Kharin method (Kharin et al, GRL, 2012 https://doi.org/10.1029/2012GL052647)}
+ \item{Fuckar method (Fuckar et al, GRL, 2014 https://doi.org/10.1002/2014GL060815)}
 }
 Per-pair climatology means that only the startdates covered by the 
 whole experiments/observational dataset will be used. In other words, the 
 startdates which are not all available along 'dat_dim' dimension of both
 the 'exp' and 'obs' are excluded when computing the climatologies.
+Kharin method is the linear trend bias correction method, and Fuckar method 
+is the initial condition bias correction method. The two methods both do the
+per-pair correction beforehand.
 }
 \examples{
 # Load sample data as in Load() example:

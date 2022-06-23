@@ -992,7 +992,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   if (is.null(sdates)) {
     stop("Error: parameter 'sdates' must be provided.")
   }
-  if (!is.character(sdates) || !all(nchar(sdates) == 8) || any(is.na(strtoi(sdates)))) {
+  if (!is.character(sdates) || !all(nchar(sdates) == 8) || anyNA(strtoi(sdates))) {
     stop("Error: parameter 'sdates' is incorrect. All starting dates should be a character string in the format 'YYYYMMDD'.")
   }
 
@@ -1007,7 +1007,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
     }
     if (length(nmember) != length(exp)) {
       stop("Error: 'nmember' must contain as many values as 'exp'.")
-    } else if (any(is.na(nmember))) {
+    } else if (anyNA(nmember)) {
       nmember[which(is.na(nmember))] <- max(nmember, na.rm = TRUE)
     }
   }
@@ -1023,7 +1023,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
     }
     if (length(nmemberobs) != length(obs)) {
       stop("Error: 'nmemberobs' must contain as many values as 'obs'.")
-    } else if (any(is.na(nmemberobs))) {
+    } else if (anyNA(nmemberobs)) {
       nmemberobs[which(is.na(nmemberobs))] <- max(nmemberobs, na.rm = TRUE)
     }
   }
@@ -1532,7 +1532,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   }
 
   dims <- dim_exp[na.omit(match(c('dataset', 'member', 'sdate', 'ftime', 'lat', 'lon'), names(dim_exp)))]
-  if (is.null(dims[['member']]) || any(is.na(unlist(dims))) || any(unlist(dims) == 0)) {
+  if (is.null(dims[['member']]) || anyNA(unlist(dims)) || any(unlist(dims) == 0)) {
     dims <- 0
     dim_exp <- NULL
   }
@@ -1844,7 +1844,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
     .warning("no data found in file system for any observational dataset.")
   }
   dims <- dim_obs[na.omit(match(c('dataset', 'member', 'sdate', 'ftime', 'lat', 'lon'), names(dim_obs)))]
-  if (is.null(dims[['member']]) || any(is.na(unlist(dims))) || any(unlist(dims) == 0)) {
+  if (is.null(dims[['member']]) || anyNA(unlist(dims)) || any(unlist(dims) == 0)) {
     dims <- 0
     dim_obs <- NULL
   }
@@ -1864,12 +1864,12 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   # So [1, 1, 1, 1, 1, 1] will be next to [2, 1, 1, 1, 1, 1] in memory
   pointer_var_exp <- pointer_var_obs <- NULL
   if (!is.null(dim_exp) && (length(unlist(dim_exp)) == length(dim_exp)) && 
-      !any(is.na(unlist(dim_exp))) && !any(unlist(dim_exp) == 0)) {
+      !anyNA(unlist(dim_exp)) && !any(unlist(dim_exp) == 0)) {
     var_exp <- big.matrix(nrow = prod(unlist(dim_exp)), ncol = 1)
     pointer_var_exp <- describe(var_exp)
   }
   if (!is.null(dim_obs) && (length(unlist(dim_obs)) == length(dim_obs)) && 
-      !any(is.na(unlist(dim_obs))) && !any(unlist(dim_obs) == 0)) {
+      !anyNA(unlist(dim_obs)) && !any(unlist(dim_obs) == 0)) {
     var_obs <- big.matrix(nrow = prod(unlist(dim_obs)), ncol = 1)
     pointer_var_obs <- describe(var_obs)
   }
@@ -1878,11 +1878,11 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   }
   # We calculate the % of total progress that each work piece represents so 
   # that progress bar can be updated properly
-  exp_work_piece_percent <- prod(dim_exp) / (prod(dim_obs) + prod(dim_exp))
-  obs_work_piece_percent <- prod(dim_obs) / (prod(dim_obs) + prod(dim_exp))
+  exp_work_piece_percent <- prod(unlist(dim_exp)) / (prod(unlist(dim_obs)) + prod(unlist(dim_exp)))
+  obs_work_piece_percent <- prod(unlist(dim_obs)) / (prod(unlist(dim_obs)) + prod(unlist(dim_exp)))
   # Add some important extra fields in the work pieces before sending
-  exp_work_pieces <- lapply(exp_work_pieces, function (x) c(x, list(dataset_type = 'exp', dims = dim_exp, out_pointer = pointer_var_exp)))###, progress_amount = exp_work_piece_progress)))
-  obs_work_pieces <- lapply(obs_work_pieces, function (x) c(x, list(dataset_type = 'obs', dims = dim_obs, out_pointer = pointer_var_obs)))###, progress_amount = obs_work_piece_progress)))
+  exp_work_pieces <- lapply(exp_work_pieces, function (x) c(x, list(dataset_type = 'exp', dims = unlist(dim_exp), out_pointer = pointer_var_exp)))###, progress_amount = exp_work_piece_progress)))
+  obs_work_pieces <- lapply(obs_work_pieces, function (x) c(x, list(dataset_type = 'obs', dims = unlist(dim_obs), out_pointer = pointer_var_obs)))###, progress_amount = obs_work_piece_progress)))
   work_pieces <- c(exp_work_pieces, obs_work_pieces)
   # Calculate the progress %s that will be displayed and assign them to the 
   # appropriate work pieces
@@ -1953,15 +1953,15 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
       bytes_obs <- 0
       obs_dim_sizes <- '0'
     } else {
-      bytes_obs <- prod(c(dim_obs, 8))
-      obs_dim_sizes <- paste(na.omit(as.vector(dim_obs[c('dataset', 'member', 'sdate', 'ftime', 'lat', 'lon')])), collapse = ' x ')
+      bytes_obs <- prod(c(unlist(dim_obs), 8))
+      obs_dim_sizes <- paste(na.omit(as.vector(unlist(dim_obs)[c('dataset', 'member', 'sdate', 'ftime', 'lat', 'lon')])), collapse = ' x ')
     }
     if (length(dim_exp) == 0) {
       bytes_exp <- 0
       exp_dim_sizes <- '0'
     } else {
-      bytes_exp <- prod(c(dim_exp, 8))
-      exp_dim_sizes <- paste(na.omit(as.vector(dim_exp[c('dataset', 'member', 'sdate', 'ftime', 'lat', 'lon')])), collapse = ' x ')
+      bytes_exp <- prod(c(unlist(dim_exp), 8))
+      exp_dim_sizes <- paste(na.omit(as.vector(unlist(dim_exp)[c('dataset', 'member', 'sdate', 'ftime', 'lat', 'lon')])), collapse = ' x ')
     }
     .message(paste("Total size of requested data: ", bytes_obs + bytes_exp, "bytes."))
     .message(paste("- Experimental data:  (", exp_dim_sizes, ") x 8 bytes =", bytes_exp, "bytes."), indent = 2)
@@ -2121,7 +2121,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
 
   })
 
-  if (class(errors) == 'try-error') {
+  if (inherits(errors, 'try-error')) {
     invisible(list(load_parameters = load_parameters))
   } else {
     # Before ending, the data is arranged in the common format, with the following
@@ -2146,7 +2146,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
       old_dims <- dim_exp
       dim_exp <- dim_exp[dim_reorder]
       mod_data <-
-        aperm(array(bigmemory::as.matrix(var_exp), dim = old_dims), dim_reorder)
+        aperm(array(bigmemory::as.matrix(var_exp), dim = unlist(old_dims)), dim_reorder)
       attr(mod_data, 'dimensions') <- names(dim_exp)
       names(dim(mod_data)) <- names(dim_exp)
       number_ftime <- dim_exp[["ftime"]]

@@ -94,7 +94,20 @@ a) splitting your array into a list of sub-arrays (each with the data for
 one plot) and providing it as parameter 'var', 
 b) providing a list of named sub-lists in 'special_args', where the names 
 of each sub-list match the names of the parameters to be adjusted, and 
-each value in a sub-list contains the value of the corresponding parameter.}
+each value in a sub-list contains the value of the corresponding parameter.
+For example, if the plots are two maps with different arguments, the 
+structure would be like:\cr
+var:\cr
+ List of 2\cr
+  $ : num [1:360, 1:181] 1 3.82 5.02 6.63 8.72 ...\cr
+  $ : num [1:360, 1:181] 2.27 2.82 4.82 7.7 10.32 ...\cr
+special_args:\cr
+ List of 2\cr
+ $ :List of 2\cr
+  ..$ arg1: ...\cr
+  ..$ arg2: ...\cr
+ $ :List of 1\cr
+  ..$ arg1: ...\cr}
 
 \item{nrow}{Numeric value to force the number of rows in the automatically 
 generated layout. If higher than the required, this will yield blank cells 

@@ -200,7 +200,7 @@ EOF <- function(ano, lat, lon, time_dim = 'sdate', space_dim = c('lat', 'lon'),
 
   # Check if all the time steps at one grid point are NA-consistent.
   # The grid point should have all NAs or no NA along time dim.
-  if (any(is.na(ano))) {
+  if (anyNA(ano)) {
     ano_latlon <- array(ano, dim = c(nt, ny * nx))  # [time, lat*lon]
     na_ind <- which(is.na(ano_latlon), arr.ind = T)
     if (dim(na_ind)[1] != nt * length(unique(na_ind[, 2]))) {

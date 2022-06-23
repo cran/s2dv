@@ -134,11 +134,24 @@
 #'@param lab_dist_y A numeric of the distance of the latitude labels to the 
 #'  box borders. The default value is NULL and is automatically adjusted by 
 #'  the function.
-#'@param degree_sym A logical indicating whether to include degree symbol (30° N) or not (30N; default).
+#'@param degree_sym A logical indicating whether to include degree symbol (30° N)
+#'  or not (30N; default).
 #'@param intylat Interval between latitude ticks on y-axis, in degrees. 
 #'  Defaults to 20.
 #'@param intxlon Interval between latitude ticks on x-axis, in degrees. 
 #'  Defaults to 20.
+#'@param xlonshft A numeric of the degrees to shift the latitude ticks. The 
+#'  default value is 0.
+#'@param ylatshft A numeric of the degrees to shift the longitude ticks. The
+#'  default value is 0.
+#'@param xlabels A vector of character string of the custumized x-axis labels.
+#'  The values should correspond to each tick, which is decided by the longitude
+#'  and parameter 'intxlon'. The default value is NULL and the labels will be
+#'  automatically generated.
+#'@param ylabels A vector of character string of the custumized y-axis labels.
+#'  The values should correspond to each tick, which is decided by the latitude
+#'  and parameter 'intylat'. The default value is NULL and the labels will be
+#'  automatically generated.
 #'@param axes_tick_scale Scale factor for the tick lines along the longitude 
 #'  and latitude axes.
 #'@param axes_label_scale Scale factor for the labels along the longitude 
@@ -249,7 +262,8 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
                         arr_scale_shaft = 1, arr_scale_shaft_angle = 1,
                         axelab = TRUE, labW = FALSE, 
                         lab_dist_x = NULL, lab_dist_y = NULL, degree_sym = FALSE,
-                        intylat = 20, intxlon = 20, 
+                        intylat = 20, intxlon = 20,
+                        xlonshft = 0, ylatshft = 0, xlabels = NULL, ylabels = NULL,
                         axes_tick_scale = 1, axes_label_scale = 1,
                         drawleg = TRUE, subsampleg = NULL, 
                         bar_extra_labels = NULL, draw_bar_ticks = TRUE, 
@@ -635,6 +649,22 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   } else {
     intxlon <- round(intxlon)
   }
+  if (!is.numeric(xlonshft) | length(xlonshft) != 1) {
+    stop("Parameter 'xlonshft' must be a number.")
+  }
+  if (!is.numeric(ylatshft) | length(ylatshft) != 1) {
+    stop("Parameter 'ylatshft' must be a number.")
+  }
+  if (!is.null(xlabels)) {
+    if (!is.character(xlabels) | !is.vector(xlabels)) {
+      stop("Parameter 'xlabels' must be a vector of character string.")
+    }
+  }
+  if (!is.null(ylabels)) {
+    if (!is.character(ylabels) | !is.vector(ylabels)) {
+      stop("Parameter 'ylabels' must be a vector of character string.")
+    }
+  }
 
   # Check legend parameters
   if (!is.logical(drawleg)) {
@@ -728,11 +758,6 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   latmax <- ceiling(max(lat) / 10) * 10
   lonmin <- floor(min(lon) / 10) * 10
   lonmax <- ceiling(max(lon) / 10) * 10
-  if (min(lon) < 0) {
-    continents <- 'world'
-  } else {
-    continents <- 'world2'
-  }
 
   #
   #  Plotting the map
@@ -760,40 +785,61 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   cex_axes_ticks <- -0.5 * axes_tick_scale
   spaceticklab <- 0
   if (axelab) { 
-    ypos <- seq(latmin, latmax, intylat)
-    xpos <- seq(lonmin, lonmax, intxlon)
-    letters <- array('', length(ypos))
-    if (degree_sym == FALSE) {
-      letters[ypos < 0] <- 'S'
-      letters[ypos > 0] <- 'N'
+    # Y axis label
+    if (!is.null(ylabels)) {
+      ypos <- seq(latmin, latmax, intylat) + ylatshft
+      if (length(ypos) != length(ylabels)) {
+        stop(paste0("Parameter 'ylabels' must have the same length as the latitude ",
+               "vector spaced by 'intylat' (length = ", length(ypos), ")."))
+      }
+      ylabs <- ylabels
     } else {
-      letters[ypos < 0] <- paste(intToUtf8(176), 'S')
-      letters[ypos > 0] <- paste(intToUtf8(176), 'N')
-    }
-    ylabs <- paste(as.character(abs(ypos)), letters, sep = '')
-    letters <- array('', length(xpos))
-    if (labW) {
-      xpos2 <- xpos  
-      xpos2[xpos2 > 180] <- 360 - xpos2[xpos2 > 180]
-    }
-    if (degree_sym == FALSE) {
-      letters[xpos < 0] <- 'W'
-      letters[xpos > 0] <- 'E'
-    } else {
-      letters[xpos < 0] <- paste(intToUtf8(176), 'W')
-      letters[xpos > 0] <- paste(intToUtf8(176), 'E')
-    }
-    if (labW) {
-      letters[xpos == 0] <- ' '
-      letters[xpos == 180] <- ' '
+      ypos <- seq(latmin, latmax, intylat) + ylatshft
+      letters <- array('', length(ypos))
       if (degree_sym == FALSE) {
-        letters[xpos > 180] <- 'W'
+        letters[ypos < 0] <- 'S'
+        letters[ypos > 0] <- 'N'
       } else {
-        letters[xpos > 180] <- paste(intToUtf8(176), 'W')
-      }  
-      xlabs <- paste(as.character(abs(xpos2)), letters, sep = '')
+        letters[ypos < 0] <- paste(intToUtf8(176), 'S')
+        letters[ypos > 0] <- paste(intToUtf8(176), 'N')
+      }
+      ylabs <- paste(as.character(abs(ypos)), letters, sep = '')
+    }
+
+    # X axis label
+    if (!is.null(xlabels)) {
+      xpos <- seq(lonmin, lonmax, intxlon) + xlonshft
+      if (length(xpos) != length(xlabels)) {
+        stop(paste0("Parameter 'xlabels' must have the same length as the longitude ",
+               "vector spaced by 'intxlon' (length = ", length(xpos), ")."))
+      }
+      xlabs <- xlabels
     } else {
-      xlabs <- paste(as.character(abs(xpos)), letters, sep = '')
+      xpos <- seq(lonmin, lonmax, intxlon) + xlonshft
+      letters <- array('', length(xpos))
+      if (labW) {
+        xpos2 <- xpos  
+        xpos2[xpos2 > 180] <- 360 - xpos2[xpos2 > 180]
+      }
+      if (degree_sym == FALSE) {
+        letters[xpos < 0] <- 'W'
+        letters[xpos > 0] <- 'E'
+      } else {
+        letters[xpos < 0] <- paste(intToUtf8(176), 'W')
+        letters[xpos > 0] <- paste(intToUtf8(176), 'E')
+      }
+      if (labW) {
+        letters[xpos == 0] <- ' '
+        letters[xpos == 180] <- ' '
+        if (degree_sym == FALSE) {
+          letters[xpos > 180] <- 'W'
+        } else {
+          letters[xpos > 180] <- paste(intToUtf8(176), 'W')
+        }  
+        xlabs <- paste(as.character(abs(xpos2)), letters, sep = '')
+      } else {
+        xlabs <- paste(as.character(abs(xpos)), letters, sep = '')
+      }
     }
     spaceticklab <- max(-cex_axes_ticks, 0)
     margins[1] <- margins[1] + 1.2 * cex_axes_labels + spaceticklab
@@ -847,9 +893,19 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   col_inf_image <- ifelse(is.null(col_inf), colNA, col_inf)
   col_sup_image <- ifelse(is.null(col_sup), colNA, col_sup)
   if (square) {
-    image(lonb$x, latb$x, var[lonb$ix, latb$ix], col = c(col_inf_image, cols, col_sup_image), 
-          breaks = c(-.Machine$double.xmax, brks, .Machine$double.xmax),
-          axes = FALSE, xlab = "", ylab = "", add = TRUE)          
+    # If lat and lon are both regular-spaced, "useRaster = TRUE" can avoid
+    # artifact white lines on the figure. If not, useRaster has to be FALSE (default)
+    tryCatch({
+      image(lonb$x, latb$x, var[lonb$ix, latb$ix], 
+            col = c(col_inf_image, cols, col_sup_image), 
+            breaks = c(-.Machine$double.xmax, brks, .Machine$double.xmax),
+            axes = FALSE, xlab = "", ylab = "", add = TRUE, useRaster = TRUE)
+    }, error = function(x) {
+      image(lonb$x, latb$x, var[lonb$ix, latb$ix], 
+            col = c(col_inf_image, cols, col_sup_image), 
+            breaks = c(-.Machine$double.xmax, brks, .Machine$double.xmax),
+            axes = FALSE, xlab = "", ylab = "", add = TRUE)
+    })
   } else {
     .filled.contour(lonb$x, latb$x, var[lonb$ix, latb$ix], 
                     levels = c(.Machine$double.xmin, brks, .Machine$double.xmax), 
@@ -886,24 +942,15 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   #  Plotting continents
   # ~~~~~~~~~~~~~~~~~~~~~
   #
-  # maps::map has the global map range [0, 360] or [-180, 180].
-  # Set xlim so lon = 0 won't show a straight line when lon = [0, 359]. 
-  # NOTE: It works except Antartic area. Don't know why. ylim is also set 
-  #       but it doesn't work.
-  if (continents == 'world') {  # [-180, 180]
-    xlim_conti <- c(-179.99, 179.99)
-  } else {  # [0, 360]
-    xlim_conti <- c(0.01, 359.99)
-  }
+  wrap_vec <- c(lon[1], lon[1] + 360)
   old_lwd <- par('lwd')
   par(lwd = coast_width)
   # If [0, 360], use GEOmap; if [-180, 180], use maps::map
   # UPDATE: Use maps::map for both cases. The difference between GEOmap and
   #         maps is trivial. The only thing we can see for now is that 
   #         GEOmap has better lakes.
-    coast <- maps::map(continents, interior = country.borders, wrap = TRUE,
-                 xlim = xlim_conti, ylim = c(-89.99, 89.99),
-                 fill = filled.continents, add = TRUE, plot = FALSE)
+  coast <- maps::map(interior = country.borders, wrap = wrap_vec,
+                     fill = filled.continents, add = TRUE, plot = FALSE)
 
   if (filled.continents) {
     polygon(coast, col = continent_color, border = coast_color, lwd = coast_width)
@@ -911,7 +958,7 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     lines(coast, col = coast_color, lwd = coast_width)
   }
   if (!is.null(lake_color)) {
-    maps::map('lakes', add = TRUE, fill = filled.continents, col = lake_color) 
+    maps::map('lakes', add = TRUE, wrap = wrap_vec, fill = filled.continents, col = lake_color) 
   }
   par(lwd = old_lwd)
 
@@ -920,8 +967,8 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
       old_lwd <- par('lwd')
       par(lwd = coast_width)
 
-      outline <- maps::map(continents, fill = T, plot = FALSE)  # must be fill = T
-      xbox <- xlim_conti + c(-2, 2)
+      outline <- maps::map(wrap = wrap_vec, fill = T, plot = FALSE)  # must be fill = T
+      xbox <- wrap_vec + c(-2, 2)
       ybox <- c(-92, 92) 
       outline$x <- c(outline$x, NA, c(xbox, rev(xbox), xbox[1]))
       outline$y <- c(outline$y, NA, rep(ybox, each = 2), ybox[1])
@@ -931,9 +978,9 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   }
 
   # Plot shapefile
+  #NOTE: the longitude range cannot cut shapefile range, or not all the shapefile will be plotted.
   if (!is.null(shapefile)) {
-    maps::map(shape, interior = country.borders, #wrap = TRUE,
-              xlim = xlim_conti, ylim = c(-89.99, 89.99),
+    maps::map(shape, interior = country.borders, #wrap = wrap_vec,
               fill = filled.continents, add = TRUE, plot = TRUE, 
               lwd = shapefile_lwd, col = shapefile_color)
   }

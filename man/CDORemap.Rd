@@ -49,18 +49,35 @@ for the price of writing more intermediate files (whis usually is
 unconvenient) by setting the parameter \code{avoid_writes = TRUE}.}
 
 \item{crop}{Whether to crop the data after interpolation with 
-'cdo sellonlatbox' (TRUE) or to extend interpolated data to the whole 
-world as CDO does by default (FALSE). If \code{crop = TRUE} then the 
-longitude and latitude borders which to crop at are taken as the limits of 
-the cells at the borders ('lons' and 'lats' are perceived as cell centers), 
-i.e. the resulting array will contain data that covers the same area as 
-the input array. This is equivalent to specifying \code{crop = 'preserve'}, 
-i.e. preserving area. If \code{crop = 'tight'} then the borders which to 
-crop at are taken as the minimum and maximum cell centers in 'lons' and 
-'lats', i.e. the area covered by the resulting array may be smaller if 
-interpolating from a coarse grid to a fine grid. The parameter 'crop' also 
-accepts a numeric vector of custom borders which to crop at: 
-c(western border, eastern border, southern border, northern border).}
+'cdo sellonlatbox' (TRUE) or to extend interpolated data to the whole
+world as CDO does by default (FALSE). The default value is TRUE.\cr
+\itemize{
+  \item{
+    If \code{crop = TRUE}, the longitude and latitude borders to be cropped
+    at are taken as the limits of the cells at the borders (not the values
+    of 'lons' and 'lats', which are perceived as cell centers), i.e., the
+    resulting array will contain data that covers the same area as the input
+    array. This is equivalent to specifying \code{crop = 'preserve'}, i.e.,
+    preserving area. Notice that the longitude range of returning array will
+    follow the original data 'lons' instead of the target grid 'grid'.
+  }
+  \item{
+    If \code{crop = FALSE}, the returning array is not cropped, i.e., a 
+    global domain, and the longitude range will be the same as the target
+    grid 'grid'.
+  }
+  \item{
+    If \code{crop = 'tight'}, the borders to be cropped at are taken as the 
+    minimum and maximum cell centers in 'lons' and 'lats', i.e., the area
+    covered by the resulting array may be smaller if interpolating from a 
+    coarse grid to a fine grid. 
+  }
+  \item{
+    The parameter 'crop' also accepts a numeric vector of customized borders
+    to be cropped at:\cr
+    c(western border, eastern border, southern border, northern border).
+  }
+}}
 
 \item{force_remap}{Whether to force remapping, even if the input data array 
 is already on the target grid.}

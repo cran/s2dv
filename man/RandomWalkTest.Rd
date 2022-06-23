@@ -37,8 +37,8 @@ A list of 2:
 }
 \description{
 Forecast comparison of the skill obtained with 2 forecasts (with respect to a 
-common reference) based on Random Walks, with significance estimate at the 5%
-confidence level, as in DelSole and Tippett (2015).
+common reference) based on Random Walks, with significance estimate at the 95%
+confidence level, as in DelSole and Tippett (2016).
 }
 \examples{
 fcst_A <- array(c(11:50), dim = c(sdate = 10, lat = 2, lon = 2))

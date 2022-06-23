@@ -47,6 +47,7 @@ Other indices available in NBClust are "kl", "ch", "hartigan", "ccc",
 "ptbiserial", "gap", "frey", "mcclain", "gamma", "gplus", "tau", "dunn", 
 "hubert", "sdindex", and "sdbw".
 One can also use all of them with the option 'alllong' or almost all indices
+ except gap, gamma, gplus and tau with 'all', when the optimal number of
 clusters K is detremined by the majority rule (the maximum of histogram of 
 the results of all indices with finite solutions). Use of some indices on 
 a big and/or unstructured dataset can be computationally intense and/or 
@@ -63,7 +64,7 @@ A list containing:
  are same as 'data' without 'space_dim'.
 }
 \item{$centers}{
- A nemeric array of cluster centres or centroids (e.g. [1:K, 1:spatial degrees 
+ A numeric array of cluster centres or centroids (e.g. [1:K, 1:spatial degrees 
  of freedom]). The rest dimensions are same as 'data' except 'time_dim' 
  and 'space_dim'.
 }

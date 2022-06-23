@@ -54,6 +54,10 @@ PlotEquiMap(
   degree_sym = FALSE,
   intylat = 20,
   intxlon = 20,
+  xlonshft = 0,
+  ylatshft = 0,
+  xlabels = NULL,
+  ylabels = NULL,
   axes_tick_scale = 1,
   axes_label_scale = 1,
   drawleg = TRUE,
@@ -247,13 +251,30 @@ the function.}
 box borders. The default value is NULL and is automatically adjusted by 
 the function.}
 
-\item{degree_sym}{A logical indicating whether to include degree symbol (30° N) or not (30N; default).}
+\item{degree_sym}{A logical indicating whether to include degree symbol (30° N)
+or not (30N; default).}
 
 \item{intylat}{Interval between latitude ticks on y-axis, in degrees. 
 Defaults to 20.}
 
 \item{intxlon}{Interval between latitude ticks on x-axis, in degrees. 
 Defaults to 20.}
+
+\item{xlonshft}{A numeric of the degrees to shift the latitude ticks. The 
+default value is 0.}
+
+\item{ylatshft}{A numeric of the degrees to shift the longitude ticks. The
+default value is 0.}
+
+\item{xlabels}{A vector of character string of the custumized x-axis labels.
+The values should correspond to each tick, which is decided by the longitude
+and parameter 'intxlon'. The default value is NULL and the labels will be
+automatically generated.}
+
+\item{ylabels}{A vector of character string of the custumized y-axis labels.
+The values should correspond to each tick, which is decided by the latitude
+and parameter 'intylat'. The default value is NULL and the labels will be
+automatically generated.}
 
 \item{axes_tick_scale}{Scale factor for the tick lines along the longitude 
 and latitude axes.}

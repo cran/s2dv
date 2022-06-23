@@ -1,37 +1,47 @@
-#'Compute the anomaly correlation coefficient between the forecast and corresponding observation
+#'Compute the spatial anomaly correlation coefficient between the forecast and corresponding observation
 #'
-#'Calculate the anomaly correlation coefficient for the ensemble mean of each 
-#'model and the corresponding references over a spatial domain. It can return a
-#'forecast time series if the data contain forest time dimension, and also the 
-#'start date mean if the data contain start date dimension. 
-#'The domain of interest can be specified by providing the list 
-#'of longitudes/latitudes (lon/lat) of the data together with the corners 
-#'of the domain: lonlatbox = c(lonmin, lonmax, latmin, latmax).
+#'Calculate the spatial anomaly correlation coefficient (ACC) for the ensemble
+#'mean of each model and the corresponding references over a spatial domain. It
+#'can return a forecast time series if the data contain forest time dimension, 
+#'and also the ACC mean over one dimension, e.g., start date dimension.
+#'The domain of interest can be specified by providing the list of longitudes/
+#'latitudes of the data together with the corners of the domain: lonlatbox = 
+#'c(lonmin, lonmax, latmin, latmax). The data will be adjusted to have a spatial
+#'mean of zero, then area weighting is applied. The formula is referenced from 
+#'Wilks (2011; section 7.6.4; https://doi.org/10.1016/B978-0-12-385022-5.00008-7).
 #'
 #'@param exp A numeric array of experimental anomalies with named dimensions.
-#'  It must have at least 'dat_dim' and 'space_dim'.
+#'  The dimension must have at least 'lat_dim' and 'lon_dim'.
 #'@param obs A numeric array of observational anomalies with named dimensions.
-#'  It must have the same dimensions as 'exp' except the length of 'dat_dim' 
+#'  The dimension should be the same as 'exp' except the length of 'dat_dim' 
 #'  and 'memb_dim'.
 #'@param dat_dim A character string indicating the name of dataset (nobs/nexp) 
-#'  dimension. The default value is 'dataset'.
+#'  dimension. The default value is 'dataset'. If there is no dataset 
+#'  dimension, set NULL.
+#'@param lat_dim A character string indicating the name of the latitude
+#'  dimension of 'exp' and 'obs' along which ACC is computed. The default value
+#'  is 'lat'. 
+#'@param lon_dim A character string indicating the name of the longitude
+#'  dimension of 'exp' and 'obs' along which ACC is computed. The default value
+#'  is 'lon'. 
 #'@param space_dim A character string vector of 2 indicating the name of the
 #'  latitude and longitude dimensions (in order) along which ACC is computed. 
-#'  The default value is c('lat', 'lon').
+#'  The default value is c('lat', 'lon'). This argument has been deprecated.
+#'  Use 'lat_dim' and 'lon_dim' instead.
 #'@param avg_dim A character string indicating the name of the dimension to be
-#'  averaged. It must be one of 'time_dim'. The mean ACC is calculated along 
-#'  averaged. If no need to calculate mean ACC, set as NULL. The default value 
-#'  is 'sdate'.
+#'  averaged, which is usually the time dimension. If no need to calculate mean
+#'  ACC, set as NULL. The default value is 'sdate'.
 #'@param memb_dim A character string indicating the name of the member 
 #'  dimension. If the data are not ensemble ones, set as NULL. The default 
 #'  value is 'member'.
-#'@param lat A vector of the latitudes of the exp/obs grids. Only required when
-#'  the domain of interested is specified. The default value is NULL.
+#'@param lat A vector of the latitudes of the exp/obs grids. It is used for
+#'  area weighting and when the domain of interested 'lonlatbox' is specified.
 #'@param lon A vector of the longitudes of the exp/obs grids. Only required when
-#'  the domain of interested is specified. The default value is NULL.
+#'  the domain of interested 'lonlatbox' is specified. The default value is 
+#'  NULL.
 #'@param lonlatbox A numeric vector of 4 indicating the corners of the domain of
-#'  interested: c(lonmin, lonmax, latmin, latmax). Only required when the domain
-#'  of interested is specified. The default value is NULL.
+#'  interested: c(lonmin, lonmax, latmin, latmax). The default value is NULL 
+#'  and the whole data will be used.
 #'@param conf A logical value indicating whether to retrieve the confidence 
 #'  intervals or not. The default value is TRUE.
 #'@param conftype A charater string of "parametric" or "bootstrap". 
@@ -54,8 +64,9 @@
 #'A list containing the numeric arrays:\cr 
 #'\item{acc}{
 #'  The ACC with the dimensions c(nexp, nobs, the rest of the dimension except 
-#'  space_dim and memb_dim). nexp is the number of experiment (i.e., dat_dim in
-#'  exp), and nobs is the number of observation (i.e., dat_dim in obs).
+#'  lat_dim, lon_dim and memb_dim). nexp is the number of experiment (i.e., dat_dim in
+#'  exp), and nobs is the number of observation (i.e., dat_dim in obs). If 
+#'  dat_dim is NULL, nexp and nobs are omitted.
 #'}
 #'\item{conf.lower (if conftype = "parametric") or acc_conf.lower (if 
 #'      conftype = "bootstrap")}{
@@ -73,8 +84,9 @@
 #'}
 #'\item{macc}{
 #'  The mean anomaly correlation coefficient with dimensions
-#'  c(nexp, nobs, the rest of the dimension except space_dim, memb_dim, and 
-#'  avg_dim). Only present if 'avg_dim' is not NULL.
+#'  c(nexp, nobs, the rest of the dimension except lat_dim, lon_dim, memb_dim, and 
+#'  avg_dim). Only present if 'avg_dim' is not NULL. If dat_dim is NULL, nexp 
+#'  and nobs are omitted.
 #'}
 #'\item{macc_conf.lower}{
 #'  The lower confidence interval of MACC with the same dimensions as MACC. 
@@ -101,8 +113,8 @@
 #'clim <- Clim(sampleData$mod, sampleData$obs)
 #'ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 #'ano_obs <- Ano(sampleData$obs, clim$clim_obs)
-#'acc <- ACC(ano_exp, ano_obs)
-#'acc_bootstrap <- ACC(ano_exp, ano_obs, conftype = 'bootstrap')
+#'acc <- ACC(ano_exp, ano_obs, lat = sampleData$lat)
+#'acc_bootstrap <- ACC(ano_exp, ano_obs, conftype = 'bootstrap', lat = sampleData$lat)
 #'# Combine acc results for PlotACC
 #'res <- array(c(acc$conf.lower, acc$acc, acc$conf.upper, acc$p.val), 
 #'             dim = c(dim(acc$acc), 4))
@@ -113,14 +125,15 @@
 #'PlotACC(res_bootstrap, startDates)
 #'  }
 #'@references Joliffe and Stephenson (2012). Forecast Verification: A 
-#'  Practitioner's Guide in Atmospheric Science. Wiley-Blackwell.
+#'  Practitioner's Guide in Atmospheric Science. Wiley-Blackwell.; 
+#'  Wilks (2011; section 7.6.4; https://doi.org/10.1016/B978-0-12-385022-5.00008-7).
 #'@import multiApply
 #'@importFrom abind abind
 #'@importFrom stats qt qnorm quantile
 #'@importFrom ClimProjDiags Subset
 #'@export
-ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
-                avg_dim = 'sdate', memb_dim = 'member', 
+ACC <- function(exp, obs, dat_dim = 'dataset', lat_dim = 'lat', lon_dim = 'lon',
+                space_dim = c('lat', 'lon'), avg_dim = 'sdate', memb_dim = 'member', 
                 lat = NULL, lon = NULL, lonlatbox = NULL, 
                 conf = TRUE, conftype = "parametric", conf.lev = 0.95, pval = TRUE,
                 ncores = NULL) {
@@ -135,7 +148,7 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
   }
   if (is.null(dim(exp)) | is.null(dim(obs))) {
     stop(paste0("Parameter 'exp' and 'obs' must have at least dimensions ",
-                "dat_dim and space_dim."))
+                "lat_dim and lon_dim."))
   }
   if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
@@ -146,18 +159,34 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
     stop("Parameter 'exp' and 'obs' must have same dimension names.")
   }
   ## dat_dim
-  if (!is.character(dat_dim) | length(dat_dim) > 1) {
-    stop("Parameter 'dat_dim' must be a character string.")
+  if (!is.null(dat_dim)) {
+    if (!is.character(dat_dim) | length(dat_dim) > 1) {
+      stop("Parameter 'dat_dim' must be a character string or NULL.")
+    }
+    if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
+      stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.",
+           "Set it as NULL if there is no dataset dimension.")
+    }
   }
-  if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
-    stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.")
+  ## space_dim (deprecated)
+  if (!missing("space_dim")) {
+    warning("Parameter 'space_dim' is deprecated. Use 'lat_dim' and 'lon_dim' instead.")
+    lat_dim <- space_dim[1]
+    lon_dim <- space_dim[2]
   }
-  ## space_dim
-  if (!is.character(space_dim) | length(space_dim) != 2) {
-    stop("Parameter 'space_dim' must be a character vector of 2.")
+  ## lat_dim
+  if (!is.character(lat_dim) | length(lat_dim) != 1) {
+    stop("Parameter 'lat_dim' must be a character string.")
   }
-  if (any(!space_dim %in% names(dim(exp))) | any(!space_dim %in% names(dim(obs)))) {
-    stop("Parameter 'space_dim' is not found in 'exp' or 'obs' dimension.")
+  if (!lat_dim %in% names(dim(exp)) | !lat_dim %in% names(dim(obs))) {
+    stop("Parameter 'lat_dim' is not found in 'exp' or 'obs' dimension.")
+  }
+  ## lon_dim
+  if (!is.character(lon_dim) | length(lon_dim) != 1) {
+    stop("Parameter 'lon_dim' must be a character string.")
+  }
+  if (!lon_dim %in% names(dim(exp)) | !lon_dim %in% names(dim(obs))) {
+    stop("Parameter 'lon_dim' is not found in 'exp' or 'obs' dimension.")
   }
   ## avg_dim
   if (!is.null(avg_dim)) {
@@ -174,19 +203,21 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
       stop("Parameter 'memb_dim' must be a character string.")
     }
     if (!memb_dim %in% names(dim(exp)) | !memb_dim %in% names(dim(obs))) {
-      stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.")
+      stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.",
+           "Set it as NULL if there is no member dimension.")
     }
   }
   ## lat
-  if (!is.null(lat)) {
-    if (!is.numeric(lat) | length(lat) != dim(exp)[space_dim[1]]) {
-      stop(paste0("Parameter 'lat' must be a numeric vector with the same ",
-                  "length as the latitude dimension of 'exp' and 'obs'."))
-    }
+  if (is.null(lat)) {
+    stop("Parameter 'lat' cannot be NULL. It is required for area weighting.")
+  }
+  if (!is.numeric(lat) | length(lat) != dim(exp)[lat_dim]) {
+    stop(paste0("Parameter 'lat' must be a numeric vector with the same ",
+                "length as the latitude dimension of 'exp' and 'obs'."))
   }
   ## lon
   if (!is.null(lon)) {
-    if (!is.numeric(lon) | length(lon) != dim(exp)[space_dim[2]]) {
+    if (!is.numeric(lon) | length(lon) != dim(exp)[lon_dim]) {
       stop(paste0("Parameter 'lon' must be a numeric vector with the same ",
                   "length as the longitude dimension of 'exp' and 'obs'."))
     }
@@ -196,15 +227,12 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
     if (!is.numeric(lonlatbox) | length(lonlatbox) != 4) {
       stop("Parameter 'lonlatbox' must be a numeric vector of 4.")
     }
-  }
-  ## lat, lon, and lonlatbox
-  if (!is.null(lon) & !is.null(lat) & !is.null(lonlatbox)) {
+    if (is.null(lon)) {
+      stop("Parameter 'lat' and 'lon' are required if 'lonlatbox' is specified.")
+    }
     select_lonlat <- TRUE
-  } else if (is.null(lon) & is.null(lat) & is.null(lonlatbox)) {
-    select_lonlat <- FALSE
   } else {
-    stop(paste0("Parameters 'lon', 'lat', and 'lonlatbox' must be used or be ",
-                "NULL at the same time."))
+    select_lonlat <- FALSE
   }
   ## conf
   if (!is.logical(conf) | length(conf) > 1) {
@@ -219,7 +247,8 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
       stop("Parameter 'memb_dim' cannot be NULL when parameter 'conftype' is 'bootstrap'.")
     }
     ## conf.lev
-    if (!is.numeric(conf.lev) | conf.lev < 0 | conf.lev > 1 | length(conf.lev) > 1) {
+    if (!is.numeric(conf.lev) | any(conf.lev < 0) | any(conf.lev > 1) | 
+        length(conf.lev) > 1) {
       stop("Parameter 'conf.lev' must be a numeric number between 0 and 1.")
     }
   }
@@ -229,21 +258,23 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores < 0 |
-      length(ncores) > 1) {
+    if (!is.numeric(ncores) | any(ncores %% 1 != 0) | any(ncores < 0) |
+        length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
   }
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
-  name_exp <- name_exp[-which(name_exp == dat_dim)]
-  name_obs <- name_obs[-which(name_obs == dat_dim)]
+  if (!is.null(dat_dim)) {
+    name_exp <- name_exp[-which(name_exp == dat_dim)]
+    name_obs <- name_obs[-which(name_obs == dat_dim)]
+  }
   if (!is.null(memb_dim)) {
     name_exp <- name_exp[-which(name_exp == memb_dim)]
     name_obs <- name_obs[-which(name_obs == memb_dim)]
   }
-  if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
+  if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
                 "all the dimensions expect 'dat_dim' and 'memb_dim'."))
   }
@@ -273,8 +304,8 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
                     (lonlatbox[1] > lonlatbox[2] & (lon > lonlatbox[1] | lon < lonlatbox[2])))
     indlat <- which(lat >= lonlatbox[3] & lat <= lonlatbox[4])
 
-    exp <- ClimProjDiags::Subset(exp, space_dim, list(indlat, indlon), drop = FALSE)
-    obs <- ClimProjDiags::Subset(obs, space_dim, list(indlat, indlon), drop = FALSE)
+    exp <- ClimProjDiags::Subset(exp, c(lat_dim, lon_dim), list(indlat, indlon), drop = FALSE)
+    obs <- ClimProjDiags::Subset(obs, c(lat_dim, lon_dim), list(indlat, indlon), drop = FALSE)
   }
 
    # Ensemble mean
@@ -287,84 +318,68 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
     obs <- MeanDims(obs, memb_dim, na.rm = TRUE)
   }
 
+
   if (is.null(avg_dim)) {
-    res <- Apply(list(exp, obs),
-                 target_dims = list(c(space_dim, dat_dim),
-                                    c(space_dim, dat_dim)),
-                 fun = .ACC,
-                 dat_dim = dat_dim, avg_dim = avg_dim,
-                 conftype = conftype, pval = pval, conf = conf, conf.lev = conf.lev,
-                 ncores_input = ncores,
-                 ncores = ncores)
-
-    if (conftype == 'bootstrap') {
-      res_conf <- Apply(list(exp_ori, obs_ori),
-                 target_dims = list(c(memb_dim, dat_dim, space_dim),
-                                    c(memb_dim, dat_dim, space_dim)),
-                 fun = .ACC_bootstrap,
-                 dat_dim = dat_dim, memb_dim = memb_dim, avg_dim = avg_dim,
-                 conftype = conftype, pval = pval, conf = conf, conf.lev = conf.lev,
-                 ncores_input = ncores,
-                 ncores = ncores)
-      #NOTE: pval?
-      res <- list(acc = res$acc, 
-                  acc_conf.lower = res_conf$acc_conf.lower, 
-                  acc_conf.upper = res_conf$acc_conf.upper,
-                  macc = res$macc,
-                  macc_conf.lower = res_conf$macc_conf.lower, 
-                  macc_conf.upper = res_conf$macc_conf.upper)
-    }
-
+    target_dims <- list(c(lat_dim, lon_dim, dat_dim), c(lat_dim, lon_dim, dat_dim))
   } else {
-    res <- Apply(list(exp, obs),
-                 target_dims = list(c(space_dim, avg_dim, dat_dim),
-                                    c(space_dim, avg_dim, dat_dim)),
+    target_dims <- list(c(lat_dim, lon_dim, avg_dim, dat_dim), c(lat_dim, lon_dim, avg_dim, dat_dim))
+  }
+  res <- Apply(list(exp, obs),
+                 target_dims = target_dims,
                  fun = .ACC,
                  dat_dim = dat_dim, avg_dim = avg_dim,
+                 lat = lat,
                  conftype = conftype, pval = pval, conf = conf, conf.lev = conf.lev,
-                 ncores_input = ncores,
                  ncores = ncores)
 
-    if (conftype == 'bootstrap') {
-      res_conf <- Apply(list(exp_ori, obs_ori),
-                        target_dims = list(c(memb_dim, dat_dim, avg_dim, space_dim),
-                                           c(memb_dim, dat_dim, avg_dim, space_dim)),
-                        fun = .ACC_bootstrap,
-                        dat_dim = dat_dim, memb_dim = memb_dim, avg_dim = avg_dim,
-                        conftype = conftype, pval = pval, conf = conf, conf.lev = conf.lev,
-                        ncores_input = ncores,
-                        ncores = ncores)
-      res <- list(acc = res$acc, 
-                  acc_conf.lower = res_conf$acc_conf.lower, 
-                  acc_conf.upper = res_conf$acc_conf.upper,
-                  macc = res$macc,
-                  macc_conf.lower = res_conf$macc_conf.lower,
-                  macc_conf.upper = res_conf$macc_conf.upper)
-
+  # If bootstrap, calculate confidence level
+  if (conftype == 'bootstrap') {
+    if (is.null(avg_dim)) {
+      target_dims_bs <- list(c(memb_dim, dat_dim, lat_dim, lon_dim),
+                             c(memb_dim, dat_dim, lat_dim, lon_dim))
+    } else {
+      target_dims_bs <- list(c(memb_dim, dat_dim, avg_dim, lat_dim, lon_dim),
+                             c(memb_dim, dat_dim, avg_dim, lat_dim, lon_dim))
     }
-
+    res_conf <- Apply(list(exp_ori, obs_ori),
+                      target_dims = target_dims_bs, 
+                      fun = .ACC_bootstrap, 
+                      dat_dim = dat_dim, memb_dim = memb_dim, avg_dim = avg_dim,
+                      lat = lat,
+                      conftype = conftype, pval = pval, conf = conf, conf.lev = conf.lev,
+                      ncores = ncores)
+    #NOTE: pval?
+    res <- list(acc = res$acc,
+                acc_conf.lower = res_conf$acc_conf.lower,
+                acc_conf.upper = res_conf$acc_conf.upper,
+                macc = res$macc,
+                macc_conf.lower = res_conf$macc_conf.lower,
+                macc_conf.upper = res_conf$macc_conf.upper)
   }
 
- return(res)
+  return(res)
 }
 
-.ACC <- function(exp, obs,  dat_dim = 'dataset', #space_dim = c('lat', 'lon'),
-                 avg_dim = 'sdate', #memb_dim = NULL,
-                 lon = NULL, lat = NULL, lonlatbox = NULL,
-                 conf = TRUE, conftype = "parametric", conf.lev = 0.95, pval = TRUE,
-                 ncores_input = NULL) {
-
-# if (is.null(avg_dim)) 
-  # exp: [space_dim, dat_exp]
-  # obs: [space_dim, dat_obs]
-# if (!is.null(avg_dim)) 
-  # exp: [space_dim, avg_dim, dat_exp]
-  # obs: [space_dim, avg_dim, dat_obs]
-
+.ACC <- function(exp, obs, dat_dim = 'dataset', avg_dim = 'sdate', lat,
+                 conf = TRUE, conftype = "parametric", conf.lev = 0.95, pval = TRUE) {
   # .ACC() should use all the spatial points to calculate ACC. It returns [nexp, nobs].
+  # If dat_dim = NULL, it returns a number.
 
-  nexp <- as.numeric(dim(exp)[length(dim(exp))])
-  nobs <- as.numeric(dim(obs)[length(dim(obs))])
+  # if (is.null(avg_dim)) 
+  ## exp: [lat, lon, (dat_exp)]
+  ## obs: [lat, lon, (dat_obs)]
+  # if (!is.null(avg_dim)) 
+  ## exp: [lat, lon, avg_dim, (dat_exp)]
+  ## obs: [lat, lon, avg_dim, (dat_obs)]
+
+  # Add dat_dim temporarily if dat_dim = NULL
+  if (is.null(dat_dim)) {
+    nexp <- 1
+    nobs <- 1
+  } else {
+    nexp <- as.numeric(dim(exp)[length(dim(exp))])
+    nobs <- as.numeric(dim(obs)[length(dim(obs))])
+  }
 
   if (is.null(avg_dim)) {
     acc <- array(dim = c(nexp = nexp, nobs = nobs))
@@ -372,34 +387,56 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
     if (conf) {
       conf.upper <- array(dim = c(nexp = nexp, nobs = nobs))
       conf.lower <- array(dim = c(nexp = nexp, nobs = nobs))
-      if (conftype == 'bootstrap') {
-         ndraw <- 100
-         acc_draw <- array(dim = c(nexp = nexp, nobs = nobs, ndraw)) 
-      }
     }
     
   } else {
-        acc <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[length(dim(exp)) - 1]))
-        names(dim(acc))[3] <- avg_dim
-        macc <- array(dim = c(nexp = nexp, nobs = nobs))
-        if (pval) p.val <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[length(dim(exp)) - 1]))
+    acc <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[avg_dim]))
+    names(dim(acc))[3] <- avg_dim
+    macc <- array(dim = c(nexp = nexp, nobs = nobs))
+    if (pval) p.val <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[avg_dim]))
     if (conf) {
-        conf.upper <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[length(dim(exp)) - 1]))
-        conf.lower <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[length(dim(exp)) - 1]))
-      if (conftype == 'bootstrap') {
-         ndraw <- 100
-         acc_draw <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[length(dim(exp)) - 1], ndraw))
-         macc_draw <- array(dim = c(nexp = nexp, nobs = nobs, ndraw))
-      }
+        conf.upper <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[avg_dim]))
+        conf.lower <- array(dim = c(nexp = nexp, nobs = nobs, dim(exp)[avg_dim]))
     }
   }  
   
+  # centralize & area weighted
+  ## spatial centralization for each [avg_dim, dat]
+  dim_exp <- dim(exp)
+  dim_obs <- dim(obs)
+  wt <- cos(lat * pi/180)
+  wt <- rep(wt, times = prod(dim_exp[2:length(dim_exp)]))
+
+  if (is.null(avg_dim) & is.null(dat_dim)) {  #[lat, lon]
+    # turn exp and obs into vector, first latitudes and then longitudes
+    exp <- as.vector(exp)
+    obs <- as.vector(obs)
+    exp <- array(sqrt(wt) * (exp - mean(exp, na.rm = TRUE)), dim = dim_exp)
+    obs <- array(sqrt(wt) * (obs - mean(obs, na.rm = TRUE)), dim = dim_obs)
+  } else { # [lat, lon, dat], [lat, lon, avg_dim], or [lat, lon, avg_dim, dat]
+    # exp
+    exp <- array(exp, dim = c(prod(dim_exp[1:2]), dim_exp[3:length(dim_exp)]))
+    mean_exp <- apply(exp, 2:length(dim(exp)), mean, na.rm = TRUE)  # [avg_dim, (dat)]
+    mean_exp <- rep(as.vector(mean_exp), each = prod(dim_exp[1:2]))
+    exp <- array(sqrt(wt) * (as.vector(exp) - mean_exp), dim = dim_exp)
+    # obs
+    obs <- array(obs, dim = c(prod(dim_obs[1:2]), dim_obs[3:length(dim_obs)]))
+    mean_obs <- apply(obs, 2:length(dim(obs)), mean, na.rm = TRUE)  # [avg_dim, (dat)]
+    mean_obs <- rep(as.vector(mean_obs), each = prod(dim_obs[1:2]))
+    obs <- array(sqrt(wt) * (as.vector(obs) - mean_obs), dim = dim_obs)
+  }
+
   # Per-paired exp and obs. NAs should be in the same position in both exp and obs
   for (iobs in 1:nobs) {
     for (iexp in 1:nexp) {
-      exp_sub <- ClimProjDiags::Subset(exp, dat_dim, iexp, drop = 'selected')
-      obs_sub <- ClimProjDiags::Subset(obs, dat_dim, iobs, drop = 'selected')
-      # dim: [space_dim]
+      if (!is.null(dat_dim)) {
+        exp_sub <- ClimProjDiags::Subset(exp, dat_dim, iexp, drop = 'selected')
+        obs_sub <- ClimProjDiags::Subset(obs, dat_dim, iobs, drop = 'selected')
+      } else {
+        exp_sub <- exp
+        obs_sub <- obs
+      }
+      # dim: [lat, lon, (avg_dim)]
 
       # Variance(iexp) should not take into account any point 
       # that is not available in iobs and therefore not accounted for 
@@ -409,18 +446,18 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
 
       if (is.null(avg_dim)) {
         # ACC
-        top <- sum(exp_sub*obs_sub, na.rm = TRUE)  #a number
+        top <- sum(exp_sub * obs_sub, na.rm = TRUE)  #a number
         bottom <- sqrt(sum(exp_sub^2, na.rm = TRUE) * sum(obs_sub^2, na.rm = TRUE))
         acc[iexp, iobs] <- top/bottom #a number
         # handle bottom = 0
         if (is.infinite(acc[iexp, iobs])) acc[iexp, iobs] <- NA
+
         # pval and conf
         if (pval | conf) {
           if (conftype == "parametric") {
-            # calculate effective sample size along space_dim
-            # combine space_dim into one dim first
-            obs_tmp <- array(obs_sub, dim = c(space = length(obs_sub)))
-            eno <- Eno(obs_tmp, 'space', ncores = ncores_input)  # a number
+            # calculate effective sample size
+            eno <- .Eno(as.vector(obs_sub), na.action = na.pass)
+
             if (pval) {
               t <- qt(conf.lev, eno - 2)  # a number
               p.val[iexp, iobs] <- sqrt(t^2 / (t^2 + eno - 2))
@@ -433,18 +470,21 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
         }
 
       } else {  #avg_dim is not NULL
+        # exp_sub and obs_sub: [lat, lon, avg_dim]
+
         # MACC
-        top <- sum(exp_sub*obs_sub, na.rm = TRUE)  #a number
+        top <- sum(exp_sub * obs_sub, na.rm = TRUE)  #a number
         bottom <- sqrt(sum(exp_sub^2, na.rm = TRUE) * sum(obs_sub^2, na.rm = TRUE))
         macc[iexp, iobs] <- top/bottom #a number
+
         # handle bottom = 0
         if (is.infinite(macc[iexp, iobs])) macc[iexp, iobs] <- NA
+
         # ACC
-        for (i in 1:dim(acc)[3]) {   #NOTE: use sapply!!!
-          exp_sub_i <- ClimProjDiags::Subset(exp_sub, avg_dim, i, drop = 'selected')
-          obs_sub_i <- ClimProjDiags::Subset(obs_sub, avg_dim, i, drop = 'selected')
-          #dim: [space_dim]
-          top <- sum(exp_sub_i*obs_sub_i, na.rm = TRUE)  #a number
+        for (i in 1:dim(acc)[3]) {
+          exp_sub_i <- exp_sub[, , i]
+          obs_sub_i <- obs_sub[, , i]
+          top <- sum(exp_sub_i * obs_sub_i, na.rm = TRUE)  #a number
           bottom <- sqrt(sum(exp_sub_i^2, na.rm = TRUE) * sum(obs_sub_i^2, na.rm = TRUE))
           acc[iexp, iobs, i] <- top/bottom #a number
           # handle bottom = 0
@@ -454,18 +494,21 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
         # pval and conf
         if (pval | conf) {
           if (conftype == "parametric") {
-            # calculate effective sample size along space_dim 
-            # combine space_dim into one dim first
-            obs_tmp <- array(obs_sub, dim = c(space = prod(dim(obs_sub)[-length(dim(obs_sub))]), 
-                                              dim(obs_sub)[length(dim(obs_sub))]))
-            eno <- Eno(obs_tmp, 'space', ncores = ncores_input)  # a vector of avg_dim
+            # calculate effective sample size along lat_dim and lon_dim 
+            # combine lat_dim and lon_dim into one dim first
+            obs_tmp <- array(obs_sub, 
+                             dim = c(space = prod(dim(obs_sub)[1:2]), 
+                                     dim(obs_sub)[3]))
+            eno <- apply(obs_tmp, 2, .Eno, na.action = na.pass)  # a vector of avg_dim
             if (pval) {
               t <- qt(conf.lev, eno - 2)  # a vector of avg_dim
               p.val[iexp, iobs, ] <- sqrt(t^2 / (t^2 + eno - 2))
             }
             if (conf) {
-              conf.upper[iexp, iobs, ] <- tanh(atanh(acc[iexp, iobs, ]) + qnorm(1 - (1 - conf.lev) / 2) / sqrt(eno - 3))
-              conf.lower[iexp, iobs, ] <- tanh(atanh(acc[iexp, iobs, ]) + qnorm((1 - conf.lev) / 2) / sqrt(eno - 3))
+              conf.upper[iexp, iobs, ] <- tanh(atanh(acc[iexp, iobs, ]) + 
+                                          qnorm(1 - (1 - conf.lev) / 2) / sqrt(eno - 3))
+              conf.lower[iexp, iobs, ] <- tanh(atanh(acc[iexp, iobs, ]) + 
+                                          qnorm((1 - conf.lev) / 2) / sqrt(eno - 3))
             }
           }
         }
@@ -476,8 +519,29 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
   }
 
 #------------------------------------------------
-  
-
+  # Remove nexp and nobs if dat_dim = NULL
+  if (is.null(dat_dim)) {
+    if (is.null(avg_dim)) {
+      acc <- as.vector(acc)
+      if (conf) {
+        conf.lower <- as.vector(conf.lower)
+        conf.upper <- as.vector(conf.upper)
+      }   
+      if (pval) {
+        p.val <- as.vector(p.val)
+      }
+    } else {
+      dim(acc) <- dim(acc)[3:length(dim(acc))]
+      macc <- as.vector(macc)
+      if (conf) {
+        dim(conf.lower) <- dim(conf.lower)[3:length(dim(conf.lower))]
+        dim(conf.upper) <- dim(conf.upper)[3:length(dim(conf.upper))]
+      }
+      if (pval) {
+          dim(p.val) <- dim(p.val)[3:length(dim(p.val))]
+      }
+    }
+  }
 
   # Return output
   if (is.null(avg_dim)) {
@@ -509,17 +573,16 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
 }
 
 
-.ACC_bootstrap <- function(exp, obs,  dat_dim = 'dataset', #space_dim = c('lat', 'lon'),
-                           avg_dim = 'sdate', memb_dim = NULL,
-                           lon = NULL, lat = NULL, lonlatbox = NULL,
-                           conf = TRUE, conftype = "parametric", conf.lev = 0.95, pval = TRUE, 
-                           ncores_input = NULL) {
+.ACC_bootstrap <- function(exp, obs,  dat_dim = 'dataset', 
+                           avg_dim = 'sdate', memb_dim = NULL, lat,
+                           conf = TRUE, conftype = "parametric", conf.lev = 0.95, 
+                           pval = TRUE) {
 # if (is.null(avg_dim)) 
-  # exp: [memb_exp, dat_exp, space_dim]
-  # obs: [memb_obs, dat_obs, space_dim]
+  # exp: [memb_exp, dat_exp, lat, lon]
+  # obs: [memb_obs, dat_obs, lat, lon]
 # if (!is.null(avg_dim)) 
-  # exp: [memb_exp, dat_exp, avg_dim, space_dim]
-  # obs: [memb_obs, dat_obs, avg_dim, space_dim]
+  # exp: [memb_exp, dat_exp, avg_dim, lat, lon]
+  # obs: [memb_obs, dat_obs, avg_dim, lat, lon]
 
   nexp <- as.numeric(dim(exp)[2])
   nobs <- as.numeric(dim(obs)[2])
@@ -571,7 +634,7 @@ ACC <- function(exp, obs, dat_dim = 'dataset', space_dim = c('lat', 'lon'),
    
     #calculate the ACC of the randomized field
     tmpACC <- .ACC(drawexp, drawobs, conf = FALSE, pval = FALSE, avg_dim = avg_dim,
-                   ncores_input = ncores_input)
+                   lat = lat)
     if (is.null(avg_dim)) {
       acc_draw[, , jdraw] <- tmpACC$acc
     } else {

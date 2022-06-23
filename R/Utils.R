@@ -255,7 +255,7 @@
                     NA
                   }
           result <- FALSE
-          if (!any(is.na(c(nlons, nlats)))) {
+          if (!anyNA(c(nlons, nlats))) {
             if ((nlons == length(lon)) && 
                 (nlats == length(lat))) {
               result <- TRUE
@@ -349,11 +349,11 @@
         if (!is.null(work_piece[['progress_amount']])) {
           cat("\n")
         }
-        cat(paste0("! Warning: the dataset with index ", 
+        .warning(paste0("The dataset with index ", 
             tail(work_piece[['indices']], 1), " in '", 
             work_piece[['dataset_type']], "' doesn't start at longitude 0 and will be re-interpolated in order to align its longitudes with the standard CDO grids definable with the names 't<RES>grid' or 'r<NX>x<NY>', which are by definition starting at the longitude 0.\n"))
         if (!is.null(mask)) {
-          cat(paste0("! Warning: a mask was provided for the dataset with index ",    
+          .warning(paste0("A mask was provided for the dataset with index ",    
               tail(work_piece[['indices']], 1), " in '",
               work_piece[['dataset_type']], "'. This dataset has been re-interpolated to align its longitudes to start at 0. You must re-interpolate the corresponding mask to align its longitudes to start at 0 as well, if you haven't done so yet. Running cdo remapcon,", common_grid_name, " original_mask_file.nc new_mask_file.nc will fix it.\n"))
         }
@@ -363,7 +363,7 @@
           cat("\n")
         }
         if (!explore_dims) {
-          cat(paste0("! Warning: the dataset with index ", tail(work_piece[['indices']], 1), 
+          .warning(paste0("The dataset with index ", tail(work_piece[['indices']], 1), 
                      " in '", work_piece[['dataset_type']], "' is originally on ",
                      "a grid coarser than the common grid and it has been ",
                      "extrapolated. Check the results carefully. It is ",
@@ -583,7 +583,7 @@
     }
     if (length(expected_dims) > 0) {
       dim_matches <- match(expected_dims, var_dimnames)
-      if (any(is.na(dim_matches))) {
+      if (anyNA(dim_matches)) {
         if (!is.null(old_members_dimname)) {
           expected_dims[which(expected_dims == 'lev')] <- old_members_dimname
         }
@@ -836,7 +836,7 @@
         if (!all(dim_matches == sort(dim_matches))) {
           if (!found_disordered_dims && rev(work_piece[['indices']])[2] == 1 && rev(work_piece[['indices']])[3] == 1) {
             found_disordered_dims <- TRUE
-            cat(paste0("! Warning: the dimensions for the variable ", namevar, " in the files of the experiment with index ", tail(work_piece[['indices']], 1), " are not in the optimal order for loading with Load(). The optimal order would be '", paste(expected_dims, collapse = ', '), "'. One of the files of the dataset is stored in ", filename))
+            .warning(paste0("The dimensions for the variable ", namevar, " in the files of the experiment with index ", tail(work_piece[['indices']], 1), " are not in the optimal order for loading with Load(). The optimal order would be '", paste(expected_dims, collapse = ', '), "'. One of the files of the dataset is stored in ", filename))
           }
           tmp <- aperm(tmp, dim_matches)
         }
@@ -879,13 +879,13 @@
               }
   
               if (output == 'areave' || output == 'lon') {
-                weights <- InsertDim(cos(final_lats * pi / 180), 1, length(final_lons))
+                weights <- InsertDim(cos(final_lats * pi / 180), 1, length(final_lons), name = 'lon')
                 weights[which(is.na(x))] <- NA
                 if (output == 'areave') {
                   weights <- weights / mean(weights, na.rm = TRUE)
                   mean(x * weights, na.rm = TRUE) 
                 } else {
-                  weights <- weights / InsertDim(MeanDims(weights, 2, na.rm = TRUE), 2, length(final_lats))
+                  weights <- weights / InsertDim(MeanDims(weights, 2, na.rm = TRUE), 2, length(final_lats), name = 'lat')
                   MeanDims(x * weights, 2, na.rm = TRUE)
                 }
               } else if (output == 'lat') {

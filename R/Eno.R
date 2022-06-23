@@ -58,7 +58,7 @@ Eno <- function(data, time_dim = 'sdate', na.action = na.pass, ncores = NULL) {
       as.character(substitute(na.action)) != c("na.fail")) {
       stop("Parameter 'na.action' must be a function either na.pass or na.fail.")
   }
-  if(as.character(substitute(na.action))== c("na.fail") && any(is.na(data))) {
+  if(as.character(substitute(na.action))== c("na.fail") && anyNA(data)) {
     stop(paste0("Calculation fails because NA is found in paratemter 'data', ",
                 "which is not accepted when ",
                 "parameter 'na.action' = na.fail."))

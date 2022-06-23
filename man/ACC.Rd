@@ -2,12 +2,14 @@
 % Please edit documentation in R/ACC.R
 \name{ACC}
 \alias{ACC}
-\title{Compute the anomaly correlation coefficient between the forecast and corresponding observation}
+\title{Compute the spatial anomaly correlation coefficient between the forecast and corresponding observation}
 \usage{
 ACC(
   exp,
   obs,
   dat_dim = "dataset",
+  lat_dim = "lat",
+  lon_dim = "lon",
   space_dim = c("lat", "lon"),
   avg_dim = "sdate",
   memb_dim = "member",
@@ -23,37 +25,47 @@ ACC(
 }
 \arguments{
 \item{exp}{A numeric array of experimental anomalies with named dimensions.
-It must have at least 'dat_dim' and 'space_dim'.}
+The dimension must have at least 'lat_dim' and 'lon_dim'.}
 
 \item{obs}{A numeric array of observational anomalies with named dimensions.
-It must have the same dimensions as 'exp' except the length of 'dat_dim' 
+The dimension should be the same as 'exp' except the length of 'dat_dim' 
 and 'memb_dim'.}
 
 \item{dat_dim}{A character string indicating the name of dataset (nobs/nexp) 
-dimension. The default value is 'dataset'.}
+dimension. The default value is 'dataset'. If there is no dataset 
+dimension, set NULL.}
+
+\item{lat_dim}{A character string indicating the name of the latitude
+dimension of 'exp' and 'obs' along which ACC is computed. The default value
+is 'lat'.}
+
+\item{lon_dim}{A character string indicating the name of the longitude
+dimension of 'exp' and 'obs' along which ACC is computed. The default value
+is 'lon'.}
 
 \item{space_dim}{A character string vector of 2 indicating the name of the
 latitude and longitude dimensions (in order) along which ACC is computed. 
-The default value is c('lat', 'lon').}
+The default value is c('lat', 'lon'). This argument has been deprecated.
+Use 'lat_dim' and 'lon_dim' instead.}
 
 \item{avg_dim}{A character string indicating the name of the dimension to be
-averaged. It must be one of 'time_dim'. The mean ACC is calculated along 
-averaged. If no need to calculate mean ACC, set as NULL. The default value 
-is 'sdate'.}
+averaged, which is usually the time dimension. If no need to calculate mean
+ACC, set as NULL. The default value is 'sdate'.}
 
 \item{memb_dim}{A character string indicating the name of the member 
 dimension. If the data are not ensemble ones, set as NULL. The default 
 value is 'member'.}
 
-\item{lat}{A vector of the latitudes of the exp/obs grids. Only required when
-the domain of interested is specified. The default value is NULL.}
+\item{lat}{A vector of the latitudes of the exp/obs grids. It is used for
+area weighting and when the domain of interested 'lonlatbox' is specified.}
 
 \item{lon}{A vector of the longitudes of the exp/obs grids. Only required when
-the domain of interested is specified. The default value is NULL.}
+the domain of interested 'lonlatbox' is specified. The default value is 
+NULL.}
 
 \item{lonlatbox}{A numeric vector of 4 indicating the corners of the domain of
-interested: c(lonmin, lonmax, latmin, latmax). Only required when the domain
-of interested is specified. The default value is NULL.}
+interested: c(lonmin, lonmax, latmin, latmax). The default value is NULL 
+and the whole data will be used.}
 
 \item{conf}{A logical value indicating whether to retrieve the confidence 
 intervals or not. The default value is TRUE.}
@@ -81,8 +93,9 @@ computation. The default value is NULL.}
 A list containing the numeric arrays:\cr 
 \item{acc}{
  The ACC with the dimensions c(nexp, nobs, the rest of the dimension except 
- space_dim and memb_dim). nexp is the number of experiment (i.e., dat_dim in
- exp), and nobs is the number of observation (i.e., dat_dim in obs).
+ lat_dim, lon_dim and memb_dim). nexp is the number of experiment (i.e., dat_dim in
+ exp), and nobs is the number of observation (i.e., dat_dim in obs). If 
+ dat_dim is NULL, nexp and nobs are omitted.
 }
 \item{conf.lower (if conftype = "parametric") or acc_conf.lower (if 
      conftype = "bootstrap")}{
@@ -100,8 +113,9 @@ A list containing the numeric arrays:\cr
 }
 \item{macc}{
  The mean anomaly correlation coefficient with dimensions
- c(nexp, nobs, the rest of the dimension except space_dim, memb_dim, and 
- avg_dim). Only present if 'avg_dim' is not NULL.
+ c(nexp, nobs, the rest of the dimension except lat_dim, lon_dim, memb_dim, and 
+ avg_dim). Only present if 'avg_dim' is not NULL. If dat_dim is NULL, nexp 
+ and nobs are omitted.
 }
 \item{macc_conf.lower}{
  The lower confidence interval of MACC with the same dimensions as MACC. 
@@ -113,13 +127,15 @@ A list containing the numeric arrays:\cr
 }
 }
 \description{
-Calculate the anomaly correlation coefficient for the ensemble mean of each 
-model and the corresponding references over a spatial domain. It can return a
-forecast time series if the data contain forest time dimension, and also the 
-start date mean if the data contain start date dimension. 
-The domain of interest can be specified by providing the list 
-of longitudes/latitudes (lon/lat) of the data together with the corners 
-of the domain: lonlatbox = c(lonmin, lonmax, latmin, latmax).
+Calculate the spatial anomaly correlation coefficient (ACC) for the ensemble
+mean of each model and the corresponding references over a spatial domain. It
+can return a forecast time series if the data contain forest time dimension, 
+and also the ACC mean over one dimension, e.g., start date dimension.
+The domain of interest can be specified by providing the list of longitudes/
+latitudes of the data together with the corners of the domain: lonlatbox = 
+c(lonmin, lonmax, latmin, latmax). The data will be adjusted to have a spatial
+mean of zero, then area weighting is applied. The formula is referenced from 
+Wilks (2011; section 7.6.4; https://doi.org/10.1016/B978-0-12-385022-5.00008-7).
 }
 \examples{
  \dontshow{
@@ -137,8 +153,8 @@ sampleData$obs <- Season(sampleData$obs, monini = 11, moninf = 12, monsup = 2)
 clim <- Clim(sampleData$mod, sampleData$obs)
 ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 ano_obs <- Ano(sampleData$obs, clim$clim_obs)
-acc <- ACC(ano_exp, ano_obs)
-acc_bootstrap <- ACC(ano_exp, ano_obs, conftype = 'bootstrap')
+acc <- ACC(ano_exp, ano_obs, lat = sampleData$lat)
+acc_bootstrap <- ACC(ano_exp, ano_obs, conftype = 'bootstrap', lat = sampleData$lat)
 # Combine acc results for PlotACC
 res <- array(c(acc$conf.lower, acc$acc, acc$conf.upper, acc$p.val), 
             dim = c(dim(acc$acc), 4))
@@ -151,5 +167,6 @@ PlotACC(res_bootstrap, startDates)
 }
 \references{
 Joliffe and Stephenson (2012). Forecast Verification: A 
- Practitioner's Guide in Atmospheric Science. Wiley-Blackwell.
+ Practitioner's Guide in Atmospheric Science. Wiley-Blackwell.; 
+ Wilks (2011; section 7.6.4; https://doi.org/10.1016/B978-0-12-385022-5.00008-7).
 }

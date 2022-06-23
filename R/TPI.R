@@ -96,10 +96,10 @@ TPI <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'lo
     stop("Parameter 'data' must be a numeric array.")
   }
   # data_lats and data_lons part1
-  if (!(class(data_lats) == 'numeric' | class(data_lats) == 'integer')) {
+  if (!(inherits(data_lats, 'numeric') | inherits(data_lats, 'integer'))) {
     stop("Parameter 'data_lats' must be a numeric vector.")
   }
-  if (!(class(data_lons) == 'numeric' | class(data_lons) == 'integer')) {
+  if (!(inherits(data_lons, 'numeric') | inherits(data_lons, 'integer'))) {
     stop("Parameter 'data_lons' must be a numeric vector.")
   }
   # type
@@ -181,7 +181,7 @@ TPI <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'lo
   }
   # indices_for_clim
   if (!is.null(indices_for_clim)) {
-    if (!class(indices_for_clim) %in% c('numeric', 'integer')
+    if (!(inherits(indices_for_clim, 'numeric') | inherits(indices_for_clim, 'integer'))
         & !(is.logical(indices_for_clim) & !any(indices_for_clim))) {
       stop(paste0("The parameter 'indices_for_clim' must be a numeric vector ",
                   "or NULL to compute the anomalies based on the whole period, ",

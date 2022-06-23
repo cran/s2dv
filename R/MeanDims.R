@@ -10,9 +10,10 @@
 #'  not (FALSE).
 #'@param drop A logical value indicating whether to keep the averaged 
 #'  dimension (FALSE) or drop it (TRUE). The default value is TRUE.
-#'@return An array with the same dimension as parameter 'data' except the 
-#'  'dims' dimensions. If 'drop' is TRUE, 'dims' will be removed; if 'drop' is
-#'  FALSE, 'dims' will be preserved and the length will be 1.
+#'@return A numeric or an array with the same dimension as parameter 'data'
+#'  except the 'dims' dimensions. If 'drop' is TRUE, 'dims' will be removed; if
+#' 'drop' is FALSE, 'dims' will be preserved and the length will be 1. If all
+#'  the dimensions are averaged out, a numeric is returned.
 #'
 #'@examples
 #'a <- array(rnorm(24), dim = c(dat = 2, member = 3, time = 4))
@@ -69,7 +70,7 @@ MeanDims <- function(data, dims, na.rm = FALSE, drop = TRUE) {
 
   if (length(dims) == length(dim_data)) {
     if (drop) {
-      data <- as.array(mean(data, na.rm = na.rm))
+      data <- mean(data, na.rm = na.rm)
     } else {
       data <- array(mean(data, na.rm = na.rm), 
                     dim = rep(1, length(dim_data)))
@@ -79,8 +80,8 @@ MeanDims <- function(data, dims, na.rm = FALSE, drop = TRUE) {
     if (is.character(dims)) {
       dims <- which(names(dim_data) %in% dims)
     }
-    pos <- (1:length(dim_data))[-dims]
-    data <- apply(data, pos, mean, na.rm = na.rm)
+    data <- aperm(data, c(dims, (1:length(dim_data))[-dims]))
+    data <- colMeans(data, dims = length(dims), na.rm = na.rm)
 
     # If data is vector
     if (is.null(dim(data))) {

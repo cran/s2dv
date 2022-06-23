@@ -97,10 +97,10 @@ SPOD <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'l
     stop("Parameter 'data' must be a numeric array.")
   }
   # data_lats and data_lons part1
-  if (!(class(data_lats) == 'numeric' | class(data_lats) == 'integer')) {
+  if (!(inherits(data_lats, 'numeric') | inherits(data_lats, 'integer'))) {
     stop("Parameter 'data_lats' must be a numeric vector.")
   }
-  if (!(class(data_lons) == 'numeric' | class(data_lons) == 'integer')) {
+  if (!(inherits(data_lons, 'numeric') | inherits(data_lons, 'integer'))) {
     stop("Parameter 'data_lons' must be a numeric vector.")
   }
   # type

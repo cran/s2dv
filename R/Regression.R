@@ -123,7 +123,7 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
     stop("Parameter 'reg_dim' is not found in 'datay' or 'datax' dimension.")
   }
   ## formula
-  if (class(formula) != 'formula') {
+  if (!inherits(formula, 'formula')) {
     stop("Parameter 'formula' must the an object of class 'formula'.")
   }
   ## pval

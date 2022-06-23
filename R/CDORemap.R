@@ -42,18 +42,35 @@
 #'  for the price of writing more intermediate files (whis usually is 
 #'  unconvenient) by setting the parameter \code{avoid_writes = TRUE}.
 #'@param crop Whether to crop the data after interpolation with 
-#'  'cdo sellonlatbox' (TRUE) or to extend interpolated data to the whole 
-#'  world as CDO does by default (FALSE). If \code{crop = TRUE} then the 
-#'  longitude and latitude borders which to crop at are taken as the limits of 
-#'  the cells at the borders ('lons' and 'lats' are perceived as cell centers), 
-#'  i.e. the resulting array will contain data that covers the same area as 
-#'  the input array. This is equivalent to specifying \code{crop = 'preserve'}, 
-#'  i.e. preserving area. If \code{crop = 'tight'} then the borders which to 
-#'  crop at are taken as the minimum and maximum cell centers in 'lons' and 
-#'  'lats', i.e. the area covered by the resulting array may be smaller if 
-#'  interpolating from a coarse grid to a fine grid. The parameter 'crop' also 
-#'  accepts a numeric vector of custom borders which to crop at: 
-#'  c(western border, eastern border, southern border, northern border).
+#'  'cdo sellonlatbox' (TRUE) or to extend interpolated data to the whole
+#'  world as CDO does by default (FALSE). The default value is TRUE.\cr
+#'  \itemize{
+#'    \item{
+#'      If \code{crop = TRUE}, the longitude and latitude borders to be cropped
+#'      at are taken as the limits of the cells at the borders (not the values
+#'      of 'lons' and 'lats', which are perceived as cell centers), i.e., the
+#'      resulting array will contain data that covers the same area as the input
+#'      array. This is equivalent to specifying \code{crop = 'preserve'}, i.e.,
+#'      preserving area. Notice that the longitude range of returning array will
+#'      follow the original data 'lons' instead of the target grid 'grid'.
+#'    }
+#'    \item{
+#'      If \code{crop = FALSE}, the returning array is not cropped, i.e., a 
+#'      global domain, and the longitude range will be the same as the target
+#'      grid 'grid'.
+#'    }
+#'    \item{
+#'      If \code{crop = 'tight'}, the borders to be cropped at are taken as the 
+#'      minimum and maximum cell centers in 'lons' and 'lats', i.e., the area
+#'      covered by the resulting array may be smaller if interpolating from a 
+#'      coarse grid to a fine grid. 
+#'    }
+#'    \item{
+#'      The parameter 'crop' also accepts a numeric vector of customized borders
+#'      to be cropped at:\cr
+#'      c(western border, eastern border, southern border, northern border).
+#'    }
+#'  }
 #'@param force_remap Whether to force remapping, even if the input data array 
 #'  is already on the target grid.
 #'@param write_dir Path to the directory where to create the intermediate 
@@ -222,10 +239,10 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
   if (!is.numeric(lons) || !is.numeric(lats)) {
     stop("Expected numeric 'lons' and 'lats'.")
   }
-  if (any(is.na(lons > 0))) {
+  if (anyNA(lons > 0)) {
     stop("Found invalid values in 'lons'.")
   }
-  if (any(is.na(lats > 0))) {
+  if (anyNA(lats > 0)) {
     stop("Found invalid values in 'lats'.")
   }
   if (is.null(dim(lons))) {
@@ -414,7 +431,6 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
   }
   if (is.logical(crop)) {
     if (crop) {
-            warning("Parameter 'crop' = 'TRUE'. The output grid range will follow the input lons and lats.")
       if (length(lons) == 1 || length(lats) == 1) {
         stop("CDORemap cannot remap if crop = TRUE and values for only one ",
              "longitude or one latitude are provided. Either a) provide ",
@@ -525,8 +541,6 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
         }
 ###---
       }
-    }  else if (crop == FALSE) {
-       warning("Parameter 'crop' = 'FALSE'. The output grid range will follow parameter 'grid'.")
     }
   } else if (is.numeric(crop)) {
     if (length(crop) != 4) {
@@ -697,6 +711,8 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     if (!is.null(unlimited_dim)) {
       # This will make ArrayToNc create this dim as unlimited.
       names(dim(data_array))[unlimited_dim] <- 'time'
+      # create time variable. The value is random since CDORemap() doesn't support time remapping now and we just want to avoid cdo warning
+      time_attr <- array(c(1:dim(data_array)[unlimited_dim]), dim = c(dim(data_array)[unlimited_dim]))
     }
     if (length(dim(lons)) == 1) {
       names(dim(lons)) <- lon_dim
@@ -758,7 +774,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
         }
 #        dims_before_crop <- dim(subset)
         # Make sure subset goes along with metadata
-        easyNCDF::ArrayToNc(setNames(list(subset, lons, lats), c('var', lon_var_name, lat_var_name)), tmp_file)
+        if (is.null(unlimited_dim)) {
+          easyNCDF::ArrayToNc(setNames(list(subset, lons, lats), c('var', lon_var_name, lat_var_name)), tmp_file)
+        } else {
+        easyNCDF::ArrayToNc(setNames(list(subset, lons, lats, time_attr), c('var', lon_var_name, lat_var_name, 'time')), tmp_file)
+        }
       } else {
          if (is_irregular) {
            pos_lon <- which(names(dim(data_array)) == lon_dim)
@@ -774,7 +794,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
            }
          }
 #        dims_before_crop <- dim(data_array)
-        easyNCDF::ArrayToNc(setNames(list(data_array, lons, lats), c('var', lon_var_name, lat_var_name)), tmp_file)
+        if (is.null(unlimited_dim)) {
+          easyNCDF::ArrayToNc(setNames(list(data_array, lons, lats), c('var', lon_var_name, lat_var_name)), tmp_file)
+        } else {
+          easyNCDF::ArrayToNc(setNames(list(data_array, lons, lats, time_attr), c('var', lon_var_name, lat_var_name, 'time')), tmp_file)
+        }
       }
       sellonlatbox <- ''
       if (crop) {
@@ -784,11 +808,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
                                            ',', format(lat_extremes[2], scientific = FALSE), ' -')
       }
       err <- try({
-        system(paste0("cdo -s ", sellonlatbox, "remap", method, ",", grid, " ", tmp_file, " ", tmp_file2))
+        system(paste0("cdo -s ", sellonlatbox, "remap", method, ",", grid, " ", tmp_file, " ", tmp_file2), ignore.stdout = T, ignore.stderr = T)
       })
       file.remove(tmp_file)
-      if (('try-error' %in% class(err)) || err > 0) {
-        stop("CDO remap failed.")
+      if (is(err, 'try-error') || err > 0) {
+        stop("CDO remap failed. Possible problem: parameter 'grid'.")
       }
       ncdf_remapped <- nc_open(tmp_file2)
       if (!lons_lats_taken) {

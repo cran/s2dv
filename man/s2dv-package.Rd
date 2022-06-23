@@ -6,15 +6,7 @@
 \alias{s2dv-package}
 \title{s2dv: A Set of Common Tools for Seasonal to Decadal Verification}
 \description{
-The advanced version of package 's2dverification'. It is 
-    intended for 'seasonal to decadal' (s2d) climate forecast verification, but 
-    it can also be used in other kinds of forecasts or general climate analysis.  
-    This package is specially designed for the comparison between the experimental 
-    and observational datasets. The functionality of the included functions covers 
-    from data retrieval, data post-processing, skill scores against observation, 
-    to visualization. Compared to 's2dverification', 's2dv' is more compatible 
-    with the package 'startR', able to use multiple cores for computation and 
-    handle multi-dimensional arrays with a higher flexibility.
+The advanced version of package 's2dverification'. It is intended for 'seasonal to decadal' (s2d) climate forecast verification, but it can also be used in other kinds of forecasts or general climate analysis. This package is specially designed for the comparison between the experimental and observational datasets. The functionality of the included functions covers from data retrieval, data post-processing, skill scores against observation, to visualization. Compared to 's2dverification', 's2dv' is more compatible with the package 'startR', able to use multiple cores for computation and handle multi-dimensional arrays with a higher flexibility.
 }
 \references{
 \url{https://earth.bsc.es/gitlab/es/s2dv/}
@@ -39,6 +31,7 @@ Authors:
 Other contributors:
 \itemize{
   \item Roberto Bilbao \email{roberto.bilbao@bsc.es} [contributor]
+  \item Josep Cos \email{josep.cos@bsc.es} [contributor]
   \item Carlos Delgado \email{carlos.delgado@bsc.es} [contributor]
   \item Llorenç Lledó \email{llorenc.lledo@bsc.es} [contributor]
   \item Andrea Manrique \email{andrea.manrique@bsc.es} [contributor]

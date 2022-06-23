@@ -1,3 +1,18 @@
+# s2dv 1.2.0 (Release date: 2022-06-22)
+- Cluster(): Fix a bug of calculating nclusters ("K"): the function didn't use the whole data to calculate "K" if parameter "nclusters" is NULL.; Add missing output dimension names
+- Clim(): Correct the output dimensions for some cases; allow dat_dim to be NULL; obs doesn't need to have dat_dim.
+- MeanDims(): if the result is a number and drop = T, return a numeric instead of an array
+- Load(): Bugfix for R >= 4.0.0 regarding list and vector confusion
+- PlotLayout(): Bugfix when param "var" is a list
+- ACC(): Add area-weighting into the calculation and ensure the data has a spatial mean of zero. "space_dim" is deprecated and replaced by "lat_dim" and "lon_dim". "dat_dim" can be NULL.
+- PlotEquiMap(): Add useRaster = TRUE in image() if possible (i.e., latitude and longitude are regularly spaced.)
+- PlotEquiMap(): New parameters xlonshft ylatshft xlabels ylabels for self-defined axis
+- PlotEquiMap(): Flexible map longitude range
+- New function: WeightCells, DiffCorr, ResidualCorr, RPS, RPSS
+- Clim() and MeanDims() efficiency improvement
+- CDORemap(): Add arbitrary time metadata to avoid cdo warning like "Warning (find_time_vars): Time variable >time< not found!"
+- CDORemap(): Stop printing messages from cdo command.
+
 # s2dv 1.1.0 (Release date: 2021-12-14)
 - New functions: RatioPredictableComponents, SignalNoiseRatio  
 - CDORemap(): Able to interpolate irregular grid to regular grid; include new cdo methods 'con2', 'laf' and 'nn'

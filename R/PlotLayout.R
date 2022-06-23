@@ -56,6 +56,19 @@
 #'  b) providing a list of named sub-lists in 'special_args', where the names 
 #'  of each sub-list match the names of the parameters to be adjusted, and 
 #'  each value in a sub-list contains the value of the corresponding parameter.
+#'  For example, if the plots are two maps with different arguments, the 
+#'  structure would be like:\cr
+#'  var:\cr
+#'   List of 2\cr
+#'    $ : num [1:360, 1:181] 1 3.82 5.02 6.63 8.72 ...\cr
+#'    $ : num [1:360, 1:181] 2.27 2.82 4.82 7.7 10.32 ...\cr
+#'  special_args:\cr
+#'   List of 2\cr
+#'   $ :List of 2\cr
+#'    ..$ arg1: ...\cr
+#'    ..$ arg2: ...\cr
+#'   $ :List of 1\cr
+#'    ..$ arg1: ...\cr
 #'@param nrow Numeric value to force the number of rows in the automatically 
 #'  generated layout. If higher than the required, this will yield blank cells 
 #'  in the layout (which can then be populated). If lower than the required 
@@ -225,7 +238,7 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
 
   is_single_na <- function(x) ifelse(length(x) > 1, FALSE, is.na(x))
   # Check var
-  if (is.array(var) || (is_single_na(var))) {
+  if (!is.list(var) & (is.array(var) || (is_single_na(var)))) {
     var <- list(var)
   } else if (is.list(var)) {
     if (!all(sapply(var, is.array) | sapply(var, is_single_na))) {

@@ -4,7 +4,8 @@
 \name{sampleMap}
 \alias{sampleMap}
 \title{Sample Of Observational And Experimental Data For Forecast Verification In Function Of Longitudes And Latitudes}
-\format{The data set provides with a variable named 'sampleMap'.\cr\cr
+\format{
+The data set provides with a variable named 'sampleMap'.\cr\cr
 
 sampleMap$mod is an array that contains the experimental data and the dimension meanings and values are:\cr
  c(# of experimental datasets, # of members, # of starting dates, # of lead-times, # of latitudes, # of longitudes)\cr
@@ -16,7 +17,8 @@ sampleMap$obs is an array that contains the observational data and the dimension
 
  sampleMap$lat is an array with the 2 latitudes covered by the data (see examples on Load() for details on why such low resolution).\cr\cr
 
- sampleMap$lon is an array with the 3 longitudes covered by the data (see examples on Load() for details on why such low resolution).}
+ sampleMap$lon is an array with the 3 longitudes covered by the data (see examples on Load() for details on why such low resolution).
+}
 \usage{
 data(sampleMap)
 }

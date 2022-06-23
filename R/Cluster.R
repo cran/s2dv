@@ -37,7 +37,7 @@
 #'  "ptbiserial", "gap", "frey", "mcclain", "gamma", "gplus", "tau", "dunn", 
 #'  "hubert", "sdindex", and "sdbw".
 #'  One can also use all of them with the option 'alllong' or almost all indices
-#   except gap, gamma, gplus and tau with 'all', when the optimal number of
+#'   except gap, gamma, gplus and tau with 'all', when the optimal number of
 #'  clusters K is detremined by the majority rule (the maximum of histogram of 
 #'  the results of all indices with finite solutions). Use of some indices on 
 #'  a big and/or unstructured dataset can be computationally intense and/or 
@@ -53,7 +53,7 @@
 #'  are same as 'data' without 'space_dim'.
 #'}
 #'\item{$centers}{
-#'  A nemeric array of cluster centres or centroids (e.g. [1:K, 1:spatial degrees 
+#'  A numeric array of cluster centres or centroids (e.g. [1:K, 1:spatial degrees 
 #'  of freedom]). The rest dimensions are same as 'data' except 'time_dim' 
 #'  and 'space_dim'.
 #'}
@@ -214,8 +214,23 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
   }
 
   ###############################
-  # Calculate Cluster
+  # Compute nclusters
+  if (is.null(nclusters)) {
+    pdf(file = NULL)
+     nbclust.results <- NbClust::NbClust(data, distance = 'euclidean', 
+                                         min.nc = 2, max.nc = 20, 
+                                         method = 'kmeans', index = index)
+    dev.off()
+    if (index == 'all' || index == 'alllong') {
+      kmc  <- hist(nbclust.results$Best.nc[1, ], breaks = seq(0, 20), 
+                   plot = FALSE)$counts
+      nclusters <- which(kmc == max(kmc))
+    } else {
+      nclusters <- nbclust.results$Best.nc[1]
+    }
+  }
 
+  # Calculate Cluster
   output <- Apply(list(data),
                   target_dims = c(time_dim, space_dim),
                   fun = .Cluster,
@@ -225,7 +240,7 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
   return(output)
 }
 
-.Cluster <- function(data, weights = NULL, nclusters = NULL, index = 'sdindex') {
+.Cluster <- function(data, weights = NULL, nclusters, index = 'sdindex') {
   # data: [time, (lat, lon)]
   dat_dim <- dim(data)
 
@@ -241,27 +256,22 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
       data <- do.call(abind::abind, c(data_list, along = 0))
     }
   }
+  
+  kmeans.results <- kmeans(data, centers = nclusters, iter.max = 300, 
+                           nstart = 30) 
 
-  if (!is.null(nclusters)) {
-    kmeans.results <- kmeans(data, centers = nclusters, iter.max = 300, 
-                             nstart = 30) 
-  } else {
-    pdf(file = NULL)
-    nbclust.results <- NbClust::NbClust(data, distance = 'euclidean', 
-                                        min.nc = 2, max.nc = 20, 
-                                        method = 'kmeans', index = index)
-    dev.off()
+#---------------NEW---------------
+  # Add dimension names and shape space_dim back
+  kmeans.results$cluster <- as.array(kmeans.results$cluster)
+  names(dim(kmeans.results$cluster)) <- names(dat_dim)[1]
+  kmeans.results$centers <- array(kmeans.results$centers, 
+                                  dim = c(nclusters, dat_dim[-1]))
+  names(dim(kmeans.results$centers)) <- c('K', names(dat_dim)[-1])
+  kmeans.results$withinss <- as.array(kmeans.results$withinss)
+  names(dim(kmeans.results$withinss)) <- 'K'
+  kmeans.results$size <- as.array(kmeans.results$size)
+  names(dim(kmeans.results$size)) <- 'K'
 
-    if (index == 'all' || index == 'alllong') {
-      kmc  <- hist(nbclust.results$Best.nc[1, ], breaks = seq(0, 20), 
-                   plot = FALSE)$counts
-      kmc1 <- which(kmc == max(kmc))
-    } else {
-      kmc1 <- nbclust.results$Best.nc[1]
-    }
-
-    kmeans.results <- kmeans(data, centers = kmc1, iter.max = 300, 
-                             nstart = 30)
-  }
+#----------NEW_END----------------
   invisible(kmeans.results)
 }

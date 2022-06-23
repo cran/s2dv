@@ -180,7 +180,7 @@ ColorBar <- function(brks = NULL, cols = NULL, vertical = TRUE,
   if (!is.null(var_limits)) {
     if (!(is.numeric(var_limits) && (length(var_limits) == 2))) {
       stop("Parameter 'var_limits' must be a numeric vector of length 2.")
-    } else if (any(is.na(var_limits))) {
+    } else if (anyNA(var_limits)) {
       stop("Parameter 'var_limits' must not contain NA values.")
     } else if (any(is.infinite(var_limits))) {
       stop("Parameter 'var_limits' must not contain infinite values.")
@@ -210,7 +210,7 @@ ColorBar <- function(brks = NULL, cols = NULL, vertical = TRUE,
         brks <- length(cols) + 1
       }
     }
-    if (is.null(bar_limits) || any(is.na(bar_limits))) {
+    if (is.null(bar_limits) || anyNA(bar_limits)) {
       # var_limits is defined
       if (is.null(bar_limits)) {
         bar_limits <- c(NA, NA)
