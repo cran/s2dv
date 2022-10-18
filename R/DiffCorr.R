@@ -4,10 +4,10 @@
 #'Positive values of the correlation difference indicate that the forecast is 
 #'more skillful than the reference forecast, while negative values mean that 
 #'the reference forecast is more skillful. The statistical significance of the 
-#'correlation differences is computed with a one-sided test for equality of 
-#'dependent correlation coefficients (Steiger, 1980; Siegert et al., 2017) using
-#'effective degrees of freedom to account for the autocorrelation of the time 
-#'series (von Storch and Zwiers, 1999).
+#'correlation differences is computed with a one-sided or two-sided test for 
+#'equality of dependent correlation coefficients (Steiger, 1980; Siegert et al.,
+#'2017) using effective degrees of freedom to account for the autocorrelation of
+#'the time series (Zwiers and von Storch, 1995).
 #'
 #'@param exp A named numerical array of the forecast data with at least time 
 #'  dimension. 
@@ -38,6 +38,11 @@
 #'  steps with no missing values in all "exp", "ref", and "obs" will be used. If
 #'  "na.fail", an error will arise if any of "exp", "ref", or "obs" contains any
 #'  NA. The default value is "return.na".
+#'@param test.type A character string indicating the type of significance test. 
+#'  It can be "two-sided" (to assess whether the skill of "exp" and "ref" are 
+#'  significantly different) or "one-sided" (to assess whether the skill of  
+#'  "exp" is significantly higher than that of "ref") following Steiger (1980).
+#'  The default value is "two-sided".
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -60,19 +65,22 @@
 #'@references 
 #'Steiger, 1980; https://content.apa.org/doi/10.1037/0033-2909.87.2.245
 #'Siegert et al., 2017; https://doi.org/10.1175/MWR-D-16-0037.1
-#'von Storch and Zwiers, 1999; https://doi.org/10.1017/CBO9780511612336
+#'Zwiers and von Storch, 1995; https://doi.org/10.1175/1520-0442(1995)008<0336:TSCIAI>2.0.CO;2
 #'
 #'@examples
 #' exp <- array(rnorm(1000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
 #' obs <- array(rnorm(1000), dim = c(lat = 3, lon = 2, sdate = 50))
 #' ref <- array(rnorm(1000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
-#' res <- DiffCorr(exp, obs, ref, memb_dim = 'member')
+#' res_two.sided_sign <- DiffCorr(exp, obs, ref, memb_dim = 'member', 
+#'                                test.type = 'two-sided', alpha = 0.05)
+#' res_one.sided_pval <- DiffCorr(exp, obs, ref, memb_dim = 'member', 
+#'                                test.type = 'one-sided', alpha = NULL)
 #'
 #'@import multiApply
 #'@export
 DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate', 
                      memb_dim = NULL, method = 'pearson', alpha = NULL, 
-                     handle.na = 'return.na', ncores = NULL) {
+                     handle.na = 'return.na', test.type = "two-sided", ncores = NULL) {
   
   # Check inputs
   ## exp, ref, and obs (1)
@@ -128,9 +136,9 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
     stop('Parameter "method" must be "pearson" or "spearman".')
   }
   if (method == "spearman") {
-    warning(paste0("The test used in this function is built on Pearson method. ", 
-                   "To verify if Spearman method is reliable, you can run the ",
-                   "Monte-Carlo simulations that are done in Siegert et al., 2017"))
+    .warning(paste0("The test used in this function is built on Pearson method. ", 
+                    "To verify if Spearman method is reliable, you can run the ",
+                    "Monte-Carlo simulations that are done in Siegert et al., 2017"))
   }
   ## alpha
   if (!is.null(alpha)) {
@@ -143,6 +151,14 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
   if (!handle.na %in% c('return.na', 'only.complete.triplets', 'na.fail')) {
     stop('Parameter "handle.na" must be "return.na", "only.complete.triplets" or "na.fail".')
   }
+  ## test.type
+  if (!test.type %in% c('two-sided', 'one-sided')) {
+    stop("Parameter 'test.type' must be 'two-sided' or 'one-sided'.")
+  }
+  #NOTE: warning can be removed in the next release
+  .warning("The default significance test has changed after s2dv_1.2.0. The default method is 'two-sided'.")
+
+  ## ncores
   if (!is.null(ncores)) {
     if (any(!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
         length(ncores) > 1)) {
@@ -184,47 +200,74 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
                                        ref = time_dim, N.eff = NULL),
                     output_dims = output_dims,
                     fun = .DiffCorr, method = method,
-                    alpha = alpha, handle.na = handle.na, ncores = ncores)
+                    alpha = alpha, handle.na = handle.na, 
+                    test.type = test.type, ncores = ncores)
   } else { 
     output <- Apply(data = list(exp = exp, obs = obs, ref = ref),
                     target_dims = list(exp = time_dim, obs = time_dim, 
                                        ref = time_dim), 
                     output_dims = output_dims, N.eff = N.eff,
                     fun = .DiffCorr, method = method, 
-                    alpha = alpha, handle.na = handle.na, ncores = ncores)
+                    alpha = alpha, handle.na = handle.na, 
+                    test.type = test.type, ncores = ncores)
   }
 
   return(output)
 }
 
-.DiffCorr <- function(exp, obs, ref, N.eff = NA, method = 'pearson', alpha = NULL, handle.na = 'return.na') {
+.DiffCorr <- function(exp, obs, ref, N.eff = NA, method = 'pearson', alpha = NULL, 
+                      handle.na = 'return.na', test.type = 'two.sided') {
 
-  .diff.corr <- function(exp, obs, ref, method = 'pearson', N.eff = NA, alpha = NULL) {
-
+  .diff.corr <- function(exp, obs, ref, method = 'pearson', N.eff = NA, alpha = NULL, test.type = 'two.sided') {
     # Correlation difference
     cor.exp <- cor(x = exp, y = obs, method = method)
     cor.ref <- cor(x = ref, y = obs, method = method)
     output <- NULL
     output$diff.corr <- cor.exp - cor.ref
-
-    # Significance with one-sided test for equality of dependent correlation coefficients (Steiger, 1980)
-    r12 <- cor.exp
-    r13 <- cor.ref
-    r23 <- cor(exp, ref)
     if (is.na(N.eff)) {
       N.eff <- .Eno(x = obs, na.action = na.pass) ## effective degrees of freedom
     }
+
+    # Significance with one-sided or two-sided test for equality of dependent correlation coefficients (Steiger, 1980)
+    r12 <- cor.exp
+    r13 <- cor.ref
+    r23 <- cor(exp, ref)
     R <- (1 - r12 * r12 - r13 * r13 - r23 * r23) + 2 * r12 * r13 * r23
     t <- (r12 - r13) * sqrt((N.eff - 1) * (1 + r23) / (2 * ((N.eff - 1) / (N.eff - 3)) * R + 0.25 * (r12 + r13)^2 * (1 - r23)^3))
-    p.value <- 1 - pt(t, df = N.eff - 3)
-    if (is.null(alpha)) {
-      output$p.val <- p.value
+    
+    if (test.type == 'one-sided') {
+      
+      ## H0: the skill of exp is not higher than that of ref
+      ## H1: the skill of exp is higher than that of ref
+      
+      p.value <- pt(t, df = N.eff - 3, lower.tail = FALSE)
+      
+      if (is.null(alpha)) {
+        output$p.val <- p.value
+      } else {
+        output$sign <- ifelse(!is.na(p.value) & p.value <= alpha & output$diff.corr > 0, TRUE, FALSE)
+      }
+
+    } else if (test.type == 'two-sided') {
+      
+      ## H0: the skill difference of exp and ref is zero
+      ## H1: the skill difference of exp and ref is different from zero
+      
+      p.value <- pt(abs(t), df = N.eff - 3, lower.tail = FALSE)
+
+      if (is.null(alpha)) {
+        output$p.val <- p.value
+      } else {
+        output$sign <- ifelse(!is.na(p.value) & p.value <= alpha / 2, TRUE, FALSE)
+      }
+ 
     } else {
-      output$sign <- ifelse(!is.na(p.value) & p.value <= alpha, TRUE, FALSE)
+      stop("Parameter 'test.type' is not supported.")
     }
+
     return(output)
   }
-
+  
   #==================================================
   
   if (anyNA(exp) | anyNA(obs) | anyNA(ref)) { ## There are NAs 
@@ -237,7 +280,7 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
       ref <- ref[!nna]
 
       output <- .diff.corr(exp = exp, obs = obs, ref = ref, method = method, 
-                           N.eff = N.eff, alpha = alpha)
+                           N.eff = N.eff, alpha = alpha, test.type = test.type)
       
     } else if (handle.na == 'return.na') {
       # Data contain NA, return NAs directly without passing to .diff.corr
@@ -250,7 +293,8 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
     
   } else { ## There is no NA  
     output <- .diff.corr(exp = exp, obs = obs, ref = ref, method = method, 
-                         N.eff = N.eff, alpha = alpha)
+                         N.eff = N.eff, alpha = alpha, test.type = test.type)
   }
+
   return(output)
 }

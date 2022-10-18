@@ -92,7 +92,9 @@ dimensions: c(latitude, longitude). Longitudes can be in ascending or
 descending order and latitudes in any order. It can contain NA values 
 (coloured with 'colNA'). Arrays with dimensions c(longitude, latitude) 
 will also be accepted but 'lon' and 'lat' will be used to disambiguate so 
-this alternative is not appropriate for square arrays.}
+this alternative is not appropriate for square arrays. It is allowed that
+the positions of the longitudinal and latitudinal coordinate dimensions 
+are interchanged.}
 
 \item{lon}{Numeric vector of longitude locations of the cell centers of the 
 grid of 'var', in ascending or descending order (same as 'var'). Expected 
@@ -106,10 +108,12 @@ grid of 'var', in any order (same as 'var'). Expected to be from a regular
 rectangular or gaussian grid, within the range [-90, 90].}
 
 \item{varu}{Array of the zonal component of wind/current/other field with 
-the same dimensions as 'var'.}
+the same dimensions as 'var'. It is allowed that the positions of the 
+longitudinal and latitudinal coordinate dimensions are interchanged.}
 
 \item{varv}{Array of the meridional component of wind/current/other field 
-with the same dimensions as 'var'.}
+with the same dimensions as 'var'. It is allowed that the positions of the 
+longitudinal and latitudinal coordinate dimensions are interchanged.}
 
 \item{toptitle}{Top title of the figure, scalable with parameter 
 'title_scale'.}
@@ -138,8 +142,9 @@ colors returned by 'color_fun'. If not available, it takes 'pink' by
 default. 'col_inf' and 'col_sup' will take the value of 'colNA' if not 
 specified. See ?ColorBar for a full explanation on 'col_inf' and 'col_sup'.}
 
-\item{color_fun, subsampleg, bar_extra_labels, draw_bar_ticks, draw_separators, triangle_ends_scale, bar_label_digits, bar_label_scale, units_scale, bar_tick_scale, bar_extra_margin}{Set of parameters to control the visual 
-aspect of the drawn colour bar. See ?ColorBar for a full explanation.}
+\item{color_fun, subsampleg, bar_extra_labels, draw_bar_ticks}{Set of 
+parameters to control the visual aspect of the drawn colour bar 
+(1/3). See ?ColorBar for a full explanation.}
 
 \item{square}{Logical value to choose either to draw a coloured square for 
 each grid cell in 'var' (TRUE; default) or to draw contour lines and fill 
@@ -178,7 +183,9 @@ location of the shape. The default value is NULL.}
 
 \item{contours}{Array of same dimensions as 'var' to be added to the plot 
 and displayed with contours. Parameter 'brks2' is required to define the 
-magnitude breaks for each contour curve. Disregarded if 'square = FALSE'.}
+magnitude breaks for each contour curve. Disregarded if 'square = FALSE'.
+It is allowed that the positions of the longitudinal and latitudinal 
+coordinate dimensions are interchanged.}
 
 \item{brks2}{Vector of magnitude breaks where to draw contour curves for the 
 array provided in 'contours' or if 'square = FALSE'.}
@@ -203,7 +210,8 @@ c(n, dim(var)), where n is the number of dot/symbol layers to add to the
 plot. A value of TRUE at a grid cell will draw a dot/symbol on the 
 corresponding square of the plot. By default all layers provided in 'dots' 
 are plotted with dots, but a symbol can be specified for each of the 
-layers via the parameter 'dot_symbol'.}
+layers via the parameter 'dot_symbol'. It is allowed that the positions of
+the longitudinal and latitudinal coordinate dimensions are interchanged.}
 
 \item{dot_symbol}{Single character/number or vector of characters/numbers 
 that correspond to each of the symbol layers specified in parameter 'dots'. 
@@ -251,8 +259,8 @@ the function.}
 box borders. The default value is NULL and is automatically adjusted by 
 the function.}
 
-\item{degree_sym}{A logical indicating whether to include degree symbol (30° N)
-or not (30N; default).}
+\item{degree_sym}{A logical indicating whether to include degree symbol 
+(30° N) or not (30N; default).}
 
 \item{intylat}{Interval between latitude ticks on y-axis, in degrees. 
 Defaults to 20.}
@@ -285,6 +293,14 @@ and latitude axes.}
 \item{drawleg}{Whether to plot a color bar (legend, key) or not. Defaults to 
 TRUE. It is not possible to plot the colour bar if 'add = TRUE'. Use 
 ColorBar() and the return values of PlotEquiMap() instead.}
+
+\item{draw_separators, triangle_ends_scale, bar_label_digits}{Set of 
+parameters to control the visual aspect of the drawn colour bar 
+(2/3). See ?ColorBar for a full explanation.}
+
+\item{bar_label_scale, units_scale, bar_tick_scale, bar_extra_margin}{Set of
+parameters to control the visual aspect of the drawn colour bar (3/3). 
+See ?ColorBar for a full explanation.}
 
 \item{boxlim}{Limits of a box to be added to the plot, in degrees: 
 c(x1, y1, x2, y2). A list with multiple box specifications can also be 

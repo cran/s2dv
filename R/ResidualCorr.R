@@ -125,7 +125,7 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
   if (length(name_exp) != length(name_obs) | length(name_exp) != length(name_ref) |
       any(dim(exp)[name_exp] != dim(obs)[name_obs]) | any(dim(exp)[name_exp] != dim(ref)[name_ref])) {
     stop(paste0("Parameter 'exp', 'obs', and 'ref' must have same length of ",
-                "all dimensions expect 'memb_dim'."))
+                "all dimensions except 'memb_dim'."))
   }
   ## method
   if (!method %in% c("pearson", "kendall", "spearman")) {

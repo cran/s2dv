@@ -21,7 +21,7 @@
 #'  computation. The default value is NULL.
 #'
 #'@return A list containing the numeric arrays with dimensions identical with
-#'  'exp1', 'exp2', and 'obs', expect 'time_dim':
+#'  'exp1', 'exp2', and 'obs', except 'time_dim':
 #'\item{$ratiorms}{
 #'  The ratio between the RMSE (i.e., RMSE1/RMSE2).
 #'}

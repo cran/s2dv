@@ -1,3 +1,15 @@
+# s2dv 1.3.0 (Release date: 2022-10-17)
+- New functions: Bias, AbsBiasSS, CRPS, CRPSS 
+- split RPSS parameter 'weights' into 'weights_exp' and 'weights_ref'
+- The warning message format is consistent; use internal function .warning() for all the cases
+- PlotEquiMap() bugfixes when lon vector is not continuous
+- PlotEquiMap() parameter "dots", "varu", "varv", and "contours" array latitude and longitude dimension order is flexible
+- PlotLayout(): Add parameter to change subplot title size  
+- PlotLayout works with CSTools::PlotMostLikelyQuantileMap()
+- Parameter "dat_dim" can be NULL in all functions
+- Add "dat_dim" in RPS and RPSS to allow multiple datasets to be calculated     
+- DiffCorr: Add two-sided significance test. New param "test.type" to specify the one- or two-sided significance test.
+
 # s2dv 1.2.0 (Release date: 2022-06-22)
 - Cluster(): Fix a bug of calculating nclusters ("K"): the function didn't use the whole data to calculate "K" if parameter "nclusters" is NULL.; Add missing output dimension names
 - Clim(): Correct the output dimensions for some cases; allow dat_dim to be NULL; obs doesn't need to have dat_dim.
@@ -8,7 +20,7 @@
 - PlotEquiMap(): Add useRaster = TRUE in image() if possible (i.e., latitude and longitude are regularly spaced.)
 - PlotEquiMap(): New parameters xlonshft ylatshft xlabels ylabels for self-defined axis
 - PlotEquiMap(): Flexible map longitude range
-- New function: WeightCells, DiffCorr, ResidualCorr, RPS, RPSS
+- New function: DiffCorr, ResidualCorr, RPS, RPSS
 - Clim() and MeanDims() efficiency improvement
 - CDORemap(): Add arbitrary time metadata to avoid cdo warning like "Warning (find_time_vars): Time variable >time< not found!"
 - CDORemap(): Stop printing messages from cdo command.

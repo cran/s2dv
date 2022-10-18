@@ -16,7 +16,9 @@
 #'  descending order and latitudes in any order. It can contain NA values 
 #'  (coloured with 'colNA'). Arrays with dimensions c(longitude, latitude) 
 #'  will also be accepted but 'lon' and 'lat' will be used to disambiguate so 
-#'  this alternative is not appropriate for square arrays.
+#'  this alternative is not appropriate for square arrays. It is allowed that
+#'  the positions of the longitudinal and latitudinal coordinate dimensions 
+#'  are interchanged.
 #'@param lon Numeric vector of longitude locations of the cell centers of the 
 #'  grid of 'var', in ascending or descending order (same as 'var'). Expected 
 #'  to be regularly spaced, within either of the ranges [-180, 180] or 
@@ -27,9 +29,11 @@
 #'  grid of 'var', in any order (same as 'var'). Expected to be from a regular 
 #'  rectangular or gaussian grid, within the range [-90, 90].
 #'@param varu Array of the zonal component of wind/current/other field with 
-#'  the same dimensions as 'var'.
+#'  the same dimensions as 'var'. It is allowed that the positions of the 
+#'  longitudinal and latitudinal coordinate dimensions are interchanged.
 #'@param varv Array of the meridional component of wind/current/other field 
-#'  with the same dimensions as 'var'.
+#'  with the same dimensions as 'var'. It is allowed that the positions of the 
+#'  longitudinal and latitudinal coordinate dimensions are interchanged.
 #'@param toptitle Top title of the figure, scalable with parameter 
 #'  'title_scale'.
 #'@param sizetit Scale factor for the figure top title provided in parameter 
@@ -52,8 +56,15 @@
 #'  colors returned by 'color_fun'. If not available, it takes 'pink' by 
 #'  default. 'col_inf' and 'col_sup' will take the value of 'colNA' if not 
 #'  specified. See ?ColorBar for a full explanation on 'col_inf' and 'col_sup'.
-#'@param color_fun,subsampleg,bar_extra_labels,draw_bar_ticks,draw_separators,triangle_ends_scale,bar_label_digits,bar_label_scale,units_scale,bar_tick_scale,bar_extra_margin Set of parameters to control the visual 
-#'  aspect of the drawn colour bar. See ?ColorBar for a full explanation.
+#'@param color_fun,subsampleg,bar_extra_labels,draw_bar_ticks Set of 
+#'  parameters to control the visual aspect of the drawn colour bar 
+#'  (1/3). See ?ColorBar for a full explanation.
+#'@param draw_separators,triangle_ends_scale,bar_label_digits Set of 
+#'  parameters to control the visual aspect of the drawn colour bar 
+#'  (2/3). See ?ColorBar for a full explanation.
+#'@param bar_label_scale,units_scale,bar_tick_scale,bar_extra_margin Set of  
+#'  parameters to control the visual aspect of the drawn colour bar (3/3). 
+#'  See ?ColorBar for a full explanation.
 #'@param square Logical value to choose either to draw a coloured square for 
 #'  each grid cell in 'var' (TRUE; default) or to draw contour lines and fill 
 #'  the spaces in between with colours (FALSE). In the latter case, 
@@ -82,6 +93,8 @@
 #'@param contours Array of same dimensions as 'var' to be added to the plot 
 #'  and displayed with contours. Parameter 'brks2' is required to define the 
 #'  magnitude breaks for each contour curve. Disregarded if 'square = FALSE'.
+#'  It is allowed that the positions of the longitudinal and latitudinal 
+#'  coordinate dimensions are interchanged.
 #'@param brks2 Vector of magnitude breaks where to draw contour curves for the 
 #'  array provided in 'contours' or if 'square = FALSE'.
 #'@param contour_lwd Line width of the contour curves provided via 'contours' 
@@ -99,7 +112,8 @@
 #'  plot. A value of TRUE at a grid cell will draw a dot/symbol on the 
 #'  corresponding square of the plot. By default all layers provided in 'dots' 
 #'  are plotted with dots, but a symbol can be specified for each of the 
-#'  layers via the parameter 'dot_symbol'.
+#'  layers via the parameter 'dot_symbol'. It is allowed that the positions of
+#'  the longitudinal and latitudinal coordinate dimensions are interchanged.
 #'@param dot_symbol Single character/number or vector of characters/numbers 
 #'  that correspond to each of the symbol layers specified in parameter 'dots'. 
 #'  If a single value is specified, it will be applied to all the layers in 
@@ -134,8 +148,8 @@
 #'@param lab_dist_y A numeric of the distance of the latitude labels to the 
 #'  box borders. The default value is NULL and is automatically adjusted by 
 #'  the function.
-#'@param degree_sym A logical indicating whether to include degree symbol (30° N)
-#'  or not (30N; default).
+#'@param degree_sym A logical indicating whether to include degree symbol 
+#'  (30° N) or not (30N; default).
 #'@param intylat Interval between latitude ticks on y-axis, in degrees. 
 #'  Defaults to 20.
 #'@param intxlon Interval between latitude ticks on x-axis, in degrees. 
@@ -289,20 +303,100 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     fileout <- deviceInfo$files
   }
 
-  # Preliminar check of dots, contours, varu, varv, lon, lat
-  if (!is.null(dots)) {
-    if (!is.array(dots) || !(length(dim(dots)) %in% c(2, 3))) {
-      stop("Parameter 'dots' must be a logical array with two or three dimensions.")
+  # Check lon, lat
+  if (!is.numeric(lon) || !is.numeric(lat)) {
+    stop("Parameters 'lon' and 'lat' must be numeric vectors.")
+  }
+
+  # Check var
+  if (is.null(var)) {
+    stop("Parameter 'var' cannot be NULL.")
+  }
+  if (!is.array(var)) {
+    stop("Parameter 'var' must be a numeric array.")
+  }
+
+  transpose <- FALSE
+  if (!is.null(names(dim(var)))) {
+    if (any(names(dim(var)) %in% .KnownLonNames()) &&
+        any(names(dim(var)) %in% .KnownLatNames())) {
+      lon_dim <- names(dim(var))[names(dim(var)) %in% .KnownLonNames()]
+      lat_dim <- names(dim(var))[names(dim(var)) %in% .KnownLatNames()]
+    } else {
+      names(dim(var)) <- NULL
+      lat_dim <- NULL
+      lon_dim <- NULL
+      .warning("Dimension names of 'var' doesn't correspond to any coordinates names supported by s2dv package.")
     }
-    if (length(dim(dots)) == 2) {
-      dim(dots) <- c(1, dim(dots))
+  } else {
+    lon_dim <- NULL
+    lat_dim <- NULL
+    .warning("Parameter 'var' should have dimension names. Coordinates 'lon' and 'lat' have been assigned into the corresponding coordinates dimensions.")
+  }
+
+  if (length(dim(var)) > 2) {
+    if (!is.null(lon_dim) & !is.null(lat_dim)) {
+      dimnames <- names(dim(var))
+      dim(var) <- dim(var)[which((dimnames == lon_dim | dimnames == lat_dim | dim(var) != 1))]
+    } else {
+      if (all(dim(var) == 1)) {
+        dim(var) <- c(1, 1)
+      } else if (length(dim(var)[which(dim(var) > 1)]) == 2) {
+        var <- drop(var)
+      } else if (length(dim(var)[which(dim(var) > 1)]) == 1) {
+        dim(var) <- c(dim(var)[which(dim(var) > 1)], 1)
+      }
     }
   }
-  if (!is.null(contours)) {
-    if (!is.array(contours) || !(length(dim(contours)) == 2)) {
-      stop("Parameter 'contours' must be a numerical array with two dimensions.")
+
+  if (length(dim(var)) != 2) {
+    stop("Parameter 'var' must be a numeric array with two dimensions.")
+  }
+
+  if ((dim(var)[1] == length(lon) && dim(var)[2] == length(lat)) ||
+      (dim(var)[2] == length(lon) && dim(var)[1] == length(lat))) {
+    if (dim(var)[2] == length(lon) && dim(var)[1] == length(lat)) {
+      if (length(lon) == length(lat)) {
+        if (is.null(names(dim(var)))) {
+          .warning("Parameter 'var' should have dimension names. Coordinates 'lon' and 'lat' have been assigned into the first and second dimensions.")
+        } else {
+          if (names(dim(var)[1]) == lat_dim) {
+            transpose <- TRUE
+          }
+        }
+      } else {
+        transpose <- TRUE
+      }   
+    }
+  } else {
+    stop("Parameters 'lon' and 'lat' must have as many elements as the number of cells along longitudes and latitudes in the input array 'var'.")
+  }
+
+  if (!is.null(names(dim(var)))) {
+    if (names(dim(var)[1]) == lon_dim) {
+      if (transpose) {
+        stop("Coordinates dimensions of 'var' doesn't correspond to lat or lon.")
+      }
+    } else if (names(dim(var)[2]) == lon_dim) {
+      if (!transpose) {
+        stop("Coordinates dimensions of 'var' doesn't correspond to lat or lon.")
+      }
     }
   }
+  
+  # Transpose the input matrices because the base plot functions work directly 
+  # with dimensions c(lon, lat).
+
+  if (transpose) {
+    var <- t(var)
+  }
+
+  transpose <- FALSE
+
+  names(dim(var)) <- c(lon_dim, lat_dim)
+  dims <- dim(var)
+
+  # Check varu and varv
   if (!is.null(varu) && !is.null(varv)) {
     if (!is.array(varu) || !(length(dim(varu)) == 2)) {
       stop("Parameter 'varu' must be a numerical array with two dimensions.")
@@ -313,67 +407,110 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   } else if (!is.null(varu) || !is.null(varv)) {
     stop("Only one of the components 'varu' or 'varv' has been provided. Both must be provided.")
   }
-  if (!is.numeric(lon) || !is.numeric(lat)) {
-    stop("Parameters 'lon' and 'lat' must be numeric vectors.")
-  }
 
-  # Check var
-  if (!is.array(var)) {
-    stop("Parameter 'var' must be a numeric array.")
-  }
-  if (length(dim(var)) > 2) {
-    var <- drop(var)
-    dim(var) <- head(c(dim(var), 1, 1), 2)
-  }
-  if (length(dim(var)) > 2) {
-    stop("Parameter 'var' must be a numeric array with two dimensions. See PlotMultiMap() for multi-pannel maps or AnimateMap() for animated maps.")
-  } else if (length(dim(var)) < 2) {
-    stop("Parameter 'var' must be a numeric array with two dimensions.")
-  }
-  dims <- dim(var)
-  # Transpose the input matrices because the base plot functions work directly 
-  # with dimensions c(lon, lat).
-  transpose <- FALSE
-  if (!is.null(names(dims))) {
-    if (any(names(dims) %in% .KnownLonNames()) &&
-        any(names(dims) %in% .KnownLatNames())) {
-      if (which(names(dims) %in% .KnownLonNames()) != 1) {
-        transpose <- TRUE
+  if (!is.null(varu) && !is.null(varv)) {
+    if (!all(dim(varu) %in% dim(varv)) || !all(names(dim(varv)) %in% names(dim(varu)))) {
+      stop("Parameter 'varu' and 'varv' must have equal dimensions and dimension names.")
+    } else if (any(dim(varu) != dim(varv)) || any(names(dim(varv)) != names(dim(varu)))) {
+      varv <- t(varv)
+      names(dim(varv)) <- names(dim(varu))
+    }
+
+    if (is.null(lon_dim)) {
+      names(dim(varu)) <- NULL
+      names(dim(varv)) <- NULL
+    } else {
+      if (!is.null(names(dim(varu)))) {
+        if (!(lon_dim %in% names(dim(varu)) && lat_dim %in% names(dim(varu)))) {
+          stop("Parameters 'varu' and 'varv' must have same dimension names as 'var'.")
+        } else if (dim(varu)[lon_dim] != dim(var)[lon_dim] || dim(varu)[lat_dim] != dim(var)[lat_dim]) {
+          stop("Parameters 'varu' and 'varv' must have same dimensions as 'var'.")
+        }
+      } else {
+        .warning("Parameters 'varu' and 'varv' should have dimension names. Coordinates 'lon' and 'lat' have been assigned into the corresponding coordinates dimensions.")
       }
     }
-  }
-  if (dims[1] != length(lon) || dims[2] != length(lat)) {
-    if (dims[1] == length(lat) && dims[2] == length(lon)) {
-      transpose <- TRUE
+    
+
+    if ((dim(varu)[1] == dims[1] && dim(varu)[2] == dims[2]) ||
+        (dim(varu)[2] ==  dims[1] && dim(varu)[1] == dims[2])) {
+      if (dim(varu)[2] == dims[1] && dim(varu)[1] == dims[2]) {
+        if (length(lon) == length(lat)) {
+          if (is.null(names(dim(varu)))) {
+            .warning("Parameters 'varu' and 'varv' should have dimension names. Coordinates 'lon' and 'lat' have been assigned into the first and second dimensions.")
+          } else {
+            if (names(dim(varu)[1]) == lat_dim) {
+              transpose <- TRUE
+            }
+          }
+        } else {
+          transpose <- TRUE
+        }   
+      } 
+    } else {
+      stop("Parameters 'lon' and 'lat' must have as many elements as the number of cells along longitudes and latitudes in the input array 'varu' and 'varv'.")
     }
-  }
-  if (transpose) {
-    var <- t(var)
-    if (!is.null(varu)) varu <- t(varu)
-    if (!is.null(varv)) varv <- t(varv)
-    if (!is.null(contours)) contours <- t(contours)
-    if (!is.null(dots)) dots <- aperm(dots, c(1, 3, 2))
-    dims <- dim(var)
+    
+    if (transpose) {
+      varu <- t(varu)
+      varv <- t(varv)
+    }
+
+    transpose <- FALSE
+
   }
 
-  # Check lon
-  if (length(lon) != dims[1]) {
-    stop("Parameter 'lon' must have as many elements as the number of cells along longitudes in the input array 'var'.")
+  # Check contours
+  if (!is.null(contours)) {
+    if (!is.array(contours) || !(length(dim(contours)) == 2)) {
+      stop("Parameter 'contours' must be a numerical array with two dimensions.")
+    }
   }
 
-  # Check lat
-  if (length(lat) != dims[2]) {
-    stop("Parameter 'lat' must have as many elements as the number of cells along longitudes in the input array 'var'.")
-  }
 
-  # Check varu and varv
-  if (!is.null(varu) && !is.null(varv)) {
-    if (dim(varu)[1] != dims[1] || dim(varu)[2] != dims[2]) {
-      stop("Parameter 'varu' must have same number of longitudes and latitudes as 'var'.")
+  if (!is.null(contours)) {
+
+    if (is.null(lon_dim)) {
+      names(dim(contours)) <- NULL
+    } else {
+      if (!is.null(names(dim(contours)))) {
+        if (!(lon_dim %in% names(dim(contours)) && lat_dim %in% names(dim(contours)))) {
+          stop("Parameters 'contours' must have same dimension names as 'var'.")
+        } else if (dim(contours)[lon_dim] != dim(var)[lon_dim] || dim(contours)[lat_dim] != dim(var)[lat_dim]) {
+          stop("Parameters 'contours' must have same dimensions as 'var'.")
+        }
+      } else {
+        .warning("Parameters 'contours' should have dimension names. Coordinates 'lon' and 'lat' have been assigned into the corresponding coordinates dimensions.")
+      }
     }
-    if (dim(varv)[1] != dims[1] || dim(varv)[2] != dims[2]) {
-      stop("Parameter 'varv' must have same number of longitudes and latitudes as 'var'.")
+
+
+    transpose <- FALSE
+    if ((dim(contours)[1] == dims[1] && dim(contours)[2] == dims[2]) ||
+        (dim(contours)[2] ==  dims[1] && dim(contours)[1] == dims[2])) {
+      if (dim(contours)[2] == dims[1] && dim(contours)[1] == dims[2]) {
+        if (length(lon) == length(lat)) {
+          if (is.null(names(dim(contours)))) {
+            .warning("Parameter 'contours' should have dimension names. Coordinates 'lon' and 'lat' have been assigned into the first and second dimensions.")
+          } else {
+            if (names(dim(contours)[1]) == lat_dim) {
+              transpose <- TRUE
+            }
+          }
+        } else {
+          transpose <- TRUE
+        }   
+      }
+    } else {
+      stop("Parameters 'lon' and 'lat' must have as many elements as the number of cells along longitudes and latitudes in the input array 'contours'.")
     }
+
+    if (transpose) {
+      contours <- t(contours)
+    }
+
+    transpose <- FALSE
+
   }
 
   # Check toptitle
@@ -533,13 +670,6 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     stop("Parameter 'shapefile_color' must be a valid colour identifier.")
   }
 
-  # Check contours
-  if (!is.null(contours)) {
-    if (dim(contours)[1] != dims[1] || dim(contours)[2] != dims[2]) {
-      stop("Parameter 'contours' must have the same number of longitudes and latitudes as 'var'.")
-    }
-  }
-
   # Check brks2
   if (is.null(brks2)) {
     if (is.null(contours)) { 
@@ -579,11 +709,59 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     stop("Parameter 'contour_label_scale' must be numeric.")
   }
 
-  # Check dots, dot_symbol and dot_size
+  # Check dots
   if (!is.null(dots)) {
-    if (dim(dots)[2] != dims[1] || dim(dots)[3] != dims[2]) {
-      stop("Parameter 'dots' must have the same number of longitudes and latitudes as 'var'.")
+    if (!is.array(dots) || !(length(dim(dots)) %in% c(2, 3))) {
+      stop("Parameter 'dots' must be a logical array with two or three dimensions.")
     }
+    if (length(dim(dots)) == 2) {
+      dim(dots) <- c(1, dim(dots))
+    }
+
+    if (is.null(lon_dim)) {
+      names(dim(dots)) <- NULL
+    } else {
+      if (!is.null(names(dim(dots)))) {
+        if (!(lon_dim %in% names(dim(dots)) && lat_dim %in% names(dim(dots)))) {
+          stop("Parameters 'dots' must have same dimension names as 'var'.")
+        } else if (dim(dots)[lon_dim] != dim(var)[lon_dim] || dim(dots)[lat_dim] != dim(var)[lat_dim]) {
+          stop("Parameters 'dots' must have same dimensions as 'var'.")
+        }
+      } else {
+        .warning("Parameters 'dots' should have dimension names. Coordinates 'lon' and 'lat' have been assigned into the corresponding coordinates dimensions.")
+      }
+    }
+
+    transpose <- FALSE
+    if ((dim(dots)[2] == dims[1] && dim(dots)[3] == dims[2]) ||
+        (dim(dots)[3] ==  dims[1] && dim(dots)[2] == dims[2])) {
+      if (dim(dots)[3] == dims[1] && dim(dots)[2] == dims[2]) {
+        if (length(lon) == length(lat)) {
+          if (is.null(names(dim(dots)))) {
+            .warning("Parameter 'dots' should have dimension names. Coordinates 'lon' and 'lat' have been assigned into the first and second dimensions.")
+          } else {
+            if (names(dim(dots)[2]) == lat_dim) {
+              transpose <- TRUE
+            }
+          }
+        } else {
+          transpose <- TRUE
+        }
+      }
+    } else {
+      stop("Parameter 'dots' must have same number of longitudes and latitudes as 'var'.")
+    }
+
+    if (transpose) {
+      dots <- aperm(dots, c(1, 3, 2))
+    }
+
+    transpose <- FALSE
+
+  }
+
+  # Check dot_symbol and dot_size
+  if (!is.null(dots)) {
     if (!is.numeric(dot_symbol) && !is.character(dot_symbol)) {
       stop("Parameter 'dot_symbol' must be a numeric or character string vector.")
     }
@@ -748,9 +926,10 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   # ~~~~~~~~~~~~~~~~~
   #
   latb <- sort(lat, index.return = TRUE)
-  dlon <- lon[2:dims[1]] - lon[1:(dims[1] - 1)]
+  dlon <- diff(lon)
   wher <- which(dlon > (mean(dlon) + 1))
   if (length(wher) > 0) {
+    .warning("Detect gap in 'lon' vector, which is considered as crossing the border.")
     lon[(wher + 1):dims[1]] <- lon[(wher + 1):dims[1]] - 360
   }
   lonb <- sort(lon, index.return = TRUE)
@@ -790,7 +969,7 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
       ypos <- seq(latmin, latmax, intylat) + ylatshft
       if (length(ypos) != length(ylabels)) {
         stop(paste0("Parameter 'ylabels' must have the same length as the latitude ",
-               "vector spaced by 'intylat' (length = ", length(ypos), ")."))
+                    "vector spaced by 'intylat' (length = ", length(ypos), ")."))
       }
       ylabs <- ylabels
     } else {
@@ -811,7 +990,7 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
       xpos <- seq(lonmin, lonmax, intxlon) + xlonshft
       if (length(xpos) != length(xlabels)) {
         stop(paste0("Parameter 'xlabels' must have the same length as the longitude ",
-               "vector spaced by 'intxlon' (length = ", length(xpos), ")."))
+                    "vector spaced by 'intxlon' (length = ", length(xpos), ")."))
       }
       xlabs <- xlabels
     } else {
@@ -942,7 +1121,7 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   #  Plotting continents
   # ~~~~~~~~~~~~~~~~~~~~~
   #
-  wrap_vec <- c(lon[1], lon[1] + 360)
+  wrap_vec <- c(lonb$x[1], lonb$x[1] + 360)
   old_lwd <- par('lwd')
   par(lwd = coast_width)
   # If [0, 360], use GEOmap; if [-180, 180], use maps::map

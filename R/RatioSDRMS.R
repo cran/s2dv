@@ -109,7 +109,7 @@ RatioSDRMS <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member',
   name_obs <- name_obs[-which(name_obs == memb_dim)]
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all the dimensions expect 'dat_dim' and 'memb_dim'."))
+                "all the dimensions except 'dat_dim' and 'memb_dim'."))
   }
   ## pval
   if (!is.logical(pval) | length(pval) > 1) {

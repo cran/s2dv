@@ -194,7 +194,7 @@ NAO <- function(exp = NULL, obs = NULL, lat, lon, time_dim = 'sdate',
     }
     if (throw_error) {
       stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                  "of all the dimensions expect 'memb_dim'."))
+                  "of all the dimensions except 'memb_dim'."))
     }
   }
   ## ftime_avg

@@ -25,10 +25,11 @@ parameter 'exp' except along 'dat_dim'.}
 The default value is 'sdate'.}
 
 \item{dat_dim}{A character vector indicating the name of the dataset and 
-member dimensions. When calculating the climatology, if data at one 
-startdate (i.e., 'time_dim') is not complete along 'dat_dim', this startdate
-along 'dat_dim' will be discarded. The default value is 
-"c('dataset', 'member')".}
+ member dimensions. When calculating the climatology, if data at one 
+ startdate (i.e., 'time_dim') is not complete along 'dat_dim', this startdate
+ along 'dat_dim' will be discarded. If there is no dataset dimension, it can be NULL.
+The default value is 
+ "c('dataset', 'member')".}
 
 \item{memb_dim}{A character string indicating the name of the member 
 dimension. Only used when parameter 'memb' is FALSE. It must be one element

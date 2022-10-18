@@ -18,7 +18,8 @@
 #'@param dat_dim A character vector indicating the name of the dataset and 
 #'  member dimensions. When calculating the climatology, if data at one 
 #'  startdate (i.e., 'time_dim') is not complete along 'dat_dim', this startdate
-#'  along 'dat_dim' will be discarded. The default value is 
+#'  along 'dat_dim' will be discarded. If there is no dataset dimension, it can be NULL.
+#' The default value is 
 #'  "c('dataset', 'member')".
 #'@param memb_dim A character string indicating the name of the member 
 #'  dimension. Only used when parameter 'memb' is FALSE. It must be one element
@@ -83,11 +84,25 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
     stop("Parameter 'time_dim' is not found in 'exp' or 'obs' dimension.")
   }
   ## dat_dim
-  if (!is.character(dat_dim)) {
-    stop("Parameter 'dat_dim' must be a character vector.")
-  }
-  if (!all(dat_dim %in% names(dim(exp))) | !all(dat_dim %in% names(dim(obs)))) {
-    stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.")
+  if (!is.null(dat_dim)) {
+    if (!is.character(dat_dim)) {
+      stop("Parameter 'dat_dim' must be a character vector.")
+    }
+    if (!all(dat_dim %in% names(dim(exp))) | !all(dat_dim %in% names(dim(obs)))) {
+      stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.",
+           " Set it as NULL if there is no dataset dimension.")
+    }
+    # If dat_dim is not in obs, add it in
+    if (any(!dat_dim %in% names(dim(obs)))) {
+      reset_obs_dim <- TRUE
+      ori_obs_dim <- dim(obs)
+      dim(obs) <- c(dim(obs), rep(1, length(dat_dim[which(!dat_dim %in% names(dim(obs)))])))
+      names(dim(obs)) <- c(names(ori_obs_dim), dat_dim[which(!dat_dim %in% names(dim(obs)))])
+    } else {
+      reset_obs_dim <- FALSE
+    }
+  } else {
+    reset_obs_dim <- FALSE
   }
   ## memb
   if (!is.logical(memb) | length(memb) > 1) {
@@ -115,9 +130,11 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
-  for (i in 1:length(dat_dim)) {
-    name_exp <- name_exp[-which(name_exp == dat_dim[i])]
-    name_obs <- name_obs[-which(name_obs == dat_dim[i])]
+  if (!is.null(dat_dim)) {
+    for (i in 1:length(dat_dim)) {
+      name_exp <- name_exp[-which(name_exp == dat_dim[i])]
+      name_obs <- name_obs[-which(name_obs == dat_dim[i])]
+    }
   }
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have the same length of ",
@@ -135,36 +152,65 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
 
   #-----------------------------------
   # Per-paired method: If any sdate along dat_dim is NA, turn all sdate points along dat_dim into NA.
-   pos <- rep(0, length(dat_dim))  # dat_dim: [dataset, member]
-   for (i in 1:length(dat_dim)) {
-     pos[i] <- which(names(dim(obs)) == dat_dim[i])
-   }
-   outrows_exp <- MeanDims(exp, pos, na.rm = FALSE) +
-                  MeanDims(obs, pos, na.rm = FALSE)
-   outrows_obs <- outrows_exp
+  if (!is.null(dat_dim)) {
+    pos <- rep(0, length(dat_dim))  # dat_dim: [dataset, member]
+    for (i in 1:length(dat_dim)) {
+        pos[i] <- which(names(dim(obs)) == dat_dim[i])
+    }
+    outrows_exp <- MeanDims(exp, pos, na.rm = FALSE) +
+                    MeanDims(obs, pos, na.rm = FALSE)
+    outrows_obs <- outrows_exp
 
-   for (i in 1:length(pos)) {
-     outrows_exp <- InsertDim(outrows_exp, pos[i], dim(exp)[pos[i]])
-     outrows_obs <- InsertDim(outrows_obs, pos[i], dim(obs)[pos[i]])
-   }
-   exp_for_clim <- exp
-   obs_for_clim <- obs
-   exp_for_clim[which(is.na(outrows_exp))] <- NA
-   obs_for_clim[which(is.na(outrows_obs))] <- NA
+    for (i in 1:length(pos)) {
+        outrows_exp <- InsertDim(outrows_exp, pos[i], dim(exp)[pos[i]])
+        outrows_obs <- InsertDim(outrows_obs, pos[i], dim(obs)[pos[i]])
+    }
+    exp_for_clim <- exp
+    obs_for_clim <- obs
+    exp_for_clim[which(is.na(outrows_exp))] <- NA
+    obs_for_clim[which(is.na(outrows_obs))] <- NA
+  } else {
+    exp_for_clim <- exp
+    obs_for_clim <- obs
+  }
+
 
   #-----------------------------------
+  res <- Apply(list(exp, obs, exp_for_clim, obs_for_clim),
+                    target_dims = c(time_dim, dat_dim),
+                    fun = .Ano_CrossValid, dat_dim = dat_dim, 
+                    memb_dim = memb_dim, memb = memb,
+                    ncores = ncores)
 
-    res <- Apply(list(exp, obs, exp_for_clim, obs_for_clim),
-                  target_dims = c(time_dim, dat_dim),
-                  fun = .Ano_CrossValid,
-                  memb_dim = memb_dim, memb = memb,
-                  ncores = ncores)
+  # Remove dat_dim in obs if obs doesn't have at first place
+  if (reset_obs_dim) {
+    res_obs_dim <- ori_obs_dim[-which(names(ori_obs_dim) == time_dim)]
+    if (!memb & memb_dim %in% names(res_obs_dim)) {
+      res_obs_dim <- res_obs_dim[-which(names(res_obs_dim) == memb_dim)]
+    }
+    if (is.integer(res_obs_dim) & length(res_obs_dim) == 0) {
+      res$obs <- as.vector(res$obs)
+    } else {
+      res$obs <- array(res$obs, dim = res_obs_dim)
+    }
+  }
 
   return(res)
 }
 
-.Ano_CrossValid <- function(exp, obs, exp_for_clim, obs_for_clim,
+.Ano_CrossValid <- function(exp, obs, exp_for_clim, obs_for_clim, dat_dim = c('dataset', 'member'),
                             memb_dim = 'member', memb = TRUE, ncores = NULL) {
+  if (is.null(dat_dim)) {
+    ini_dims_exp <- dim(exp)
+    ini_dims_obs <- dim(obs)
+    ini_dims_exp_for_clim <- dim(exp)
+    ini_dims_obs_for_clim <- dim(exp)
+    exp <- InsertDim(exp, posdim = 2, lendim = 1, name = 'dataset')
+    exp_for_clim <- InsertDim(exp_for_clim, posdim = 2, lendim = 1, name = 'dataset')
+    obs <- InsertDim(obs, posdim = 2, lendim = 1, name = 'dataset')
+    obs_for_clim <- InsertDim(obs_for_clim, posdim = 2, lendim = 1, name = 'dataset')
+  }
+
   # exp: [sdate, dat_dim, memb_dim]
   # obs: [sdate, dat_dim, memb_dim]
   ano_exp_list <- vector('list', length = dim(exp)[1])  #length: [sdate]
@@ -221,6 +267,11 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
   ano_exp <- Reorder(ano_exp, c(length(dim(exp)), 1:(length(dim(exp)) - 1)))
   ano_obs <- array(unlist(ano_obs_list), dim = c(dim(obs)[-1], dim(obs)[1]))
   ano_obs <- Reorder(ano_obs, c(length(dim(obs)), 1:(length(dim(obs)) - 1)))
+
+  if (is.null(dat_dim)) {
+    ano_exp <- array(ano_exp, dim = ini_dims_exp)
+    ano_obs <- array(ano_obs, dim = ini_dims_obs)
+  }
 
   return(list(exp = ano_exp, obs = ano_obs))
 }

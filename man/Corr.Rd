@@ -21,8 +21,8 @@ Corr(
 )
 }
 \arguments{
-\item{exp}{A named numeric array of experimental data, with at least two 
-dimensions 'time_dim' and 'dat_dim'.}
+\item{exp}{A named numeric array of experimental data, with at least dimension
+'time_dim'.}
 
 \item{obs}{A named numeric array of observational data, same dimensions as
 parameter 'exp' except along 'dat_dim' and 'memb_dim'.}
@@ -31,7 +31,8 @@ parameter 'exp' except along 'dat_dim' and 'memb_dim'.}
 which the correlations are computed. The default value is 'sdate'.}
 
 \item{dat_dim}{A character string indicating the name of dataset (nobs/nexp) 
-dimension. The default value is 'dataset'.}
+dimension. The default value is 'dataset'. If there is no dataset 
+dimension, set NULL.}
 
 \item{comp_dim}{A character string indicating the name of dimension along which
 obs is taken into account only if it is complete. The default value
@@ -68,9 +69,10 @@ A list containing the numeric arrays with dimension:\cr
  c(nexp, nobs, exp_memb, obs_memb, all other dimensions of exp except 
  time_dim and memb_dim).\cr
 nexp is the number of experiment (i.e., 'dat_dim' in exp), and nobs is the 
-number of observation (i.e., 'dat_dim' in obs). exp_memb is the number of
-member in experiment (i.e., 'memb_dim' in exp) and obs_memb is the number of 
-member in observation (i.e., 'memb_dim' in obs).\cr\cr
+number of observation (i.e., 'dat_dim' in obs). If dat_dim is NULL, nexp and 
+nobs are omitted. exp_memb is the number of member in experiment (i.e., 
+'memb_dim' in exp) and obs_memb is the number of member in observation (i.e.,
+'memb_dim' in obs). If memb = F, exp_memb and obs_memb are omitted.\cr\cr
 \item{$corr}{
  The correlation coefficient. 
 }
@@ -87,18 +89,18 @@ member in observation (i.e., 'memb_dim' in obs).\cr\cr
 \description{
 Calculate the correlation coefficient (Pearson, Kendall or Spearman) for 
 an array of forecast and an array of observation. The correlations are 
-computed along time_dim, the startdate dimension. If comp_dim is given, 
-the correlations are computed only if obs along the comp_dim dimension are 
-complete between limits[1] and limits[2], i.e., there is no NA between 
-limits[1] and limits[2]. This option can be activated if the user wants to 
-account only for the forecasts which the corresponding observations are 
-available at all leadtimes.\cr 
+computed along 'time_dim' that usually refers to the start date dimension. If
+'comp_dim' is given, the correlations are computed only if obs along comp_dim
+dimension are complete between limits[1] and limits[2], i.e., there is no NA 
+between limits[1] and limits[2]. This option can be activated if the user 
+wants to account only for the forecasts which the corresponding observations 
+are available at all leadtimes.\cr 
 The confidence interval is computed by the Fisher transformation and the 
 significance level relies on an one-sided student-T distribution.\cr 
-If the dataset has more than one member, ensemble mean is necessary necessary
-before using this function since it only allows one dimension 'dat_dim' to
-have inconsistent length between 'exp' and 'obs'. If all the dimensions of
-'exp' and 'obs' are identical, you can simply use apply() and cor() to 
+The function can calculate ensemble mean before correlation by 'memb_dim' 
+specified and 'memb = F'. If ensemble mean is not calculated, correlation will
+be calculated for each member.
+If there is only one dataset for exp and obs, you can simply use cor() to 
 compute the correlation.
 }
 \examples{

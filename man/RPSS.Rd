@@ -10,23 +10,30 @@ RPSS(
   ref = NULL,
   time_dim = "sdate",
   memb_dim = "member",
+  dat_dim = NULL,
   prob_thresholds = c(1/3, 2/3),
   indices_for_clim = NULL,
   Fair = FALSE,
   weights = NULL,
+  weights_exp = NULL,
+  weights_ref = NULL,
   ncores = NULL
 )
 }
 \arguments{
-\item{exp}{A named numerical array of the forecast with at least time 
-dimension.}
+\item{exp}{A named numerical array of the forecast with at least time and
+member dimension.}
 
 \item{obs}{A named numerical array of the observation with at least time 
-dimension. The dimensions must be the same as 'exp' except 'memb_dim'.}
+dimension. The dimensions must be the same as 'exp' except 'memb_dim' and
+'dat_dim'.}
 
 \item{ref}{A named numerical array of the reference forecast data with at 
-least time dimension. The dimensions must be the same as 'exp' except 
-'memb_dim'. If it is NULL, the climatological forecast is used as reference
+least time and member dimension. The dimensions must be the same as 'exp' 
+except 'memb_dim' and 'dat_dim'. If there is only one reference dataset,
+it should not have dataset dimension. If there is corresponding reference 
+for each experiement, the dataset dimension must have the same length as in
+'exp'. If 'ref' is NULL, the climatological forecast is used as reference 
 forecast. The default value is NULL.}
 
 \item{time_dim}{A character string indicating the name of the time dimension.
@@ -35,6 +42,10 @@ The default value is 'sdate'.}
 \item{memb_dim}{A character string indicating the name of the member dimension
 to compute the probabilities of the forecast and the reference forecast. The
 default value is 'member'.}
+
+\item{dat_dim}{A character string indicating the name of dataset dimension. 
+The length of this dimension can be different between 'exp' and 'obs'. 
+The default value is NULL.}
 
 \item{prob_thresholds}{A numeric vector of the relative thresholds (from 0 to
 1) between the categories. The default value is c(1/3, 2/3), which 
@@ -48,23 +59,32 @@ the whole period is used. The default value is NULL.}
 potential RPSS that the forecast would have with an infinite ensemble size).
 The default value is FALSE.}
 
-\item{weights}{A named two-dimensional numerical array of the weights for each
-member and time. The dimension names should include 'memb_dim' and 
-'time_dim'. The default value is NULL. The ensemble should have at least 70 
-members or span at least 10 time steps and have more than 45 members if 
-consistency between the weighted and unweighted methodologies is desired.}
+\item{weights}{Deprecated and will be removed in the next release. Please use
+'weights_exp' and 'weights_ref' instead.}
+
+\item{weights_exp}{A named numerical array of the forecast ensemble weights.
+The dimension should include 'memb_dim', 'time_dim' and 'dat_dim' if there
+are multiple datasets. All dimension lengths must be equal to 'exp' 
+dimension lengths. The default value is NULL, which means no weighting is 
+applied. The ensemble should have at least 70 members or span at least 10 
+time steps and have more than 45 members if consistency between the weighted
+ and unweighted methodologies is desired.}
+
+\item{weights_ref}{Same as 'weights_exp' but for the reference forecast.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
 }
 \value{
 \item{$rpss}{
- A numerical array of the RPSS with the same dimensions as "exp" except the
- 'time_dim' and 'memb_dim' dimensions.
+ A numerical array of RPSS with dimensions c(nexp, nobs, the rest dimensions 
+ of 'exp' except 'time_dim' and 'memb_dim' dimensions). nexp is the number of 
+ experiment (i.e., dat_dim in exp), and nobs is the number of observation 
+ i.e., dat_dim in obs). If dat_dim is NULL, nexp and nobs are omitted.
 }
 \item{$sign}{
- A logical array of the statistical significance of the RPSS with the same
- dimensions as 'exp' except the 'time_dim' and 'memb_dim' dimensions.
+ A logical array of the statistical significance of the RPSS with the same 
+ dimensions as $rpss.
 }
 }
 \description{
@@ -76,17 +96,27 @@ RPSS is positive, it indicates that the forecast has higher skill than the
 reference forecast, while a negative value means that it has a lower skill. 
 Examples of reference forecasts are the climatological forecast (same 
 probabilities for all categories for all time steps), persistence, a previous
-model version, and another model. It is computed as RPSS = 1 - RPS_exp / RPS_ref.
-The statistical significance is obtained based on a Random Walk test at the 
-95% confidence level (DelSole and Tippett, 2016).
+model version, and another model. It is computed as 
+\code{RPSS = 1 - RPS_exp / RPS_ref}. The statistical significance is obtained 
+based on a Random Walk test at the 95% confidence level (DelSole and Tippett, 
+2016). If there is more than one dataset, RPS will be computed for each pair 
+of exp and obs data.
 }
 \examples{
-exp <- array(rnorm(1000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
-obs <- array(rnorm(1000), dim = c(lat = 3, lon = 2, sdate = 50))
-ref <- array(rnorm(1000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
+set.seed(1)
+exp <- array(rnorm(3000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
+set.seed(2)
+obs <- array(rnorm(300), dim = c(lat = 3, lon = 2, sdate = 50))
+set.seed(3)
+ref <- array(rnorm(3000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
+weights <- sapply(1:dim(exp)['sdate'], function(i) {
+            n <- abs(rnorm(10))
+            n/sum(n)
+          })
+dim(weights) <- c(member = 10, sdate = 50)
 res <- RPSS(exp = exp, obs = obs) ## climatology as reference forecast
 res <- RPSS(exp = exp, obs = obs, ref = ref) ## ref as reference forecast
-
+res <- RPSS(exp = exp, obs = obs, ref = ref, weights_exp = weights, weights_ref = weights)
 }
 \references{
 Wilks, 2011; https://doi.org/10.1016/B978-0-12-385022-5.00008-7

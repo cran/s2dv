@@ -14,6 +14,7 @@ DiffCorr(
   method = "pearson",
   alpha = NULL,
   handle.na = "return.na",
+  test.type = "two-sided",
   ncores = NULL
 )
 }
@@ -56,6 +57,12 @@ steps with no missing values in all "exp", "ref", and "obs" will be used. If
 "na.fail", an error will arise if any of "exp", "ref", or "obs" contains any
 NA. The default value is "return.na".}
 
+\item{test.type}{A character string indicating the type of significance test. 
+It can be "two-sided" (to assess whether the skill of "exp" and "ref" are 
+significantly different) or "one-sided" (to assess whether the skill of  
+"exp" is significantly higher than that of "ref") following Steiger (1980).
+The default value is "two-sided".}
+
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
 }
@@ -81,20 +88,23 @@ Compute the correlation difference between two deterministic forecasts.
 Positive values of the correlation difference indicate that the forecast is 
 more skillful than the reference forecast, while negative values mean that 
 the reference forecast is more skillful. The statistical significance of the 
-correlation differences is computed with a one-sided test for equality of 
-dependent correlation coefficients (Steiger, 1980; Siegert et al., 2017) using
-effective degrees of freedom to account for the autocorrelation of the time 
-series (von Storch and Zwiers, 1999).
+correlation differences is computed with a one-sided or two-sided test for 
+equality of dependent correlation coefficients (Steiger, 1980; Siegert et al.,
+2017) using effective degrees of freedom to account for the autocorrelation of
+the time series (Zwiers and von Storch, 1995).
 }
 \examples{
 exp <- array(rnorm(1000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
 obs <- array(rnorm(1000), dim = c(lat = 3, lon = 2, sdate = 50))
 ref <- array(rnorm(1000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
-res <- DiffCorr(exp, obs, ref, memb_dim = 'member')
+res_two.sided_sign <- DiffCorr(exp, obs, ref, memb_dim = 'member', 
+                               test.type = 'two-sided', alpha = 0.05)
+res_one.sided_pval <- DiffCorr(exp, obs, ref, memb_dim = 'member', 
+                               test.type = 'one-sided', alpha = NULL)
 
 }
 \references{
 Steiger, 1980; https://content.apa.org/doi/10.1037/0033-2909.87.2.245
 Siegert et al., 2017; https://doi.org/10.1175/MWR-D-16-0037.1
-von Storch and Zwiers, 1999; https://doi.org/10.1017/CBO9780511612336
+Zwiers and von Storch, 1995; https://doi.org/10.1175/1520-0442(1995)008<0336:TSCIAI>2.0.CO;2
 }

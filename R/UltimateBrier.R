@@ -5,14 +5,15 @@
 #'to choose.
 #'
 #'@param exp A numeric array of forecast anomalies with named dimensions that
-#'  at least include 'dat_dim', 'memb_dim', and 'time_dim'. It can be provided
+#'  at least include 'memb_dim', and 'time_dim'. It can be provided
 #'  by \code{Ano()}. 
 #'@param obs A numeric array of observational reference anomalies with named
-#'  dimensions that at least include 'dat_dim' and 'time_dim'. If it has 
+#'  dimensions that at least include 'time_dim'. If it has 
 #'  'memb_dim', the length  must be 1. The dimensions should be consistent with
 #'  'exp' except 'dat_dim' and 'memb_dim'. It can be provided by \code{Ano()}. 
 #'@param dat_dim A character string indicating the name of the dataset 
-#'  dimension in 'exp' and 'obs'. The default value is 'dataset'.
+#'  dimension in 'exp' and 'obs'. The default value is 'dataset'. If there is no dataset 
+#'  dimension, set NULL.
 #'@param memb_dim A character string indicating the name of the member 
 #'  dimension in 'exp' (and 'obs') for ensemble mean calculation. The default
 #'  value is 'member'.
@@ -55,7 +56,7 @@
 #'same dimensions:
 #'c(nexp, nobs, no. of bins, the rest dimensions of 'exp' except 'time_dim' and
 #''memb_dim'). 'nexp' and 'nobs' is the length of dataset dimension in 'exp'
-#'and 'obs' respectively.\cr
+#'and 'obs' respectively. If dat_dim is NULL, nexp and nobs are omitted.\cr
 #'The list of 4 includes: 
 #'  \itemize{
 #'    \item{$bs: Brier Score}
@@ -102,12 +103,15 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## dat_dim
-  if (!is.character(dat_dim) | length(dat_dim) > 1) {
-    stop("Parameter 'dat_dim' must be a character string.")
+  if (!is.null(dat_dim)) {
+    if (!is.character(dat_dim) | length(dat_dim) > 1) {
+      stop("Parameter 'dat_dim' must be a character string or NULL.")
+    }
+    if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
+      stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.")
+    }
   }
-  if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
-    stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.")
-  }
+
   ## memb_dim
   if (!is.character(memb_dim) | length(memb_dim) > 1) {
     stop("Parameter 'memb_dim' must be a character string.")
@@ -137,11 +141,11 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
   name_obs <- name_obs[-which(name_obs == dat_dim)]
   if (any(name_exp != name_obs)) {
     stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                "of all the dimensions expect 'dat_dim' and 'memb_dim'."))
+                "of all the dimensions except 'dat_dim' and 'memb_dim'."))
   }
   if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                "of all the dimensions expect 'dat_dim' and 'memb_dim'."))
+                "of all the dimensions except 'dat_dim' and 'memb_dim'."))
   }
   ## quantile
   if (!is.logical(quantile) | length(quantile) > 1) {
@@ -183,6 +187,7 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
                  target_dims = list(c(time_dim, dat_dim, memb_dim),
                                     c(time_dim, dat_dim, memb_dim)),
                  fun = .UltimateBrier,
+                 dat_dim = dat_dim, memb_dim = memb_dim,
                  thr = thr, type = type,
                  decomposition = decomposition,
                  ncores = ncores)$output1
@@ -203,6 +208,7 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
                  target_dims = list(c(time_dim, dat_dim),
                                     c(time_dim, dat_dim)),
                  fun = .UltimateBrier,
+                 dat_dim = dat_dim, memb_dim = memb_dim,
                  thr = thr, type = type,
                  decomposition = decomposition,
                  ncores = ncores)
@@ -217,8 +223,8 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
   return(res)
 }
 
-.UltimateBrier <- function(exp, obs, thr = c(5/100, 95/100), type = 'BS',
-                           decomposition = TRUE) {
+.UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', thr = c(5/100, 95/100), 
+                           type = 'BS', decomposition = TRUE) {
   # If exp and obs are probablistics
   # exp: [sdate, nexp]
   # obs: [sdate, nobs]
@@ -229,6 +235,10 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
   #NOTE: 'thr' is used in 'FairEnsembleBSS' and 'FairEnsembleBS'. But if quantile = F and 
   #      thr is real value, does it work?
   if (type == 'FairEnsembleBSS') {
+    if (is.null(dat_dim)) {
+      obs <- InsertDim(obs, posdim = 2, lendim = 1, name = 'dataset')
+      exp <- InsertDim(exp, posdim = 2, lendim = 1, name = 'dataset')
+    }
     size_ens_ref <- prod(dim(obs)[c(1, 3)])
     res <- array(dim = c(nexp = as.numeric(dim(exp)[2]), 
                          nobs = as.numeric(dim(obs)[2]), 
@@ -245,6 +255,9 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
         }
       }
     }
+    if (is.null(dat_dim)) {
+      dim(res) <- dim(res)[3:length(dim(res))]
+    }
 
   } else if (type == 'FairEnsembleBS') {
     #NOTE: The calculation in s2dverification::UltimateBrier is wrong. In the final stage,
@@ -252,6 +265,10 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
     #      but the 3rd dim of result is 'bins' instead of decomposition. 'FairEnsembleBS' does
     #      not have decomposition.
     #      The calculation is fixed here.
+    if (is.null(dat_dim)) {
+      obs <- InsertDim(obs, posdim = 2, lendim = 1, name = 'dataset')
+      exp <- InsertDim(exp, posdim = 2, lendim = 1, name = 'dataset')
+    }
     res <- array(dim = c(nexp = as.numeric(dim(exp)[2]), 
                          nobs = as.numeric(dim(obs)[2]), 
                          bin = length(thr) + 1))
@@ -264,10 +281,17 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
         }
       }
     }
+    if (is.null(dat_dim)) {
+      dim(res) <- dim(res)[3:length(dim(res))]
+    }
 #    tmp <- res[, , 1] - res[, , 2] + res[, , 3]
 #    res <- array(tmp, dim = c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2])))
 
   } else if (type == 'BS') {
+    if (is.null(dat_dim)) {
+      obs <- InsertDim(obs, posdim = 2, lendim = 1, name = 'dataset')
+      exp <- InsertDim(exp, posdim = 2, lendim = 1, name = 'dataset')
+    }
     comp <- array(dim = c(nexp = as.numeric(dim(exp)[2]),
                           nobs = as.numeric(dim(obs)[2]),
                           comp = 3))
@@ -280,17 +304,28 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
     }
     if (decomposition) {
       rel <- comp[, , 1]
-      dim(rel) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
       res <- comp[, , 2]
-      dim(res) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
       unc <- comp[, , 3]
-      dim(unc) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
       bs <- rel - res + unc
-      dim(bs) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
+      if (is.null(dat_dim)) {
+        dim(rel) <- NULL
+        dim(res) <- NULL
+        dim(unc) <- NULL
+        dim(bs) <- NULL
+      } else {
+        dim(rel) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
+        dim(res) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
+        dim(unc) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
+        dim(bs) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
+      }
       res <- list(bs = bs, rel = rel, res = res, unc = unc)
     } else {
       bs <- comp[, , 1] - comp[, , 2] + comp[, , 3]
-      dim(bs) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
+      if (is.null(dat_dim)) {
+        dim(bs) <- NULL
+      } else {
+        dim(bs) <- c(nexp = as.numeric(dim(exp)[2]), nobs = as.numeric(dim(obs)[2]))
+      }
       res <- list(bs = bs)
     }
 

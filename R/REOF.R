@@ -146,9 +146,9 @@ REOF <- function(ano, lat, lon, ntrunc = 15, time_dim = 'sdate',
   # ntrunc is bounded
   if (ntrunc != min(dim(ano)[time_dim], prod(dim(ano)[space_dim]), ntrunc)) {
     ntrunc <- min(dim(ano)[time_dim], prod(dim(ano)[space_dim]), ntrunc)
-    warning(paste0("Parameter 'ntrunc' is changed to ", ntrunc, ", the minimum among ",
-                   "the length of time_dim, the production of the length of space_dim, ",
-                   "and ntrunc."))
+    .warning(paste0("Parameter 'ntrunc' is changed to ", ntrunc, ", the minimum among ",
+                    "the length of time_dim, the production of the length of space_dim, ",
+                    "and ntrunc."))
   }
 
   # Area weighting is needed to compute the fraction of variance explained by 

@@ -124,7 +124,7 @@ Consist_Trend <- function(exp, obs, dat_dim = 'dataset', time_dim = 'sdate', int
   }
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimension expect 'dat_dim'."))
+                "all dimension except 'dat_dim'."))
   }
   ## interval
   if (!is.numeric(interval) | interval <= 0 | length(interval) > 1) {

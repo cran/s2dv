@@ -73,13 +73,13 @@ Items 'rel', 'res', 'unc', 'bs', 'bs_check_res', 'bss_res', 'gres',
 'bs_check_gres', 'bss_gres', 'rel_bias_corrected', 'gres_bias_corrected', 
 'unc_bias_corrected', and 'bss_bias_corrected' are (a) a number (b) an array
 with dimensions c(nexp, nobs, all the rest dimensions in 'exp' and 'obs' 
-expect 'time_dim' and 'memb_dim') (c) an array with dimensions of
+except 'time_dim' and 'memb_dim') (c) an array with dimensions of
 'exp' and 'obs' except 'time_dim' and 'memb_dim'\cr
 Items 'nk', 'fkbar', and 'okbar' are (a) a vector of length of bin number 
 determined by 'threshold' (b) an array with dimensions c(nexp, nobs, 
-no. of bins, all the rest dimensions in 'exp' and 'obs' expect 'time_dim' and
+no. of bins, all the rest dimensions in 'exp' and 'obs' except 'time_dim' and
 'memb_dim') (c) an array with dimensions c(no. of bin, all the rest dimensions
-in 'exp' and 'obs' expect 'time_dim' and 'memb_dim')
+in 'exp' and 'obs' except 'time_dim' and 'memb_dim')
 }
 \description{
 Compute the Brier score (BS) and the components of its standard decompostion

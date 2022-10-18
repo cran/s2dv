@@ -101,6 +101,8 @@
 #'  (specified in 'row_titles' and 'col_titles'). Takes 1 by default.
 #'@param subtitle_margin_scale Scale factor for the margins surrounding the 
 #'  subtitles. Takes 1 by default.
+#'@param subplot_titles_scale Scale factor for the subplots top titles. Takes 
+#'  1 by default.
 #'@param units Title at the top of the colour bar, most commonly the units of 
 #'  the variable provided in parameter 'var'.
 #'@param brks,cols,bar_limits,triangle_ends Usually only providing 'brks' is 
@@ -216,6 +218,7 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
                        title_scale = 1, title_margin_scale = 1,
                        title_left_shift_scale = 1,
                        subtitle_scale = 1, subtitle_margin_scale = 1,
+                       subplot_titles_scale = 1,
                        brks = NULL, cols = NULL, drawleg = 'S', titles = NULL, 
                        subsampleg = NULL, bar_limits = NULL, 
                        triangle_ends = NULL, col_inf = NULL, col_sup = NULL,
@@ -392,6 +395,11 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
     stop("Parameter 'subtite_margin_scale' must be numeric.")
   }
 
+  # Check subplot_titles_scale
+  if (!is.numeric(subplot_titles_scale)) {
+    stop("Parameter 'subplot_titles_scale' must be numeric.")
+  }
+
   # Check titles
   if (!all(sapply(titles, is.character))) {
     stop("Parameter 'titles' must be a vector of character strings.")
@@ -540,26 +548,45 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
   title_margin <- 0.5 * title_cex * title_margin_scale
   subtitle_cex <- 1.5 * subtitle_scale
   subtitle_margin <- 0.5 * sqrt(nrow * ncol) * subtitle_cex * subtitle_margin_scale
-  mat_layout <- 1:(nrow * ncol) + ifelse(drawleg != FALSE, 1, 0)
+  mat_layout <- 1:(nrow * ncol)
+  if (drawleg != FALSE) {
+    if (all(fun %in% 'PlotMostLikelyQuantileMap')) {  #multi_colorbar
+      multi_colorbar <- TRUE
+      cat_dim <- list(...)$cat_dim
+      if (is.null(cat_dim)) cat_dim <- 'bin'  # default
+      nmap <- as.numeric(dim(var[[1]])[cat_dim])
+      minimum_value <- ceiling(1 / nmap * 10 * 1.1) * 10
+      display_range = c(minimum_value, 100)
+      mat_layout <- mat_layout + nmap
+    } else {
+      multi_colorbar <- FALSE
+      mat_layout <- mat_layout + 1
+    }
+  }
   mat_layout <- matrix(mat_layout, nrow, ncol, byrow = layout_by_rows)
   fsu <- figure_size_units <- 10  # unitless
   widths <- rep(fsu, ncol)
   heights <- rep(fsu, nrow)
-  n_figures <- nrow * ncol
-  if (length(row_titles) > 0) {
-    mat_layout <- cbind(rep(0, dim(mat_layout)[1]), mat_layout)
-    widths <- c(((subtitle_cex + subtitle_margin / 2) * cs / device_size[1]) * ncol * fsu, widths)
-  }
-  if (length(col_titles) > 0) {
-    mat_layout <- rbind(rep(0, dim(mat_layout)[2]), mat_layout)
-    heights <- c(((subtitle_cex + subtitle_margin) * cs / device_size[2]) * nrow * fsu, heights)
-  }
+   # Useless
+#  n_figures <- nrow * ncol
+
   if (drawleg != FALSE) {
     if (drawleg == 'N') {
       mat_layout <- rbind(rep(1, dim(mat_layout)[2]), mat_layout)
       heights <- c(round(bar_scale * 2 * nrow), heights)
     } else if (drawleg == 'S') {
-      mat_layout <- rbind(mat_layout, rep(1, dim(mat_layout)[2]))
+      if (multi_colorbar) {
+        new_mat_layout <- c()
+        for (i_col in 1:ncol) {
+          new_mat_layout <- c(new_mat_layout, rep(mat_layout[, i_col], nmap))
+        }
+        new_mat_layout <- matrix(new_mat_layout, nrow, nmap * ncol)
+        colorbar_row <- rep(1:nmap, each = ncol)
+        mat_layout <- rbind(new_mat_layout, as.numeric(colorbar_row))
+        widths <- rep(widths, nmap)
+      } else {
+        mat_layout <- rbind(mat_layout, rep(1, dim(mat_layout)[2]))
+      }
       heights <- c(heights, round(bar_scale * 2 * nrow))
     } else if (drawleg == 'W') {
       mat_layout <- cbind(rep(1, dim(mat_layout)[1]), mat_layout)
@@ -568,8 +595,20 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
       mat_layout <- cbind(mat_layout, rep(1, dim(mat_layout)[1]))
       widths <- c(widths, round(bar_scale * 3 * ncol))
     }
-    n_figures <- n_figures + 1
+   # Useless
+#    n_figures <- n_figures + 1
   }
+
+  # row and col titles
+  if (length(row_titles) > 0) {
+    mat_layout <- cbind(rep(0, dim(mat_layout)[1]), mat_layout)
+    widths <- c(((subtitle_cex + subtitle_margin / 2) * cs / device_size[1]) * ncol * fsu, widths)
+  }
+  if (length(col_titles) > 0) {
+    mat_layout <- rbind(rep(0, dim(mat_layout)[2]), mat_layout)
+    heights <- c(((subtitle_cex + subtitle_margin) * cs / device_size[2]) * nrow * fsu, heights)
+  }
+  # toptitle
   if (toptitle != '') {
     mat_layout <- rbind(rep(0, dim(mat_layout)[2]), mat_layout)
     heights <-  c(((title_cex + title_margin) * cs / device_size[2]) * nrow * fsu, heights)
@@ -582,13 +621,32 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
       bar_extra_margin[2] <- bar_extra_margin[2] + (subtitle_cex + subtitle_margin / 2) * 
                                                    bar_left_shift_scale
     }
-    ColorBar(colorbar$brks, colorbar$cols, vertical, subsampleg, 
-             bar_limits, var_limits,
-             triangle_ends = triangle_ends, col_inf = colorbar$col_inf,
-             col_sup = colorbar$col_sup, color_fun, plot = TRUE, draw_bar_ticks, 
-             draw_separators, triangle_ends_scale, bar_extra_labels,
-             units, units_scale, bar_label_scale, bar_tick_scale, 
-             bar_extra_margin, bar_label_digits)
+
+    if (multi_colorbar) {  # multiple colorbar
+      if (!is.null(list(...)$bar_titles)) {
+        bar_titles <- list(...)$bar_titles
+      } else {
+        bar_titles <- NULL
+      }
+      GradientCatsColorBar(nmap = nmap, 
+                           brks = brks, cols = cols, vertical = vertical, subsampleg = subsampleg,
+                           bar_limits = display_range, var_limits = var_limits,
+                           triangle_ends = triangle_ends, plot = TRUE,
+                           draw_separators = draw_separators,
+                           bar_titles = bar_titles, title_scale = units_scale,
+                           label_scale = bar_label_scale, extra_margin = bar_extra_margin)
+
+    } else {  # one colorbar
+      ColorBar(brks = colorbar$brks, cols = colorbar$cols, vertical = vertical, subsampleg = subsampleg,
+               bar_limits = bar_limits, var_limits = var_limits,
+               triangle_ends = triangle_ends, col_inf = colorbar$col_inf,
+               col_sup = colorbar$col_sup, color_fun = color_fun, plot = TRUE, draw_ticks = draw_bar_ticks,
+               draw_separators = draw_separators, triangle_ends_scale = triangle_ends_scale,
+               extra_labels = bar_extra_labels,
+               title = units, title_scale = units_scale, label_scale = bar_label_scale, tick_scale = bar_tick_scale,
+               extra_margin = bar_extra_margin, label_digits = bar_label_digits)
+
+    }
   }
 
   # Draw titles
@@ -657,19 +715,26 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
       # For each of the arrays provided in that array
       apply(x, (1:length(dim(x)))[-plot_dim_indices], 
             function(y) {
-        # Do the plot
-        fun_args <- c(list(y, toptitle = titles[plot_number]), list(...), 
+        # Do the plot. colorbar is not drew.
+        fun_args <- c(list(y, toptitle = titles[plot_number], drawleg = FALSE), list(...),
                       special_args[[array_number]])
-        funct <- fun[[array_number]]
-        if (fun[[array_number]] %in% c('PlotEquiMap', 'PlotStereoMap', 'PlotSection')) {
+#        funct <- fun[[array_number]]
+        if (fun[[array_number]] %in% c('PlotEquiMap', 'PlotStereoMap')) {
           fun_args <- c(fun_args, list(brks = colorbar$brks, cols = colorbar$cols, 
                                        col_inf = colorbar$col_inf, 
                                        col_sup = colorbar$col_sup, 
-                                       drawleg = FALSE)) 
+                                       title_scale = subplot_titles_scale  # when all the functions have this argument, put it above in fun_args
+                                       ))
+        } else if (fun[[array_number]] == c('PlotSection')) {
+          fun_args <- c(fun_args, list(brks = colorbar$brks, cols = colorbar$cols))
+
+        } else if (fun[[array_number]] %in% 'PlotMostLikelyQuantileMap') {
+          #TODO: pre-generate colorbar params? like above
+          fun_args <- c(fun_args, list(brks = brks, cols = cols))
         }
         do.call(fun[[array_number]], fun_args)
         plot_number <<- plot_number + 1
-            })
+      })
     }
     array_number <<- array_number + 1
   })

@@ -131,7 +131,7 @@ EOF <- function(ano, lat, lon, time_dim = 'sdate', space_dim = c('lat', 'lon'),
                 "length as the longitude dimension of 'ano'."))
   }
   if (any(lon > 360 | lon < -360)) {
-    warning("Some 'lon' is out of the range [-360, 360].")
+    .warning("Some 'lon' is out of the range [-360, 360].")
   }
   ## neofs
   if (!is.numeric(neofs) | neofs %% 1 != 0 | neofs <= 0 | length(neofs) > 1) {

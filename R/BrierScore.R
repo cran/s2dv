@@ -57,13 +57,13 @@
 #''bs_check_gres', 'bss_gres', 'rel_bias_corrected', 'gres_bias_corrected', 
 #''unc_bias_corrected', and 'bss_bias_corrected' are (a) a number (b) an array
 #'with dimensions c(nexp, nobs, all the rest dimensions in 'exp' and 'obs' 
-#'expect 'time_dim' and 'memb_dim') (c) an array with dimensions of
+#'except 'time_dim' and 'memb_dim') (c) an array with dimensions of
 #''exp' and 'obs' except 'time_dim' and 'memb_dim'\cr
 #'Items 'nk', 'fkbar', and 'okbar' are (a) a vector of length of bin number 
 #'determined by 'threshold' (b) an array with dimensions c(nexp, nobs, 
-#'no. of bins, all the rest dimensions in 'exp' and 'obs' expect 'time_dim' and
+#'no. of bins, all the rest dimensions in 'exp' and 'obs' except 'time_dim' and
 #''memb_dim') (c) an array with dimensions c(no. of bin, all the rest dimensions
-#'in 'exp' and 'obs' expect 'time_dim' and 'memb_dim')
+#'in 'exp' and 'obs' except 'time_dim' and 'memb_dim')
 #' 
 #'@references
 #'Wilks (2006) Statistical Methods in the Atmospheric Sciences.\cr
@@ -176,11 +176,11 @@ BrierScore <- function(exp, obs, thresholds = seq(0.1, 0.9, 0.1), time_dim = 'sd
   }
   if (any(!name_exp %in% name_obs) | any(!name_obs %in% name_exp)) {
     stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                "of all the dimensions expect 'dat_dim' and 'memb_dim'."))
+                "of all the dimensions except 'dat_dim' and 'memb_dim'."))
   }
   if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                "of all the dimensions expect 'dat_dim' and 'memb_dim'."))
+                "of all the dimensions except 'dat_dim' and 'memb_dim'."))
   }
   ## ncores
   if (!is.null(ncores)) {

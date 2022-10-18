@@ -21,6 +21,7 @@ PlotLayout(
   title_left_shift_scale = 1,
   subtitle_scale = 1,
   subtitle_margin_scale = 1,
+  subplot_titles_scale = 1,
   brks = NULL,
   cols = NULL,
   drawleg = "S",
@@ -151,6 +152,9 @@ be disregarded if no 'row_titles' are provided.}
 
 \item{subtitle_margin_scale}{Scale factor for the margins surrounding the 
 subtitles. Takes 1 by default.}
+
+\item{subplot_titles_scale}{Scale factor for the subplots top titles. Takes 
+1 by default.}
 
 \item{brks, cols, bar_limits, triangle_ends}{Usually only providing 'brks' is 
 enough to generate the desired colour bar. These parameters allow to 

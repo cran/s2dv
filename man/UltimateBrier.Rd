@@ -19,16 +19,17 @@ UltimateBrier(
 }
 \arguments{
 \item{exp}{A numeric array of forecast anomalies with named dimensions that
-at least include 'dat_dim', 'memb_dim', and 'time_dim'. It can be provided
+at least include 'memb_dim', and 'time_dim'. It can be provided
 by \code{Ano()}.}
 
 \item{obs}{A numeric array of observational reference anomalies with named
-dimensions that at least include 'dat_dim' and 'time_dim'. If it has 
+dimensions that at least include 'time_dim'. If it has 
 'memb_dim', the length  must be 1. The dimensions should be consistent with
 'exp' except 'dat_dim' and 'memb_dim'. It can be provided by \code{Ano()}.}
 
 \item{dat_dim}{A character string indicating the name of the dataset 
-dimension in 'exp' and 'obs'. The default value is 'dataset'.}
+dimension in 'exp' and 'obs'. The default value is 'dataset'. If there is no dataset 
+dimension, set NULL.}
 
 \item{memb_dim}{A character string indicating the name of the member 
 dimension in 'exp' (and 'obs') for ensemble mean calculation. The default
@@ -78,7 +79,7 @@ is an array of Brier scores or Brier skill scores. All the arrays have the
 same dimensions:
 c(nexp, nobs, no. of bins, the rest dimensions of 'exp' except 'time_dim' and
 'memb_dim'). 'nexp' and 'nobs' is the length of dataset dimension in 'exp'
-and 'obs' respectively.\cr
+and 'obs' respectively. If dat_dim is NULL, nexp and nobs are omitted.\cr
 The list of 4 includes: 
  \itemize{
    \item{$bs: Brier Score}

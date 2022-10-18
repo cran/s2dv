@@ -52,7 +52,7 @@ InsertDim <- function(data, posdim, lendim, name = NULL, ncores = NULL) {
   if (is.null(name)) {
     if (is.null(names(lendim))) {
       name <- 'new'
-      warning("The name of new dimension is not given. Set the name as 'new'.")
+      .warning("The name of new dimension is not given. Set the name as 'new'.")
     } else {
       name <- names(lendim)
     }
@@ -63,7 +63,7 @@ InsertDim <- function(data, posdim, lendim, name = NULL, ncores = NULL) {
   }
   ## ncores
   if (!missing("ncores"))
-    warning("Argument 'ncores' is deprecated.")
+    .warning("Argument 'ncores' is deprecated.", tag = '! Deprecation: ')
 
   ###############################
   # Calculate InsertDim

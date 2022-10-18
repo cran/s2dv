@@ -1545,7 +1545,7 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   # If there are no experiments to load we need to choose a number of time steps
   # to load from observational datasets. We load from the first start date to 
   # the current date.
-  if (is.null(exp) || dims == 0) {
+  if (is.null(exp) || identical(dims, 0)) {
     if (is.null(leadtimemax)) {
       diff <- Sys.time() - as.POSIXct(sdates[1], format = '%Y%m%d', tz = "UTC")
       if (diff > 0) {
@@ -1866,12 +1866,12 @@ Load <- function(var, exp = NULL, obs = NULL, sdates, nmember = NULL,
   if (!is.null(dim_exp) && (length(unlist(dim_exp)) == length(dim_exp)) && 
       !anyNA(unlist(dim_exp)) && !any(unlist(dim_exp) == 0)) {
     var_exp <- big.matrix(nrow = prod(unlist(dim_exp)), ncol = 1)
-    pointer_var_exp <- describe(var_exp)
+    pointer_var_exp <- bigmemory::describe(var_exp)
   }
   if (!is.null(dim_obs) && (length(unlist(dim_obs)) == length(dim_obs)) && 
       !anyNA(unlist(dim_obs)) && !any(unlist(dim_obs) == 0)) {
     var_obs <- big.matrix(nrow = prod(unlist(dim_obs)), ncol = 1)
-    pointer_var_obs <- describe(var_obs)
+    pointer_var_obs <- bigmemory::describe(var_obs)
   }
   if (is.null(nprocs)) {
     nprocs <- detectCores()

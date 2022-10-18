@@ -170,7 +170,7 @@ ACC <- function(exp, obs, dat_dim = 'dataset', lat_dim = 'lat', lon_dim = 'lon',
   }
   ## space_dim (deprecated)
   if (!missing("space_dim")) {
-    warning("Parameter 'space_dim' is deprecated. Use 'lat_dim' and 'lon_dim' instead.")
+    .warning("Parameter 'space_dim' is deprecated. Use 'lat_dim' and 'lon_dim' instead.")
     lat_dim <- space_dim[1]
     lon_dim <- space_dim[2]
   }
@@ -276,7 +276,7 @@ ACC <- function(exp, obs, dat_dim = 'dataset', lat_dim = 'lat', lon_dim = 'lon',
   }
   if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all the dimensions expect 'dat_dim' and 'memb_dim'."))
+                "all the dimensions except 'dat_dim' and 'memb_dim'."))
   }
 
 #-----------------------------------------------------------------

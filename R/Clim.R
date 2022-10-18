@@ -173,7 +173,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
   }
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have the same dimensions ",
-                "expect 'dat_dim'."))
+                "except 'dat_dim'."))
   }
 
   ###############################

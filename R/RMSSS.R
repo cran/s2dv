@@ -96,11 +96,14 @@ RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
     stop("Parameter 'time_dim' is not found in 'exp' or 'obs' dimension.")
   }
   ## dat_dim
-  if (!is.character(dat_dim) | length(dat_dim) > 1) {
-    stop("Parameter 'dat_dim' must be a character string.")
-  }
-  if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
-    stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.")
+  if (!is.null(dat_dim)) {
+    if (!is.character(dat_dim) | length(dat_dim) > 1) {
+      stop("Parameter 'dat_dim' must be a character string or NULL.")
+    }
+    if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
+      stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.",
+           " Set it as NULL if there is no dataset dimension.")
+    }
   }
   ## pval
   if (!is.logical(pval) | length(pval) > 1) {
@@ -116,11 +119,13 @@ RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
+  if (!is.null(dat_dim)) {
   name_exp <- name_exp[-which(name_exp == dat_dim)]
   name_obs <- name_obs[-which(name_obs == dat_dim)]
+  }
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimension expect 'dat_dim'."))
+                "all dimension except 'dat_dim'."))
   }
   if (dim(exp)[time_dim] <= 2) {
     stop("The length of time_dim must be more than 2 to compute RMSSS.")
@@ -151,10 +156,20 @@ RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
 
 .RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset', pval = TRUE, 
                    ncores_input = NULL) {
+  if (is.null(dat_dim)) {
+    # exp: [sdate]
+    # obs: [sdate]
+    nexp <- 1
+    nobs <- 1
+    dim(exp) <- c(dim(exp), nexp = nexp)
+    dim(obs) <- c(dim(obs), nobs = nobs)
+  } else {
   # exp: [sdate, dat_exp]
   # obs: [sdate, dat_obs]
-  nexp <- as.numeric(dim(exp)[2])
-  nobs <- as.numeric(dim(obs)[2])
+    nexp <- as.numeric(dim(exp)[2])
+    nobs <- as.numeric(dim(obs)[2])
+  }
+
   nsdate <- as.numeric(dim(exp)[1])
   
   p_val <- array(dim = c(nexp = nexp, nobs = nobs))
@@ -207,6 +222,14 @@ RMSSS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
     # change not significant rmsss to NA
     rmsss[which(!tmp)] <- NA
   }
+
+  ###################################
+  # Remove extra dimensions if dat_dim = NULL
+  if (is.null(dat_dim)) {
+    dim(rmsss) <- NULL
+    dim(p_val) <- NULL
+  }
+  ###################################
 
   # output  
   if (pval) {

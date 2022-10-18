@@ -170,7 +170,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
   count_k <- plyr::count(occ)
   if (any(count_k$freq == 1)) {
     tmp <- count_k$x[which(count_k$freq == 1)]
-    warning(paste0("Composite K = ", tmp, " has length 1. The p-value is NA."))
+    .warning(paste0("Composite K = ", tmp, " has length 1. The p-value is NA."))
   }
 
   output_dims <- list(composite = c(space_dim, 'K'), 

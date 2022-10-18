@@ -107,11 +107,14 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
     stop("Parameter 'time_dim' is not found in 'exp' or 'obs' dimension.")
   }
   ## dat_dim
-  if (!is.character(dat_dim) | length(dat_dim) > 1) {
-    stop("Parameter 'dat_dim' must be a character string.")
-  }
-  if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
-    stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.")
+  if (!is.null(dat_dim)) {
+    if (!is.character(dat_dim) | length(dat_dim) > 1) {
+      stop("Parameter 'dat_dim' must be a character string or NULL.")
+    }
+    if (!dat_dim %in% names(dim(exp)) | !dat_dim %in% names(dim(obs))) {
+      stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.",
+           "Set it as NULL if there is no dataset dimension.")
+    }
   }
   ## comp_dim
   if (!is.null(comp_dim)) {
@@ -151,11 +154,13 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
-  name_exp <- name_exp[-which(name_exp == dat_dim)]
-  name_obs <- name_obs[-which(name_obs == dat_dim)]
+  if (!is.null(dat_dim)) {
+    name_exp <- name_exp[-which(name_exp == dat_dim)]
+    name_obs <- name_obs[-which(name_obs == dat_dim)]
+  }
   if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimension expect 'dat_dim'."))
+                "all dimension except 'dat_dim'."))
   }
   if (dim(exp)[time_dim] < 2) {
     stop("The length of time_dim must be at least 2 to compute RMS.")
@@ -196,12 +201,22 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
 }
 
 .RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
-                 conf = TRUE, conf.lev = 0.95, ncores_input = NULL) { 
-
-  # exp: [sdate, dat_exp]
-  # obs: [sdate, dat_obs]
-  nexp <- as.numeric(dim(exp)[2])
-  nobs <- as.numeric(dim(obs)[2])
+                 conf = TRUE, conf.lev = 0.95, ncores_input = NULL) {
+  if (is.null(dat_dim)) {
+    # exp: [sdate]
+    # obs: [sdate]
+    nexp <- 1
+    nobs <- 1
+    ini_dims <- dim(exp)
+    dim(exp) <- c(ini_dims, dat_dim = 1)
+    dim(obs) <- c(ini_dims, dat_dim = 1)
+  } else {
+    # exp: [sdate, dat_exp]
+    # obs: [sdate, dat_obs]
+    nexp <- as.numeric(dim(exp)[2])
+    nobs <- as.numeric(dim(obs)[2])
+  }
+  
   nsdate <- as.numeric(dim(exp)[1])
 
   dif <- array(dim = c(sdate = nsdate, nexp = nexp, nobs = nobs))
@@ -235,6 +250,16 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
                            })
     conf.upper <- (eno * rms ** 2 / chi) ** 0.5
   }
+
+  ###################################
+  # Remove nexp and nobs if dat_dim = NULL
+  if (is.null(dat_dim)) {
+    dim(rms) <- NULL
+    dim(conf.lower) <- NULL
+    dim(conf.upper) <- NULL
+  }
+
+  ###################################
 
   if (conf) {
     res <- list(rms = rms, conf.lower = conf.lower, conf.upper = conf.upper)

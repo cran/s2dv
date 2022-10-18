@@ -632,7 +632,7 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     cdo_version <- as.numeric_version(
       strsplit(suppressWarnings(system2("cdo", args = '-V', stderr = TRUE))[[1]], ' ')[[1]][5]
     )
-    warning("CDORemap: Using CDO version ", cdo_version, ".")
+    .warning(paste0("CDORemap: Using CDO version ", cdo_version, "."))
     if ((cdo_version >= as.numeric_version('1.7.0')) && (method == 'con')) {
       method <- 'ycon'
     }

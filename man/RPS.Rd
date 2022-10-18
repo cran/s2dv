@@ -9,6 +9,7 @@ RPS(
   obs,
   time_dim = "sdate",
   memb_dim = "member",
+  dat_dim = NULL,
   prob_thresholds = c(1/3, 2/3),
   indices_for_clim = NULL,
   Fair = FALSE,
@@ -17,17 +18,22 @@ RPS(
 )
 }
 \arguments{
-\item{exp}{A named numerical array of the forecast with at least time 
-dimension.}
+\item{exp}{A named numerical array of the forecast with at least time and
+member dimension.}
 
 \item{obs}{A named numerical array of the observation with at least time 
-dimension. The dimensions must be the same as 'exp' except 'memb_dim'.}
+dimension. The dimensions must be the same as 'exp' except 'memb_dim' and 
+'dat_dim'.}
 
 \item{time_dim}{A character string indicating the name of the time dimension.
 The default value is 'sdate'.}
 
 \item{memb_dim}{A character string indicating the name of the member dimension
 to compute the probabilities of the forecast. The default value is 'member'.}
+
+\item{dat_dim}{A character string indicating the name of dataset dimension. 
+The length of this dimension can be different between 'exp' and 'obs'. 
+The default value is NULL.}
 
 \item{prob_thresholds}{A numeric vector of the relative thresholds (from 0 to
 1) between the categories. The default value is c(1/3, 2/3), which 
@@ -37,22 +43,25 @@ corresponds to tercile equiprobable categories.}
 for computing the thresholds between the probabilistic categories. If NULL,
 the whole period is used. The default value is NULL.}
 
-\item{Fair}{A logical indicating whether to compute the FairRPSS (the 
-potential RPSS that the forecast would have with an infinite ensemble size).
+\item{Fair}{A logical indicating whether to compute the FairRPS (the 
+potential RPS that the forecast would have with an infinite ensemble size).
 The default value is FALSE.}
 
-\item{weights}{A named two-dimensional numerical array of the weights for each
-member and time. The dimension names should include 'memb_dim' and 
-'time_dim'. The default value is NULL. The ensemble should have at least 70 
-members or span at least 10 time steps and have more than 45 members if 
-consistency between the weighted and unweighted methodologies is desired.}
+\item{weights}{A named numerical array of the weights for 'exp'. If 'dat_dim' 
+is NULL, the dimension should include 'memb_dim' and 'time_dim'. Else, the 
+dimension should also include 'dat_dim'. The default value is NULL. The 
+ensemble should have at least 70 members or span at least 10 time steps and
+have more than 45 members if consistency between the weighted and unweighted
+methodologies is desired.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
 }
 \value{
-A numerical array of RPS with the same dimensions as "exp" except the 
-'time_dim' and 'memb_dim' dimensions.
+A numerical array of RPS with dimensions c(nexp, nobs, the rest dimensions of 
+'exp' except 'time_dim' and 'memb_dim' dimensions). nexp is the number of 
+experiment (i.e., dat_dim in exp), and nobs is the number of observation 
+(i.e., dat_dim in obs). If dat_dim is NULL, nexp and nobs are omitted.
 }
 \description{
 The Ranked Probability Score (RPS; Wilks, 2011) is defined as the sum of the
@@ -64,7 +73,8 @@ of multi-categorical probabilistic forecasts. The RPS ranges between 0
 categories. In the case of a forecast divided into two categories (the lowest
 number of categories that a probabilistic forecast can have), the RPS 
 corresponds to the Brier Score (BS; Wilks, 2011), therefore, ranges between 0 
-and 1.
+and 1. If there is more than one dataset, RPS will be computed for each pair 
+of exp and obs data.
 }
 \examples{
 exp <- array(rnorm(1000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))
