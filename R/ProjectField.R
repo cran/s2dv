@@ -237,10 +237,14 @@ ProjectField <- function(ano, eof, time_dim = 'sdate', space_dim = c('lat', 'lon
     # Weight
     e.1 <- eof_mode * wght
     ano <- ano * InsertDim(wght, 1, ntime)
+    #ano <- aaply(ano, 1, '*', wght)  # much heavier
 
-    na <- apply(ano, 1, mean, na.rm = TRUE)  # if [lat, lon] all NA, it's NA
+    na <- rowMeans(ano, na.rm = TRUE) # if [lat, lon] all NA, it's NA
+    #na <- apply(ano, 1, mean, na.rm = TRUE)  # much heavier
     tmp <- ano * InsertDim(e.1, 1, ntime)  # [sdate, lat, lon]
-    pc.ver <- apply(tmp, 1, sum, na.rm = TRUE) 
+    rm(ano)
+    #pc.ver <- apply(tmp, 1, sum, na.rm = TRUE)  # much heavier 
+    pc.ver <- rowSums(tmp, na.rm = TRUE)
     pc.ver[which(is.na(na))] <- NA
 
   } else {  # mode = NULL
@@ -250,7 +254,7 @@ ProjectField <- function(ano, eof, time_dim = 'sdate', space_dim = c('lat', 'lon
     ano <- ano * InsertDim(wght, 1, ntime)
     dim(ano) <- c(ntime, prod(dim(ano)[2:3]))  # [sdate, lat*lon]
 
-    na <- apply(ano, 1, mean, na.rm = TRUE)  # if [lat, lon] all NA, it's NA
+    na <- rowMeans(ano, na.rm = TRUE) # if [lat, lon] all NA, it's NA
     na <- aperm(array(na, dim = c(ntime, dim(e.1)[1])), c(2, 1))
 
     # Matrix multiplication e.1 [mode, lat*lon] by ano [lat*lon, sdate]

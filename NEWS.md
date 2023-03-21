@@ -1,3 +1,26 @@
+# s2dv 1.4.0 (Release date: 2023-03-21)
+**Bugfixes**  
+- AbsBiasSS() significance test bugfix  
+- RPSS() significance test bugfix  
+- Trend() output "p.val" bugfix when NAs exist  
+- RMS() bugfix when dat_dim is NULL and conf is FALSE  
+- NAO() parameter "ftime_avg" sanity check improvement  
+- CDORemap() recognizes the CDO version with non-numeric values  
+- CDORemap() reorders the unlimited dimension to the last position in order to save as netCDF correctly  
+
+**Development**  
+- Make the argument default values consistent between functions  
+- Season() sanity check improvement   
+- RMSSS() new parameters: "ref", "memb_dim", "sig_method". RandomWalkTest() is one option for significance test.   
+- Corr() new output "sign" and change parameter "conf.lev" to "alpha"  
+- CRPSS() uses cross-validation when `ref` is NULL  
+- RPS() and RPSS(): New parameter "cross.val" to choose to use cross-validation or not  
+- New function: ROCSS()  
+- RandomWalkTest(): New parameters "alpha" and "test.type"; Test method options: 'two.sided.approx','two.sided','greater','less'; change from positively oriented to negatively oriented  
+- Reorder(): Reorder attribute "dimensions" along with the data reordering. The attribute exists in Load() objects.  
+- ProjectField() efficiency improvement  
+- NAO(): parameter "ftime_avg" can be NULL so no average is calculated  
+
 # s2dv 1.3.0 (Release date: 2022-10-17)
 - New functions: Bias, AbsBiasSS, CRPS, CRPSS 
 - split RPSS parameter 'weights' into 'weights_exp' and 'weights_ref'

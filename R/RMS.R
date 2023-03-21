@@ -217,10 +217,9 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
     nobs <- as.numeric(dim(obs)[2])
   }
   
-  nsdate <- as.numeric(dim(exp)[1])
-
-  dif <- array(dim = c(sdate = nsdate, nexp = nexp, nobs = nobs))
+  dif <- array(dim = c(dim(exp)[1], nexp = nexp, nobs = nobs))
   chi <- array(dim = c(nexp = nexp, nobs = nobs))
+
   if (conf) {
     conflow <- (1 - conf.lev) / 2
     confhigh <- 1 - conflow
@@ -232,6 +231,7 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   for (i in 1:nobs) {
     dif[, , i] <- sapply(1:nexp, function(x) {exp[, x] - obs[, i]})
   }
+
   rms <- apply(dif^2, c(2, 3), mean, na.rm = TRUE)^0.5  #array(dim = c(_exp, nobs))
 
   if (conf) {
@@ -255,8 +255,10 @@ RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   # Remove nexp and nobs if dat_dim = NULL
   if (is.null(dat_dim)) {
     dim(rms) <- NULL
-    dim(conf.lower) <- NULL
-    dim(conf.upper) <- NULL
+    if (conf) {
+      dim(conf.lower) <- NULL
+      dim(conf.upper) <- NULL
+    }
   }
 
   ###################################

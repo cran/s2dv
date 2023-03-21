@@ -155,8 +155,6 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
   if (!test.type %in% c('two-sided', 'one-sided')) {
     stop("Parameter 'test.type' must be 'two-sided' or 'one-sided'.")
   }
-  #NOTE: warning can be removed in the next release
-  .warning("The default significance test has changed after s2dv_1.2.0. The default method is 'two-sided'.")
 
   ## ncores
   if (!is.null(ncores)) {

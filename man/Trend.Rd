@@ -66,7 +66,9 @@ A list containing:
  \code{conf = TRUE}.
 }
 \item{$p.val}{
- The p-value calculated by anova(). Only present if \code{pval = TRUE}.
+ A numeric array of p-value calculated by anova(). The first dimension 
+ 'stats' is 1, followed by the same dimensions as parameter 'data' except 
+ the 'time_dim' dimension. Only present if \code{pval = TRUE}.
 }
 \item{$detrended}{
  A numeric array with the same dimensions as paramter 'data', containing the 

@@ -50,7 +50,9 @@
 #'  \code{conf = TRUE}.
 #'}
 #'\item{$p.val}{
-#'  The p-value calculated by anova(). Only present if \code{pval = TRUE}.
+#'  A numeric array of p-value calculated by anova(). The first dimension 
+#'  'stats' is 1, followed by the same dimensions as parameter 'data' except 
+#'  the 'time_dim' dimension. Only present if \code{pval = TRUE}.
 #'}
 #'\item{$detrended}{
 #'  A numeric array with the same dimensions as paramter 'data', containing the 
@@ -188,7 +190,7 @@ Trend <- function(data, time_dim = 'ftime', interval = 1, polydeg = 1,
     }
 
     if (pval) {
-      p.val <- rep(NA, polydeg + 1)
+      p.val <- as.array(NA)
     }
 
   }

@@ -14,6 +14,7 @@ RPS(
   indices_for_clim = NULL,
   Fair = FALSE,
   weights = NULL,
+  cross.val = FALSE,
   ncores = NULL
 )
 }
@@ -53,6 +54,10 @@ dimension should also include 'dat_dim'. The default value is NULL. The
 ensemble should have at least 70 members or span at least 10 time steps and
 have more than 45 members if consistency between the weighted and unweighted
 methodologies is desired.}
+
+\item{cross.val}{A logical indicating whether to compute the thresholds between 
+probabilistic categories in cross-validation.
+The default value is FALSE.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}

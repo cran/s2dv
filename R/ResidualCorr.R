@@ -199,7 +199,8 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
   return(output)
 }
 
-.ResidualCorr <- function(exp, obs, ref, N.eff, method, alpha, handle.na) {
+.ResidualCorr <- function(exp, obs, ref, N.eff = NA, method = 'pearson', alpha = NULL, 
+                          handle.na = 'return.na') {
   # exp and ref and obs: [time]
   .residual.corr <- function(exp, obs, ref, method, N.eff, alpha) {
 

@@ -1,4 +1,4 @@
-#'Compute seasonal mean
+#'Compute seasonal mean or other calculations
 #'
 #'Compute the seasonal mean (or other methods) on monthly time series along
 #'one dimension of a named multi-dimensional arrays. Partial season is not 
@@ -6,13 +6,14 @@
 #'
 #'@param data A named numeric array with at least one dimension 'time_dim'. 
 #'@param time_dim A character string indicating the name of dimension along  
-#'  which the seasonal means are computed. The default value is 'ftime'.
+#'  which the seasonal mean or other calculations are computed. The default
+#'  value is 'ftime'.
 #'@param monini An integer indicating what the first month of the time series is. 
 #'  It can be from 1 to 12.
-#'@param moninf An integer indicating the starting month of the seasonal mean. 
+#'@param moninf An integer indicating the starting month of the seasonal
+#'  calculation. It can be from 1 to 12.
+#'@param monsup An integer indicating the end month of the seasonal calculation. 
 #'  It can be from 1 to 12.
-#'@param monsup An integer indicating the end month of the seasonal mean. It 
-#'  can be from 1 to 12.
 #'@param method An R function to be applied for seasonal calculation. For
 #'  example, 'sum' can be used for total precipitation. The default value is mean.
 #'@param na.rm A logical value indicating whether to remove NA values along 
@@ -26,12 +27,12 @@
 #'
 #'@examples
 #'set.seed(1)
-#'dat1 <- array(rnorm(144*3), dim = c(member = 2, sdate = 2, ftime = 12*3, lon = 3))
+#'dat1 <- array(rnorm(144 * 3), dim = c(member = 2, sdate = 2, ftime = 12*3, lon = 3))
 #'res <- Season(data = dat1, monini = 1, moninf = 1, monsup = 2)
 #'res <- Season(data = dat1, monini = 10, moninf = 12, monsup = 2)
 #'dat2 <- dat1
 #'set.seed(2)
-#'na <- floor(runif(30, min = 1, max = 144*3))
+#'na <- floor(runif(30, min = 1, max = 144 * 3))
 #'dat2[na] <- NA
 #'res <- Season(data = dat2, monini = 3, moninf = 1, monsup = 2)
 #'res <- Season(data = dat2, monini = 3, moninf = 1, monsup = 2, na.rm = FALSE)
@@ -86,6 +87,16 @@ Season <- function(data, time_dim = 'ftime', monini, moninf, monsup,
       stop("Parameter 'monsup' must be a positive integer between 1 and 12.")
     }
   }
+  ## time_dim, monini, moninf, monsup
+  mon_gap <- ifelse(moninf >= monini, moninf - monini, moninf + 12 - monini)
+  if ((mon_gap + 1) > dim(data)[time_dim]) {
+    stop("Parameter 'moninf' is out of the range because 'monini' is ", monini,
+         " and time dimenision length is ", as.numeric(dim(data)[time_dim]), ".")
+  }
+  mon_diff <- ifelse(monsup >= moninf, monsup - moninf, monsup + 12 - moninf)
+  if ((mon_gap + mon_diff + 1) > dim(data)[time_dim]) {
+    stop("The chosen month length exceeds the time dimension of 'data'.")
+  } 
   ## method
   if (!is.function(method)) {
     stop("Parameter 'method' should be an existing R function, e.g., mean or sum.")

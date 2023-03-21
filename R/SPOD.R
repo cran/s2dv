@@ -223,12 +223,12 @@ SPOD <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'l
   
   mean_1 <- ClimProjDiags::WeightedMean(data = data, lon = data_lons, lat = data_lats, 
                                         region = regions$reg1,
-                                        londim = which(names(dim(data)) == lon_dim), 
-                                        latdim = which(names(dim(data)) == lat_dim))
+                                        londim = lon_dim, 
+                                        latdim = lat_dim)
   mean_2 <- ClimProjDiags::WeightedMean(data = data, lon = data_lons, lat = data_lats, 
                                         region = regions$reg2,
-                                        londim = which(names(dim(data)) == lon_dim), 
-                                        latdim = which(names(dim(data)) == lat_dim))
+                                        londim = lon_dim, 
+                                        latdim = lat_dim)
   
   data <- ClimProjDiags::CombineIndices(indices = list(mean_1,mean_2), 
                                         weights = NULL, operation = 'subtract') # (mean_1 - mean_2)

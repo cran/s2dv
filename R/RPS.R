@@ -39,6 +39,9 @@
 #'  ensemble should have at least 70 members or span at least 10 time steps and
 #'  have more than 45 members if consistency between the weighted and unweighted
 #'  methodologies is desired.
+#'@param cross.val A logical indicating whether to compute the thresholds between 
+#'  probabilistic categories in cross-validation.
+#'  The default value is FALSE.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -61,7 +64,7 @@
 #'@export
 RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NULL,
                 prob_thresholds = c(1/3, 2/3), indices_for_clim = NULL, Fair = FALSE,
-                weights = NULL, ncores = NULL) {
+                weights = NULL, cross.val = FALSE, ncores = NULL) {
   
   # Check inputs
   ## exp and obs (1)
@@ -133,6 +136,10 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NUL
   if (!is.logical(Fair)  | length(Fair) > 1) {
     stop("Parameter 'Fair' must be either TRUE or FALSE.")
   }
+  ## cross.val
+  if (!is.logical(cross.val)  | length(cross.val) > 1) {
+    stop("Parameter 'cross.val' must be either TRUE or FALSE.")
+  }
   ## weights
   if (!is.null(weights)) {
     if (!is.array(weights) | !is.numeric(weights))
@@ -184,7 +191,7 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NUL
                memb_dim = memb_dim,
                prob_thresholds = prob_thresholds, 
                indices_for_clim = indices_for_clim, Fair = Fair,
-               weights = weights, ncores = ncores)$output1
+               weights = weights, cross.val = cross.val, ncores = ncores)$output1
  
   # Return only the mean RPS
   rps <- MeanDims(rps, time_dim, na.rm = FALSE)
@@ -194,7 +201,8 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NUL
 
 
 .RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NULL, 
-                 prob_thresholds = c(1/3, 2/3), indices_for_clim = NULL, Fair = FALSE, weights = NULL) {
+                 prob_thresholds = c(1/3, 2/3), indices_for_clim = NULL, Fair = FALSE, weights = NULL,
+                 cross.val = FALSE) {
 
   # exp: [sdate, memb, (dat)]
   # obs: [sdate, (memb), (dat)]
@@ -232,10 +240,10 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NUL
       }
 
       exp_probs <- .get_probs(data = exp_data, indices_for_quantiles = indices_for_clim, 
-                              prob_thresholds = prob_thresholds, weights = weights_data)
+                              prob_thresholds = prob_thresholds, weights = weights_data, cross.val = cross.val)
       # exp_probs: [bin, sdate]
       obs_probs <- .get_probs(data = obs_data, indices_for_quantiles = indices_for_clim, 
-                              prob_thresholds = prob_thresholds, weights = NULL)
+                              prob_thresholds = prob_thresholds, weights = NULL, cross.val = cross.val)
       # obs_probs: [bin, sdate]
       probs_exp_cumsum <- apply(exp_probs, 2, cumsum)
       probs_obs_cumsum <- apply(obs_probs, 2, cumsum)
@@ -261,67 +269,3 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NUL
   return(rps)
 }
 
-.get_probs <- function(data, indices_for_quantiles, prob_thresholds, weights = NULL) {
-  # if exp: [sdate, memb]
-  # if obs: [sdate, (memb)]
-
-  # Add dim [memb = 1] to obs if it doesn't have memb_dim
-  if (length(dim(data)) == 1) dim(data) <- c(dim(data), 1)
-
-  # Absolute thresholds
-  if (is.null(weights)) {
-    quantiles <- quantile(x = as.vector(data[indices_for_quantiles, ]), probs = prob_thresholds, type = 8, na.rm = TRUE)
-  } else {
-    # weights: [sdate, memb]
-    sorted_arrays <- .sorted_distributions(data[indices_for_quantiles, ], weights[indices_for_quantiles, ])
-    sorted_data <- sorted_arrays$data
-    cumulative_weights <- sorted_arrays$cumulative_weights
-    quantiles <- approx(cumulative_weights, sorted_data, prob_thresholds, "linear")$y
-  }
-
-  # Probabilities
-  probs <- array(dim = c(bin = length(quantiles) + 1, dim(data)[1])) # [bin, sdate]
-  for (i_time in 1:dim(data)[1]) {
-    if (anyNA(data[i_time, ])) {
-      probs[, i_time] <- rep(NA, dim = length(quantiles) + 1)
-    } else {
-      if (is.null(weights)) {
-        probs[, i_time] <- colMeans(easyVerification::convert2prob(data[i_time, ], threshold = quantiles))
-      } else {
-        sorted_arrays <- .sorted_distributions(data[i_time, ], weights[i_time, ])
-        sorted_data <- sorted_arrays$data
-        cumulative_weights <- sorted_arrays$cumulative_weights
-        # find any quantiles that are outside the data range
-        integrated_probs <- array(dim = c(bin = length(quantiles)))
-        for (i_quant in 1:length(quantiles)) {
-          # for thresholds falling under the distribution
-          if (quantiles[i_quant] < min(sorted_data)) {
-            integrated_probs[i_quant] <- 0 
-          # for thresholds falling over the distribution
-          } else if (max(sorted_data) < quantiles[i_quant]) {
-            integrated_probs[i_quant] <- 1
-          } else {
-            integrated_probs[i_quant] <- approx(sorted_data, cumulative_weights, quantiles[i_quant], "linear")$y
-          }
-        }
-        probs[, i_time] <- append(integrated_probs, 1) - append(0, integrated_probs)
-        if (min(probs[, i_time]) < 0 | max(probs[, i_time]) > 1) {
-          stop(paste0("Probability in i_time = ", i_time, " is out of [0, 1]."))
-        } 
-      }
-    }
-  }
-  return(probs)
-}
-
-.sorted_distributions <- function(data_vector, weights_vector) {
-  weights_vector <- as.vector(weights_vector)
-  data_vector <- as.vector(data_vector)
-  weights_vector <- weights_vector / sum(weights_vector) # normalize to 1
-  sorter <- order(data_vector)
-  sorted_weights <- weights_vector[sorter]
-  cumulative_weights <- cumsum(sorted_weights) - 0.5 * sorted_weights
-  cumulative_weights <- cumulative_weights - cumulative_weights[1] # fix the 0
-  cumulative_weights <- cumulative_weights / cumulative_weights[length(cumulative_weights)] # fix the 1
-  return(list("data" = data_vector[sorter], "cumulative_weights" = cumulative_weights))
-}

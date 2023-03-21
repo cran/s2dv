@@ -257,16 +257,17 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
           obs_data <- obs_data[good_values]
         }
       }
+      
       ## Bias of the exp
-      bias_exp <- .Bias(exp = exp_data, obs = obs_data, na.rm = na.rm, absolute = TRUE, time_mean = TRUE)
+      bias_exp <- .Bias(exp = exp_data, obs = obs_data, na.rm = na.rm, absolute = TRUE, time_mean = FALSE)
       ## Bias of the ref
       if (is.null(ref)) { ## Climatological forecast
-        ref_data <- mean(obs_data, na.rm = na.rm)
+        ref_data <- rep(mean(obs_data, na.rm = na.rm), length(obs_data))
       }
-      bias_ref <- .Bias(exp = ref_data, obs = obs_data, na.rm = na.rm, absolute = TRUE, time_mean = TRUE)
+      bias_ref <- .Bias(exp = ref_data, obs = obs_data, na.rm = na.rm, absolute = TRUE, time_mean = FALSE)
       ## Skill score and significance
-      biasSS[i, j] <- 1 - bias_exp / bias_ref
-      sign[i, j] <- .RandomWalkTest(skill_A = bias_exp, skill_B = bias_ref)$signif
+      biasSS[i, j] <- 1 - mean(bias_exp) / mean(bias_ref)
+      sign[i, j] <- .RandomWalkTest(skill_A = bias_exp, skill_B = bias_ref, sign = T, pval = F)$sign
     }
   }
 

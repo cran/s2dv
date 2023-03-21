@@ -222,11 +222,20 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   if (is.null(ref)) {
     ## using climatology as reference forecast
     ## all the time steps are used as if they were members
-    ## then, ref dimensions are [sdate, memb], both with length(sdate)
+    ## then, ref dimensions are [sdate, memb]
+    ## memb dimension has length(sdate) - 1 due to cross-validation
 
     obs_time_len <- dim(obs)[time_dim]
     if (is.null(dat_dim)) {
-      ref <- array(data = rep(obs, each = obs_time_len), dim = c(obs_time_len, obs_time_len))
+      
+      ## Without cross-validation: 
+      ## ref <- array(data = rep(obs, each = obs_time_len), dim = c(obs_time_len, obs_time_len))
+      ## With cross-validation (excluding the value of that year to create ref for that year):
+      ref <- array(data = NA, dim = c(obs_time_len, obs_time_len - 1))
+      for (i in 1:obs_time_len) {
+        ref[i, ] <- obs[-i]
+      }
+      
       names(dim(ref)) <- c(time_dim, memb_dim)
       # ref: [sdate, memb]; obs: [sdate]
       crps_ref <- .CRPS(exp = ref, obs = obs, time_dim = time_dim, memb_dim = memb_dim,
@@ -237,7 +246,15 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       crps_ref <- array(dim = c(obs_time_len, nobs))
       names(dim(crps_ref)) <- c(time_dim, 'nobs')
       for (i_obs in 1:nobs) {
-        ref <- array(data = rep(obs[, i_obs], each = obs_time_len), dim = c(obs_time_len, obs_time_len))
+        
+        ## Without cross-validation: 
+        ## ref <- array(data = rep(obs[, i_obs], each = obs_time_len), dim = c(obs_time_len, obs_time_len))
+        ## With cross-validation (excluding the value of that year to create ref for that year):
+        ref <- array(data = NA, dim = c(obs_time_len, obs_time_len - 1))
+        for (i in 1:obs_time_len) {
+          ref[i, ] <- obs[-i, i_obs]
+        }
+        
         names(dim(ref)) <- c(time_dim, memb_dim)
         crps_ref[, i_obs] <- .CRPS(exp = ref, obs = ClimProjDiags::Subset(obs, dat_dim, i_obs, drop = 'selected'), 
                                    time_dim = time_dim, memb_dim = memb_dim, dat_dim = NULL, Fair = Fair)
@@ -276,14 +293,14 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           crpss[i, j] <- 1 - crps_exp_mean[i, j] / crps_ref_mean[j]
-          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[j])$signif
+          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[j], sign = T, pval = F)$sign
         }
       }
     } else {
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           crpss[i, j] <- 1 - crps_exp_mean[i, j] / crps_ref_mean[i, j]
-          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[i, j])$signif
+          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[i, j], sign = T, pval = F)$sign
         }
       }
     }
@@ -291,7 +308,7 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   } else {
     crpss <- 1 - mean(crps_exp) / mean(crps_ref)
     # Significance
-    sign <- .RandomWalkTest(skill_A = crps_exp, skill_B = crps_ref)$signif
+    sign <- .RandomWalkTest(skill_A = crps_exp, skill_B = crps_ref, sign = T, pval = F)$sign
   }
   
   return(list(crpss = crpss, sign = sign))

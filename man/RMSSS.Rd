@@ -7,9 +7,14 @@
 RMSSS(
   exp,
   obs,
+  ref = NULL,
   time_dim = "sdate",
   dat_dim = "dataset",
+  memb_dim = NULL,
   pval = TRUE,
+  sign = FALSE,
+  alpha = 0.05,
+  sig_method = "one-sided Fisher",
   ncores = NULL
 )
 }
@@ -26,15 +31,38 @@ dimension can be different. It can also be a vector with the same length as
 'exp', then the vector will automatically be 'time_dim' and 'dat_dim' will
 be 1.}
 
+\item{ref}{A named numerical array of the reference forecast data with at 
+least time dimension, or 0 (typical climatological forecast) or 1 
+(normalized climatological forecast). If it is an array, the dimensions must
+be the same as 'exp' except 'memb_dim' and 'dat_dim'. If there is only one
+reference dataset, it should not have dataset dimension. If there is 
+corresponding reference for each experiment, the dataset dimension must 
+have the same length as in 'exp'. If 'ref' is NULL, the typical 
+climatological forecast is used as reference forecast (equivelant to 0.)
+The default value is NULL.}
+
 \item{time_dim}{A character string indicating the name of dimension along
 which the RMSSS are computed. The default value is 'sdate'.}
 
 \item{dat_dim}{A character string indicating the name of dataset (nobs/nexp) 
 dimension. The default value is 'dataset'.}
 
+\item{memb_dim}{A character string indicating the name of the member dimension
+to compute the ensemble mean; it should be set to NULL if the parameter 'exp'
+and 'ref' are already the ensemble mean. The default value is NULL.}
+
 \item{pval}{A logical value indicating whether to compute or not the p-value 
-of the test Ho: RMSSS = 0. If pval = TRUE, the insignificant RMSSS will 
-return NA. The default value is TRUE.}
+of the test Ho: RMSSS = 0. The default value is TRUE.}
+
+\item{sign}{A logical value indicating whether to compute or not the 
+statistical significance of the test Ho: RMSSS = 0. The default value is 
+FALSE.}
+
+\item{alpha}{A numeric of the significance level to be used in the 
+statistical significance test. The default value is 0.05.}
+
+\item{sig_method}{A character string indicating the significance method. The
+options are "one-sided Fisher" (default) and "Random Walk".}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
@@ -43,12 +71,18 @@ computation. The default value is NULL.}
 A list containing the numeric arrays with dimension:\cr 
  c(nexp, nobs, all other dimensions of exp except time_dim).\cr
 nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
-number of observation (i.e., dat_dim in obs).\cr
+number of observation (i.e., dat_dim in obs). If dat_dim is NULL, nexp and 
+nobs are omitted.\cr
 \item{$rmsss}{
- The root mean square error skill score. 
+ A numerical array of the root mean square error skill score. 
 }
 \item{$p.val}{
- The p-value. Only present if \code{pval = TRUE}.
+ A numerical array of the p-value with the same dimensions as $rmsss.
+ Only present if \code{pval = TRUE}.
+}
+\item{sign}{
+ A logical array of the statistical significance of the RMSSS with the same
+ dimensions as $rmsss. Only present if \code{sign = TRUE}.
 }
 }
 \description{
@@ -58,17 +92,18 @@ have the same dimensions except along dat_dim, where the length can be
 different, with the number of experiments/models (nexp) and the number of 
 observational datasets (nobs).\cr
 RMSSS computes the root mean square error skill score of each jexp in 1:nexp 
-against each jobs in 1:nobs which gives nexp * nobs RMSSS for each other 
-grid point of the array.\cr
-The RMSSS are computed along the time_dim dimension which should corresponds
-to the startdate dimension.\cr
-The p-value is optionally provided by an one-sided Fisher test.\cr
+against each job in 1:nobs which gives nexp * nobs RMSSS for each grid point 
+of the array.\cr
+The RMSSS are computed along the time_dim dimension which should correspond
+to the start date dimension.\cr
+The p-value and significance test are optionally provided by an one-sided 
+Fisher test or Random Walk test.\cr
 }
 \examples{
 set.seed(1)
 exp <- array(rnorm(30), dim = c(dataset = 2, time = 3, memb = 5))
 set.seed(2)
 obs <- array(rnorm(15), dim = c(time = 3, memb = 5, dataset = 1))
-res <- RMSSS(exp, obs, time_dim = 'time')
+res <- RMSSS(exp, obs, time_dim = 'time', dat_dim = 'dataset')
 
 }

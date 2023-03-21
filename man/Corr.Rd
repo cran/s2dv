@@ -16,7 +16,9 @@ Corr(
   memb = TRUE,
   pval = TRUE,
   conf = TRUE,
-  conf.lev = 0.95,
+  sign = FALSE,
+  alpha = 0.05,
+  conf.lev = NULL,
   ncores = NULL
 )
 }
@@ -52,14 +54,20 @@ member dimension, set NULL. The default value is NULL.}
 (TRUE) or do ensemble mean over 'memb_dim' (FALSE). Only functional when 
 'memb_dim' is not NULL. The default value is TRUE.}
 
-\item{pval}{A logical value indicating whether to compute or not the p-value 
+\item{pval}{A logical value indicating whether to return or not the p-value 
 of the test Ho: Corr = 0. The default value is TRUE.}
 
-\item{conf}{A logical value indicating whether to retrieve the confidence 
-intervals or not. The default value is TRUE.}
+\item{conf}{A logical value indicating whether to return or not the confidence 
+intervals. The default value is TRUE.}
 
-\item{conf.lev}{A numeric indicating the confidence level for the 
-regression computation. The default value is 0.95.}
+\item{sign}{A logical value indicating whether to retrieve the statistical
+significance of the test Ho: Corr = 0 based on 'alpha'. The default value is
+FALSE.}
+
+\item{alpha}{A numeric indicating the significance level for the statistical
+significance test. The default value is 0.05.}
+
+\item{conf.lev}{Deprecated. Use alpha now instead. alpha = 1 - conf.lev.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
@@ -84,6 +92,9 @@ nobs are omitted. exp_memb is the number of member in experiment (i.e.,
 }
 \item{$conf.upper}{
  The upper confidence interval. Only present if \code{conf = TRUE}.
+}
+\item{$sign}{
+ The statistical significance. Only present if \code{sign = TRUE}.
 }
 }
 \description{

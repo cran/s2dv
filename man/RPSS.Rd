@@ -17,6 +17,7 @@ RPSS(
   weights = NULL,
   weights_exp = NULL,
   weights_ref = NULL,
+  cross.val = FALSE,
   ncores = NULL
 )
 }
@@ -71,6 +72,10 @@ time steps and have more than 45 members if consistency between the weighted
  and unweighted methodologies is desired.}
 
 \item{weights_ref}{Same as 'weights_exp' but for the reference forecast.}
+
+\item{cross.val}{A logical indicating whether to compute the thresholds between 
+probabilistics categories in cross-validation.
+The default value is FALSE.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}

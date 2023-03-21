@@ -273,8 +273,8 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
 
   data <- ClimProjDiags::WeightedMean(data = data, lon = data_lons, lat = data_lats, 
                                       region = NULL,
-                                      londim = which(names(dim(data)) == lon_dim), 
-                                      latdim = which(names(dim(data)) == lat_dim))
+                                      londim = lon_dim, 
+                                      latdim = lat_dim)
   
   if (type == 'dcpp'){
     target_dims <- c(sdate_dim, fmonth_dim)

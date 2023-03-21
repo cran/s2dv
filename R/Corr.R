@@ -38,12 +38,16 @@
 #'@param memb A logical value indicating whether to remain 'memb_dim' dimension
 #'  (TRUE) or do ensemble mean over 'memb_dim' (FALSE). Only functional when 
 #'  'memb_dim' is not NULL. The default value is TRUE.
-#'@param pval A logical value indicating whether to compute or not the p-value 
+#'@param pval A logical value indicating whether to return or not the p-value 
 #'  of the test Ho: Corr = 0. The default value is TRUE.
-#'@param conf A logical value indicating whether to retrieve the confidence 
-#'  intervals or not. The default value is TRUE.
-#'@param conf.lev A numeric indicating the confidence level for the 
-#'  regression computation. The default value is 0.95.
+#'@param conf A logical value indicating whether to return or not the confidence 
+#'  intervals. The default value is TRUE.
+#'@param sign A logical value indicating whether to retrieve the statistical
+#'  significance of the test Ho: Corr = 0 based on 'alpha'. The default value is
+#'  FALSE.
+#'@param alpha A numeric indicating the significance level for the statistical
+#'  significance test. The default value is 0.05.
+#'@param conf.lev Deprecated. Use alpha now instead. alpha = 1 - conf.lev. 
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -67,6 +71,9 @@
 #'}
 #'\item{$conf.upper}{
 #'  The upper confidence interval. Only present if \code{conf = TRUE}.
+#'}
+#'\item{$sign}{
+#'  The statistical significance. Only present if \code{sign = TRUE}.
 #'}
 #'
 #'@examples
@@ -100,8 +107,8 @@
 Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset', 
                  comp_dim = NULL, limits = NULL, method = 'pearson', 
                  memb_dim = NULL, memb = TRUE,
-                 pval = TRUE, conf = TRUE,
-                 conf.lev = 0.95, ncores = NULL) {
+                 pval = TRUE, conf = TRUE, sign = FALSE,
+                 alpha = 0.05, conf.lev = NULL, ncores = NULL) {
 
   # Check inputs 
   ## exp and obs (1)
@@ -185,9 +192,19 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   if (!is.logical(conf) | length(conf) > 1) {
     stop("Parameter 'conf' must be one logical value.")
   }
-  ## conf.lev
-  if (!is.numeric(conf.lev) | conf.lev < 0 | conf.lev > 1 | length(conf.lev) > 1) {
-    stop("Parameter 'conf.lev' must be a numeric number between 0 and 1.")
+  ## sign
+  if (!is.logical(sign) | length(sign) > 1) {
+    stop("Parameter 'sign' must be one logical value.")
+  }
+  ## conf.lev 
+  ##NOTE: remove the parameter and the warning after v1.4.0
+  if (!missing("conf.lev")) {
+    .warning(paste0("Argument 'conf.lev' is deprecated. Please use 'alpha' instead. ",
+                    "'alpha' = ", 1 - conf.lev, " is used."), tag = '! Deprecation: ')
+  }
+  ## alpha
+  if (!is.numeric(alpha) | alpha < 0 | alpha > 1 | length(alpha) > 1) {
+    stop("Parameter 'alpha' must be a numeric number between 0 and 1.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -259,14 +276,15 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
                    fun = .Corr,
                    dat_dim = dat_dim, memb_dim = memb_dim,
                    time_dim = time_dim, method = method,
-                   pval = pval, conf = conf, conf.lev = conf.lev, ncores_input = ncores,
+                   pval = pval, conf = conf, sign = sign, alpha = alpha,
                    ncores = ncores)
 
  return(res)
 }
 
-.Corr <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', time_dim = 'sdate', method = 'pearson',
-                  conf = TRUE, pval = TRUE, conf.lev = 0.95, ncores_input = NULL) {
+.Corr <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member',
+		  time_dim = 'sdate', method = 'pearson',
+                  conf = TRUE, pval = TRUE, sign = FALSE, alpha = 0.05) {
   if (is.null(memb_dim)) {
     if (is.null(dat_dim)) {
       # exp: [sdate]
@@ -372,20 +390,20 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
 #    }
 #  }
 
-  if (pval | conf) {
+  if (pval || conf || sign) {
     if (method == "kendall" | method == "spearman") {
       if (!is.null(dat_dim) | !is.null(memb_dim)) {
         tmp <- apply(obs, c(1:length(dim(obs)))[-1], rank)  # for memb_dim = NULL, 2; for memb_dim, c(2, 3)
         names(dim(tmp))[1] <- time_dim
-        eno <- Eno(tmp, time_dim, ncores = ncores_input)
+        eno <- Eno(tmp, time_dim)
       } else {
         tmp <- rank(obs)
         tmp <- array(tmp)
         names(dim(tmp)) <- time_dim
-        eno <- Eno(tmp, time_dim, ncores = ncores_input)
+        eno <- Eno(tmp, time_dim)
       }
     } else if (method == "pearson") {
-      eno <- Eno(obs, time_dim, ncores = ncores_input)  
+      eno <- Eno(obs, time_dim)  
     }
 
     if (is.null(memb_dim)) {
@@ -406,16 +424,19 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
 
 #############old#################
 #This doesn't return error but it's diff from cor.test() when method is spearman and kendall
-  if (pval) {
-    t <-sqrt(CORR * CORR * (eno_expand - 2) / (1 - (CORR ^ 2)))
+  if (pval || sign) {
+    t <- sqrt(CORR * CORR * (eno_expand - 2) / (1 - (CORR ^ 2)))
     p.val <- pt(t, eno_expand - 2, lower.tail = FALSE)
+    if (sign) signif <- !is.na(p.val) & p.val <= alpha
   } 
 ###################################
   if (conf) {
-    conf.lower <- (1 - conf.lev) / 2
+    conf.lower <- alpha / 2
     conf.upper <- 1 - conf.lower
+    suppressWarnings({
     conflow <- tanh(atanh(CORR) + qnorm(conf.lower) / sqrt(eno_expand - 3))
     confhigh <- tanh(atanh(CORR) + qnorm(conf.upper) / sqrt(eno_expand - 3))
+    })
   }
 
 ###################################  
@@ -433,16 +454,15 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
 
 ###################################
 
-  if (pval & conf) {
-    res <- list(corr = CORR, p.val = p.val, 
-                conf.lower = conflow, conf.upper = confhigh)
-  } else if (pval & !conf) {
-    res <- list(corr = CORR, p.val = p.val)
-  } else if (!pval & conf) {
-    res <- list(corr = CORR,
-                conf.lower = conflow, conf.upper = confhigh)
-  } else {
-    res <- list(corr = CORR)
+  res <- list(corr = CORR)
+  if (pval) {
+    res <- c(res, list(p.val = p.val))
+  }
+  if (conf) {
+    res <- c(res, list(conf.lower = conflow, conf.upper = confhigh))
+  }
+  if (sign) {
+    res <- c(res, list(sign = signif))
   }
 
   return(res)

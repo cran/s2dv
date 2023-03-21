@@ -1,10 +1,14 @@
 #'Reorder the dimension of an array
 #'
-#'Reorder the dimension order of a multi-dimensional array  
+#'Reorder the dimensions of a multi-dimensional array. The order can be provided
+#'either as indices or the dimension names. If the order is dimension name, 
+#'the function looks for names(dim(x)). If it doesn't exist, the function checks
+#' if attributes "dimensions" exists; this attribute is in the objects generated
+#' by Load(). 
 #'
-#'@param data An array of which the dimension to be reordered.
+#'@param data An array of which the dimensions to be reordered.
 #'@param order A vector of indices or character strings indicating the new 
-#'  order of the dimension.
+#'  order of the dimensions.
 #'
 #'@return An array which has the same values as parameter 'data' but with 
 #'  different dimension order.
@@ -15,6 +19,11 @@
 #'  print(dim(Reorder(dat1, c('sdate', 'dat', 'lon', 'ftime'))))
 #'  dat2 <- array(c(1:10), dim = c(2, 1, 5))
 #'  print(dim(Reorder(dat2, c(2, 1, 3))))
+#'  attr(dat2, 'dimensions') <- c('sdate', 'time', 'region')
+#'  dat2_reorder <- Reorder(dat2, c('time', 'sdate', 'region'))
+#'  # A character array
+#'  dat3 <- array(paste0('a', 1:24), dim = c(b = 2, c = 3, d = 4))
+#'  dat3_reorder <- Reorder(dat3, c('d', 'c', 'b'))
 #'@export
 Reorder <- function(data, order) {
 
@@ -26,6 +35,9 @@ Reorder <- function(data, order) {
   if (!is.array(data)) {
     stop("Parameter 'data' must be an array.")
   }
+
+  ## If attribute "dimensions" exists
+  attr.dim.reorder <- ifelse(!is.null(attributes(data)$dimensions), TRUE, FALSE)
 
   ## order
   if (is.null(order)) {
@@ -42,7 +54,23 @@ Reorder <- function(data, order) {
     }
   }
   if (is.character(order)) {
-    if (!all(order %in% names(dim(data)))) {
+    if (is.null(names(dim(data)))) {
+      if (attr.dim.reorder) {
+        warning("Found dimension names in attributes. Use them to reorder.")
+        dim_names <- attributes(data)$dimensions
+      } else {
+        stop("The array doesn't have dimension names.")
+      }
+    } else {
+      dim_names <- names(dim(data))
+      if (attr.dim.reorder) {
+        if (any(attributes(data)$dimensions != dim_names)) {
+          warning("Found attribute 'dimensions' has different names from ",
+                  "names(dim(x)). Use the latter one to reorder.")
+        }
+      }
+    }
+    if (!all(order %in% dim_names)) {
       stop("Parameter 'order' do not match the dimension names of parameter 'data'.")
     }
   }
@@ -52,13 +80,12 @@ Reorder <- function(data, order) {
   }
 
 
-
   ###############################
   # Reorder
 
   ## If order is character string, find the indices
   if (is.character(order)) {
-    order <- match(order, names(dim(data)))
+    order <- match(order, dim_names)
   }
 
   ## reorder
@@ -73,10 +100,15 @@ Reorder <- function(data, order) {
     y <- array(1:length(data), dim = dim(data))
     y <- aperm(y, order)
     data <- data[as.vector(y)]
+    dim(data) <- old_dims[order]
   }
-  dim(data) <- old_dims[order]
+  if (attr.dim.reorder) {
+    attr_bk$dimensions <- attr_bk$dimensions[order]
+  }
+
   attributes(data) <- c(attributes(data), attr_bk)
-  data
+
+  return(data)
 }
 
 

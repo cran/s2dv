@@ -53,6 +53,9 @@
 #'  time steps and have more than 45 members if consistency between the weighted
 #'   and unweighted methodologies is desired.
 #'@param weights_ref Same as 'weights_exp' but for the reference forecast.
+#'@param cross.val A logical indicating whether to compute the thresholds between 
+#'  probabilistics categories in cross-validation.
+#'  The default value is FALSE.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -91,7 +94,8 @@
 #'@export
 RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
                  dat_dim = NULL, prob_thresholds = c(1/3, 2/3), indices_for_clim = NULL,
-                 Fair = FALSE, weights = NULL, weights_exp = NULL, weights_ref = NULL, ncores = NULL) {
+                 Fair = FALSE, weights = NULL, weights_exp = NULL, weights_ref = NULL, 
+                 cross.val = FALSE, ncores = NULL) {
  
   # Check inputs
   ## exp, obs, and ref (1)
@@ -198,6 +202,10 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   if (!is.logical(Fair) | length(Fair) > 1) {
     stop("Parameter 'Fair' must be either TRUE or FALSE.")
   }
+  ## cross.val
+  if (!is.logical(cross.val)  | length(cross.val) > 1) {
+    stop("Parameter 'cross.val' must be either TRUE or FALSE.")
+  }
   ## weights
   if (!is.null(weights)) {
     .warning(paste0("Parameter 'weights' is deprecated and will be removed in the next release. ",
@@ -301,6 +309,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
                   indices_for_clim = indices_for_clim, Fair = Fair,
                   weights_exp = weights_exp,
                   weights_ref = weights_ref,
+                  cross.val = cross.val, 
                   ncores = ncores)
   
   return(output)
@@ -309,7 +318,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
 
 .RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', dat_dim = NULL,
                   prob_thresholds = c(1/3, 2/3), indices_for_clim = NULL, Fair = FALSE, 
-                  weights_exp = NULL, weights_ref = NULL) {
+                  weights_exp = NULL, weights_ref = NULL, cross.val = FALSE) {
 
   # exp: [sdate, memb, (dat)]
   # obs: [sdate, (memb), (dat)]
@@ -326,7 +335,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   # RPS of the forecast
   rps_exp <- .RPS(exp = exp, obs = obs, time_dim = time_dim, memb_dim = memb_dim, dat_dim = dat_dim,
                   prob_thresholds = prob_thresholds, indices_for_clim = indices_for_clim,
-                  Fair = Fair, weights = weights_exp)
+                  Fair = Fair, weights = weights_exp, cross.val = cross.val)
   
   # RPS of the reference forecast
   if (is.null(ref)) { ## using climatology as reference forecast
@@ -343,7 +352,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       if (is.null(dim(obs_data))) dim(obs_data) <- c(dim(obs)[1:2])
       # obs_probs: [bin, sdate] 
       obs_probs <- .get_probs(data = obs_data, indices_for_quantiles = indices_for_clim, 
-                              prob_thresholds = prob_thresholds, weights = NULL)
+                              prob_thresholds = prob_thresholds, weights = NULL, cross.val = cross.val)
       # clim_probs: [bin, sdate]
       clim_probs <- c(prob_thresholds[1], diff(prob_thresholds), 1 - prob_thresholds[length(prob_thresholds)])
       clim_probs <- array(clim_probs, dim = dim(obs_probs))
@@ -380,7 +389,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
 
     rps_ref <- .RPS(exp = ref, obs = obs, time_dim = time_dim, memb_dim = memb_dim, dat_dim = dat_dim,
                     prob_thresholds = prob_thresholds, indices_for_clim = indices_for_clim,
-                    Fair = Fair, weights = weights_ref)
+                    Fair = Fair, weights = weights_ref, cross.val = cross.val)
     if (!is.null(dat_dim)) {
       if (isTRUE(remove_dat_dim)) {
         dim(rps_ref) <- dim(rps_ref)[-2]
@@ -399,21 +408,21 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           rpss[i, j] <- 1 - rps_exp_mean[i, j] / rps_ref_mean[j]
-          sign[i, j] <- .RandomWalkTest(skill_A = rps_exp_mean[i, j], skill_B = rps_ref_mean[j])$signif
+          sign[i, j] <- .RandomWalkTest(skill_A = rps_exp[, i, j], skill_B = rps_ref[, j])$sign
         }
       }
     } else {
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           rpss[i, j] <- 1 - rps_exp_mean[i, j] / rps_ref_mean[i, j]
-          sign[i, j] <- .RandomWalkTest(skill_A = rps_exp_mean[i, j], skill_B = rps_ref_mean[i, j])$signif
+          sign[i, j] <- .RandomWalkTest(skill_A = rps_exp[, i, j], skill_B = rps_ref[, i, j])$sign
         }
       }
     }
   } else {
     rpss <- 1 - mean(rps_exp) / mean(rps_ref)
     # Significance
-    sign <- .RandomWalkTest(skill_A = rps_exp, skill_B = rps_ref)$signif
+    sign <- .RandomWalkTest(skill_A = rps_exp, skill_B = rps_ref, sign = T, pval = F)$sign
   }
   
   return(list(rpss = rpss, sign = sign))

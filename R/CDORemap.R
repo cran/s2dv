@@ -629,13 +629,14 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     if (nchar(Sys.which('cdo')[1]) < 1) {
       stop("CDO must be installed in order to use the .CDORemap.")
     }
-    cdo_version <- as.numeric_version(
+    cdo_version <- 
       strsplit(suppressWarnings(system2("cdo", args = '-V', stderr = TRUE))[[1]], ' ')[[1]][5]
-    )
     .warning(paste0("CDORemap: Using CDO version ", cdo_version, "."))
+    cdo_version <- as.numeric_version(unlist(strsplit(cdo_version, "[A-Za-z]", fixed = FALSE))[[1]])
     if ((cdo_version >= as.numeric_version('1.7.0')) && (method == 'con')) {
       method <- 'ycon'
     }
+
     # CDO takes arrays of 3 dimensions or 4 if one of them is unlimited.
     # The unlimited dimension can only be the left-most (right-most in R).
     # There are no restrictions for the dimension names or variable names.
@@ -666,7 +667,10 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     total_slices <- 1
     other_dims_per_chunk <- ifelse(is_irregular, 1, 2)  # 4 (the maximum accepted by CDO) - 2 (lon, lat) = 2.
     if (length(other_dims) > 1 || (length(other_dims) > 0 && (is_irregular))) {
-      if (!(length(dim(data_array)) %in% other_dims)) {
+      # If lat/lon is the last dimension OR the largest other_dims is not the last one, 
+      # reorder the largest other dimension to the last as unlimited dim.
+      if (!(length(dim(data_array)) %in% other_dims) |
+          which.max(dim(data_array)[other_dims]) != length(other_dims)) {
         if (avoid_writes || is_irregular) {
           dims_mod <- dim(data_array)
           dims_mod[which(names(dim(data_array)) %in%
@@ -675,9 +679,9 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           permutation <- (1:length(dim(data_array)))[-dim_to_move]
           permutation <- c(permutation, dim_to_move)
           permutation_back <- sort(permutation, index.return = TRUE)$ix
-          dim_backup <- dim(data_array)
+#          dim_backup <- dim(data_array)
           data_array <- aperm(data_array, permutation)
-          dim(data_array) <- dim_backup[permutation]
+#          dim(data_array) <- dim_backup[permutation]
           other_dims <- which(!(names(dim(data_array)) %in% c(lon_dim, lat_dim)))
         } else {
           # We allow only lon, lat and 1 more dimension per chunk, so 
@@ -695,6 +699,9 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
         total_slices <- prod(dim(slices_to_iterate))
       }
       if ((other_dims_per_chunk > 1) || (other_dims_per_chunk > 0 && is_irregular)) {
+        #NOTE: Why don't we use the second line here? In history, that line was never used.
+        #      The first line sort() can cause problems. If the largest other_dims is always
+        #      the last dim, tail(other_dims) is enough.
         unlimited_dim <- tail(sort(tail(other_dims_ordered_by_size, other_dims_per_chunk)), 1)
         #unlimited_dim <- tail(other_dims)
       }

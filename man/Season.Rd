@@ -2,7 +2,7 @@
 % Please edit documentation in R/Season.R
 \name{Season}
 \alias{Season}
-\title{Compute seasonal mean}
+\title{Compute seasonal mean or other calculations}
 \usage{
 Season(
   data,
@@ -19,16 +19,17 @@ Season(
 \item{data}{A named numeric array with at least one dimension 'time_dim'.}
 
 \item{time_dim}{A character string indicating the name of dimension along
-which the seasonal means are computed. The default value is 'ftime'.}
+which the seasonal mean or other calculations are computed. The default
+value is 'ftime'.}
 
 \item{monini}{An integer indicating what the first month of the time series is. 
 It can be from 1 to 12.}
 
-\item{moninf}{An integer indicating the starting month of the seasonal mean. 
-It can be from 1 to 12.}
+\item{moninf}{An integer indicating the starting month of the seasonal
+calculation. It can be from 1 to 12.}
 
-\item{monsup}{An integer indicating the end month of the seasonal mean. It 
-can be from 1 to 12.}
+\item{monsup}{An integer indicating the end month of the seasonal calculation. 
+It can be from 1 to 12.}
 
 \item{method}{An R function to be applied for seasonal calculation. For
 example, 'sum' can be used for total precipitation. The default value is mean.}
@@ -51,12 +52,12 @@ accounted.
 }
 \examples{
 set.seed(1)
-dat1 <- array(rnorm(144*3), dim = c(member = 2, sdate = 2, ftime = 12*3, lon = 3))
+dat1 <- array(rnorm(144 * 3), dim = c(member = 2, sdate = 2, ftime = 12*3, lon = 3))
 res <- Season(data = dat1, monini = 1, moninf = 1, monsup = 2)
 res <- Season(data = dat1, monini = 10, moninf = 12, monsup = 2)
 dat2 <- dat1
 set.seed(2)
-na <- floor(runif(30, min = 1, max = 144*3))
+na <- floor(runif(30, min = 1, max = 144 * 3))
 dat2[na] <- NA
 res <- Season(data = dat2, monini = 3, moninf = 1, monsup = 2)
 res <- Season(data = dat2, monini = 3, moninf = 1, monsup = 2, na.rm = FALSE)

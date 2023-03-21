@@ -211,8 +211,8 @@ GSAT <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'l
 
   data <- ClimProjDiags::WeightedMean(data = data, lon = data_lons, lat = data_lats,
                                       region = NULL,
-                                      londim = which(names(dim(data)) == lon_dim),
-                                      latdim = which(names(dim(data)) == lat_dim))
+                                      londim = lon_dim,
+                                      latdim = lat_dim)
   
   if (type == 'dcpp'){
     target_dims <- c(sdate_dim, fmonth_dim)

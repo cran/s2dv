@@ -2,50 +2,109 @@
 % Please edit documentation in R/RandomWalkTest.R
 \name{RandomWalkTest}
 \alias{RandomWalkTest}
-\title{Random walk test for skill differences}
+\title{Random Walk test for skill differences}
 \usage{
-RandomWalkTest(skill_A, skill_B, time_dim = "sdate", ncores = NULL)
+RandomWalkTest(
+  skill_A,
+  skill_B,
+  time_dim = "sdate",
+  test.type = "two.sided.approx",
+  alpha = 0.05,
+  pval = TRUE,
+  sign = FALSE,
+  ncores = NULL
+)
 }
 \arguments{
-\item{skill_A}{A numerical array of the time series of the skill with the 
-forecaster A's.}
+\item{skill_A}{A numerical array of the time series of the scores obtained
+with the forecaster A.}
 
-\item{skill_B}{A numerical array of the time series of the skill with the 
-forecaster B's. The dimensions should be identical as parameter 'skill_A'.}
+\item{skill_B}{A numerical array of the time series of the scores obtained
+with the forecaster B. The dimensions should be identical as parameter
+'skill_A'.}
 
 \item{time_dim}{A character string indicating the name of the dimension along
 which the tests are computed. The default value is 'sdate'.}
+
+\item{test.type}{A character string indicating the type of significance test. 
+It can be "two.sided.approx" (to assess whether forecaster A and forecaster
+B are significantly different in terms of skill with a two-sided test using  
+the approximation of DelSole and Tippett, 2016), "two.sided" (to assess 
+whether forecaster A and forecaster B are significantly different in terms
+of skill with an exact two-sided test), "greater" (to assess whether 
+forecaster A shows significantly better skill than forecaster B with a 
+one-sided test for negatively oriented scores), or "less" (to assess whether
+forecaster A shows significantly better skill than forecaster B with a 
+one-sided test for positively oriented scores). The default value is 
+"two.sided.approx".}
+
+\item{alpha}{A numeric of the significance level to be used in the statistical
+significance test (output "sign"). The default value is 0.05.}
+
+\item{pval}{A logical value indicating whether to return the p-value of the
+significance test. The default value is TRUE.}
+
+\item{sign}{A logical value indicating whether to return the statistical
+significance of the test based on 'alpha'. The default value is FALSE.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
 }
 \value{
-A list of 2:
+A list with:
 \item{$score}{
  A numerical array with the same dimensions as the input arrays except 
  'time_dim'. The number of times that forecaster A has been better than 
  forecaster B minus the number of times that forecaster B has been better 
- than forecaster A (for skill positively oriented). If $score is positive 
- forecaster A is better than forecaster B, and if $score is negative 
- forecaster B is better than forecaster B.
+ than forecaster A (for skill negatively oriented, i.e., the lower the 
+ better). If $score is positive, forecaster A has been better more times
+ than forecaster B. If $score is negative, forecaster B has been better more
+ times than forecaster A.
 }
-\item{$signif}{
- A logical array with the same dimensions as the input arrays except 
- 'time_dim'. Whether the difference is significant or not at the 5% 
- significance level.
+\item{$sign}{
+ A logical array of the statistical significance with the same dimensions
+ as the input arrays except "time_dim". Returned only if "sign" is TRUE.
+}
+\item{$p.val}{
+ A numeric array of the p-values with the same dimensions as the input arrays
+ except "time_dim". Returned only if "pval" is TRUE.
 }
 }
 \description{
 Forecast comparison of the skill obtained with 2 forecasts (with respect to a 
-common reference) based on Random Walks, with significance estimate at the 95%
-confidence level, as in DelSole and Tippett (2016).
+common observational reference) based on Random Walks (DelSole and Tippett,
+2016).
+}
+\details{
+Null and alternative hypothesis for "two-sided" test (regardless of the 
+orientation of the scores):\cr
+H0: forecaster A and forecaster B are not different in terms of skill\cr
+H1: forecaster A and forecaster B are different in terms of skill
+
+Null and alternative hypothesis for one-sided "greater" (for negatively 
+oriented scores, i.e., the lower the better) and "less" (for positively 
+oriented scores, i.e., the higher the better) tests:\cr
+H0: forecaster A is not better than forecaster B\cr
+H1: forecaster A is better than forecaster B
+
+Examples of negatively oriented scores are the RPS, RMSE and the Error, while
+the ROC score is a positively oriented score.
+
+DelSole and Tippett (2016) approximation for two-sided test at 95% confidence 
+level: significant if the difference between the number of times that 
+forecaster A has been better than forecaster B and forecaster B has been
+better than forecaster A is above 2sqrt(N) or below -2sqrt(N).
 }
 \examples{
-fcst_A <- array(c(11:50), dim = c(sdate = 10, lat = 2, lon = 2))
-fcst_B <- array(c(21:60), dim = c(sdate = 10, lat = 2, lon = 2))
-reference <- array(1:40, dim = c(sdate = 10, lat = 2, lon = 2))
-skill_A <- abs(fcst_A - reference)
-skill_B <- abs(fcst_B - reference)
-RandomWalkTest(skill_A = skill_A, skill_B = skill_B, time_dim = 'sdate', ncores = 1)
+fcst_A <- array(data = 11:50, dim = c(sdate = 10, lat = 2, lon = 2))
+fcst_B <- array(data = 21:60, dim = c(sdate = 10, lat = 2, lon = 2))
+reference <- array(data = 1:40, dim = c(sdate = 10, lat = 2, lon = 2))
+scores_A <- abs(fcst_A - reference)
+scores_B <- abs(fcst_B - reference)
+res1 <- RandomWalkTest(skill_A = scores_A, skill_B = scores_B, pval = FALSE, sign = TRUE)
+res2 <- RandomWalkTest(skill_A = scores_A, skill_B = scores_B, test.type = 'greater')
 
+}
+\references{
+DelSole and Tippett (2016): https://doi.org/10.1175/MWR-D-15-0218.1
 }

@@ -33,8 +33,8 @@
 #'@param ftime_dim A character string indicating the name of the forecast time 
 #'  dimension of 'exp' and 'obs'. The default value is 'ftime'.
 #'@param ftime_avg A numeric vector of the forecast time steps to average
-#'  across the target period. The default value is 2:4, i.e., from 2nd to 4th 
-#'  forecast time steps.
+#'  across the target period. If average is not needed, set NULL. The default 
+#'  value is 2:4, i.e., from 2nd to 4th forecast time steps.
 #'@param obsproj A logical value indicating whether to compute the NAO index by
 #'  projecting the forecast anomalies onto the leading EOF of observational 
 #'  reference (TRUE) or compute the NAO by first computing the leading 
@@ -48,11 +48,13 @@
 #'A list which contains:
 #'\item{exp}{
 #'  A numeric array of forecast NAO index in verification format with the same 
-#'  dimensions as 'exp' except space_dim and ftime_dim.
+#'  dimensions as 'exp' except space_dim and ftime_dim. If ftime_avg is NULL, 
+#'  ftime_dim remains.
 #'  }
 #'\item{obs}{
 #'  A numeric array of observed NAO index in verification format with the same
-#'  dimensions as 'obs' except space_dim and ftime_dim.
+#'  dimensions as 'obs' except space_dim and ftime_dim. If ftime_avg is NULL,
+#'  ftime_dim remains.
 #'}
 #'
 #'@references
@@ -198,16 +200,18 @@ NAO <- function(exp = NULL, obs = NULL, lat, lon, time_dim = 'sdate',
     }
   }
   ## ftime_avg
-  if (!is.vector(ftime_avg) | !is.integer(ftime_avg)) {
-    stop("Parameter 'ftime_avg' must be an integer vector.")
-  }
-  if (!is.null(exp)) {
-    if (max(ftime_avg) > dim(exp)[ftime_dim] | min(ftime_avg) < 1) {
-      stop("Parameter 'ftime_avg' must be within the range of ftime_dim length.")
+  if (!is.null(ftime_avg)) {
+    if (!is.vector(ftime_avg) | !is.numeric(ftime_avg)) {
+      stop("Parameter 'ftime_avg' must be an integer vector.")
     }
-  } else {
-    if (max(ftime_avg) > dim(obs)[ftime_dim] | min(ftime_avg) < 1) {
-      stop("Parameter 'ftime_avg' must be within the range of ftime_dim length.")
+    if (!is.null(exp)) {
+      if (max(ftime_avg) > dim(exp)[ftime_dim] | min(ftime_avg) < 1) {
+        stop("Parameter 'ftime_avg' must be within the range of ftime_dim length.")
+      }
+    } else {
+      if (max(ftime_avg) > dim(obs)[ftime_dim] | min(ftime_avg) < 1) {
+        stop("Parameter 'ftime_avg' must be within the range of ftime_dim length.")
+      }
     }
   }
   ## sdate >= 2
@@ -281,22 +285,24 @@ NAO <- function(exp = NULL, obs = NULL, lat, lon, time_dim = 'sdate',
   }
   ## ncores
   if (!is.null(ncores)) {
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores == 0 |
       length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
   }
 
   # Average ftime 
-  if (!is.null(exp)) {
-    exp_sub <- ClimProjDiags::Subset(exp, ftime_dim, ftime_avg, drop = FALSE)
-    exp <- MeanDims(exp_sub, ftime_dim, na.rm = TRUE)
-    ## Cross-validated PCs. Fabian. This should be extended to
-    ## nmod and nlt by simple loops. Virginie
-  }
-  if (!is.null(obs)) {
-    obs_sub <- ClimProjDiags::Subset(obs, ftime_dim, ftime_avg, drop = FALSE)
-    obs <- MeanDims(obs_sub, ftime_dim, na.rm = TRUE)
+  if (!is.null(ftime_avg)) {
+    if (!is.null(exp)) {
+      exp_sub <- ClimProjDiags::Subset(exp, ftime_dim, ftime_avg, drop = FALSE)
+      exp <- MeanDims(exp_sub, ftime_dim, na.rm = TRUE)
+      ## Cross-validated PCs. Fabian. This should be extended to
+      ## nmod and nlt by simple loops. Virginie
+    }
+    if (!is.null(obs)) {
+      obs_sub <- ClimProjDiags::Subset(obs, ftime_dim, ftime_avg, drop = FALSE)
+      obs <- MeanDims(obs_sub, ftime_dim, na.rm = TRUE)
+    }
   }
 
   # wght

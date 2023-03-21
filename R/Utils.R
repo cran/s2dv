@@ -1,7 +1,7 @@
 #'@importFrom abind abind
-#'@import plyr
+#'@import plyr ncdf4
 #'@importFrom grDevices png jpeg pdf svg bmp tiff
-#'@import ncdf4
+#'@importFrom easyVerification convert2prob
 
 ## Function to tell if a regexpr() match is a complete match to a specified name
 .IsFullMatch <- function(x, name) {
@@ -1807,5 +1807,91 @@ GradientCatsColorBar <- function(nmap, brks = NULL, cols = NULL, vertical = TRUE
     return(list(brks = brks, cols = cols))
   }
 
+}
+
+.get_probs <- function(data, indices_for_quantiles, prob_thresholds, weights = NULL, cross.val = FALSE) {
+  # if exp: [sdate, memb]
+  # if obs: [sdate, (memb)]
+
+  # Add dim [memb = 1] to obs if it doesn't have memb_dim
+  if (length(dim(data)) == 1) dim(data) <- c(dim(data), 1)
+  
+  # Absolute thresholds
+  if (cross.val) {
+    quantiles <- array(NA, dim = c(bin = length(prob_thresholds), sdate = dim(data)[1]))
+    for (i in 1:dim(data)[1]) {
+      if (is.null(weights)) {
+        quantiles[,i] <- quantile(x = as.vector(data[indices_for_quantiles[which(indices_for_quantiles != i)], ]),
+                              probs = prob_thresholds, type = 8, na.rm = TRUE)
+      } else {
+        # weights: [sdate, memb]
+        sorted_arrays <- .sorted_distributions(data[indices_for_quantiles[which(indices_for_quantiles != i)], ], 
+                                               weights[indices_for_quantiles[which(indices_for_quantiles != i)], ])
+        sorted_data <- sorted_arrays$data
+        cumulative_weights <- sorted_arrays$cumulative_weights
+        quantiles[,i] <- approx(cumulative_weights, sorted_data, prob_thresholds, "linear")$y
+      }
+    }
+  } else {
+    if (is.null(weights)) {
+      quantiles <- quantile(x = as.vector(data[indices_for_quantiles, ]), probs = prob_thresholds, type = 8, na.rm = TRUE)
+    } else {
+      # weights: [sdate, memb]
+      sorted_arrays <- .sorted_distributions(data[indices_for_quantiles, ], weights[indices_for_quantiles, ])
+      sorted_data <- sorted_arrays$data
+      cumulative_weights <- sorted_arrays$cumulative_weights
+      quantiles <- approx(cumulative_weights, sorted_data, prob_thresholds, "linear")$y
+    }
+    quantiles <- array(rep(quantiles, dim(data)[1]),dim = c(bin = length(quantiles), dim(data)[1]))
+  }
+  
+  # quantiles: [bin-1, sdate]
+  # Probabilities
+  probs <- array(dim = c(dim(quantiles)[1] + 1, dim(data)[1])) # [bin, sdate]
+  for (i_time in 1:dim(data)[1]) {
+    if (anyNA(data[i_time, ])) {
+      probs[, i_time] <- rep(NA, dim = dim(quantiles)[1] + 1)
+    } else {
+      if (is.null(weights)) {
+        probs[, i_time] <- colMeans(easyVerification::convert2prob(data[i_time, ], 
+                                                                   threshold = quantiles[,i_time]))
+      } else {
+        sorted_arrays <- .sorted_distributions(data[i_time, ], weights[i_time, ])
+        sorted_data <- sorted_arrays$data
+        cumulative_weights <- sorted_arrays$cumulative_weights
+        # find any quantiles that are outside the data range
+        integrated_probs <- array(dim = dim(quantiles))
+        for (i_quant in 1:dim(quantiles)[1]) {
+          # for thresholds falling under the distribution
+          if (quantiles[i_quant, i_time] < min(sorted_data)) {
+            integrated_probs[i_quant, i_time] <- 0 
+          # for thresholds falling over the distribution
+          } else if (max(sorted_data) < quantiles[i_quant, i_time]) {
+            integrated_probs[i_quant, i_time] <- 1
+          } else {
+            integrated_probs[i_quant, i_time] <- approx(sorted_data, cumulative_weights, quantiles[i_quant, i_time], 
+                                                "linear")$y
+          }
+        }
+        probs[, i_time] <- append(integrated_probs[,i_time], 1) - append(0, integrated_probs[,i_time])
+        if (min(probs[, i_time]) < 0 | max(probs[, i_time]) > 1) {
+          stop(paste0("Probability in i_time = ", i_time, " is out of [0, 1]."))
+        } 
+      }
+    }
+  }
+  return(probs)
+}
+
+.sorted_distributions <- function(data_vector, weights_vector) {
+  weights_vector <- as.vector(weights_vector)
+  data_vector <- as.vector(data_vector)
+  weights_vector <- weights_vector / sum(weights_vector) # normalize to 1
+  sorter <- order(data_vector)
+  sorted_weights <- weights_vector[sorter]
+  cumulative_weights <- cumsum(sorted_weights) - 0.5 * sorted_weights
+  cumulative_weights <- cumulative_weights - cumulative_weights[1] # fix the 0
+  cumulative_weights <- cumulative_weights / cumulative_weights[length(cumulative_weights)] # fix the 1
+  return(list("data" = data_vector[sorter], "cumulative_weights" = cumulative_weights))
 }
 

@@ -12,8 +12,9 @@ clim.colors(n, palette = "bluered")
 \arguments{
 \item{palette}{Which type of palette to generate: from blue through white 
 to red ('bluered'), from red through white to blue ('redblue'), from 
-yellow through orange to red ('yellowred'), or from red through orange 
-to red ('redyellow').}
+yellow through orange to red ('yellowred'),  from red through orange to
+red ('redyellow'), from purple through white to orange ('purpleorange'),
+and from orange through white to purple ('orangepurple').}
 
 \item{n}{Number of colors to generate.}
 }

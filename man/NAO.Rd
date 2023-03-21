@@ -50,8 +50,8 @@ of 'ano'. The default value is c('lat', 'lon').}
 dimension of 'exp' and 'obs'. The default value is 'ftime'.}
 
 \item{ftime_avg}{A numeric vector of the forecast time steps to average
-across the target period. The default value is 2:4, i.e., from 2nd to 4th 
-forecast time steps.}
+across the target period. If average is not needed, set NULL. The default 
+value is 2:4, i.e., from 2nd to 4th forecast time steps.}
 
 \item{obsproj}{A logical value indicating whether to compute the NAO index by
 projecting the forecast anomalies onto the leading EOF of observational 
@@ -67,11 +67,13 @@ computation. The default value is NULL.}
 A list which contains:
 \item{exp}{
  A numeric array of forecast NAO index in verification format with the same 
- dimensions as 'exp' except space_dim and ftime_dim.
+ dimensions as 'exp' except space_dim and ftime_dim. If ftime_avg is NULL, 
+ ftime_dim remains.
  }
 \item{obs}{
  A numeric array of observed NAO index in verification format with the same
- dimensions as 'obs' except space_dim and ftime_dim.
+ dimensions as 'obs' except space_dim and ftime_dim. If ftime_avg is NULL,
+ ftime_dim remains.
 }
 }
 \description{
