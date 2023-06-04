@@ -1,3 +1,6 @@
+# s2dv 1.4.1 (Release date: 2023-06-02)
+- Resubmit to CRAN because it was archived due to dependency issue.
+
 # s2dv 1.4.0 (Release date: 2023-03-21)
 **Bugfixes**  
 - AbsBiasSS() significance test bugfix  

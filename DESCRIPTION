@@ -1,6 +1,6 @@
 Package: s2dv
 Title: A Set of Common Tools for Seasonal to Decadal Verification
-Version: 1.4.0
+Version: 1.4.1
 Authors@R: c(
     person("BSC-CNS", role = c("aut", "cph")),
     person("An-Chi", "Ho", , "an.ho@bsc.es", role = c("aut", "cre")),
@@ -36,7 +36,7 @@ SystemRequirements: cdo
 Encoding: UTF-8
 RoxygenNote: 7.2.0
 NeedsCompilation: no
-Packaged: 2023-03-21 11:08:35 UTC; aho
+Packaged: 2023-06-02 19:16:21 UTC; aho
 Author: BSC-CNS [aut, cph],
   An-Chi Ho [aut, cre],
   Nuria Perez-Zanon [aut],
@@ -49,4 +49,4 @@ Author: BSC-CNS [aut, cph],
   Eva Rifà [ctb]
 Maintainer: An-Chi Ho <an.ho@bsc.es>
 Repository: CRAN
-Date/Publication: 2023-03-21 12:40:02 UTC
+Date/Publication: 2023-06-04 12:20:02 UTC
