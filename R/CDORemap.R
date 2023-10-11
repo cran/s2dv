@@ -76,6 +76,9 @@
 #'@param write_dir Path to the directory where to create the intermediate 
 #'  files for CDO to work. By default, the R session temporary directory is 
 #'  used (\code{tempdir()}).
+#'@param ncores An integer indicating the number of theads used for 
+#'  interpolation (i.e., \code{-P} in cdo command.) The default value is NULL
+#'  and \code{-P} is not used.
 #'
 #'@return A list with the following components:
 #'  \item{'data_array'}{The interpolated data array (if an input array 
@@ -223,7 +226,8 @@
 #'@export
 CDORemap <- function(data_array = NULL, lons, lats, grid, method, 
                      avoid_writes = TRUE, crop = TRUE,
-                     force_remap = FALSE, write_dir = tempdir()) {  #, mask = NULL) {
+                     force_remap = FALSE, write_dir = tempdir(),
+                     ncores = NULL) {  #, mask = NULL) {
   .isRegularVector <- function(x, tol = 0.1) {
     if (length(x) < 2) {
       #stop("The provided vector must be of length 2 or greater.")
@@ -564,6 +568,13 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
   if (!dir.exists(write_dir)) {
     stop("Parameter 'write_dir' must point to an existing directory.")
   }
+  # Check ncores
+  if (!is.null(ncores)) {
+    if (!is.numeric(ncores) | any(ncores %% 1 != 0) | any(ncores < 0) |
+        length(ncores) > 1) {
+      stop("Parameter 'ncores' must be a positive integer.")
+    }
+  }
 #  if (!is.null(mask)) {
 #    if (!is.numeric(mask) || !is.array(mask)) {
 #      stop("Parameter 'mask' must be a numeric array.")
@@ -814,9 +825,17 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
                                            ',', format(lat_extremes[1], scientific = FALSE), 
                                            ',', format(lat_extremes[2], scientific = FALSE), ' -')
       }
-      err <- try({
-        system(paste0("cdo -s ", sellonlatbox, "remap", method, ",", grid, " ", tmp_file, " ", tmp_file2), ignore.stdout = T, ignore.stderr = T)
-      })
+      if (is.null(ncores)) {
+        err <- try({
+          system(paste0("cdo -s ", sellonlatbox, "remap", method, ",", grid, " ", 
+                        tmp_file, " ", tmp_file2), ignore.stdout = T, ignore.stderr = T)
+        })
+      } else {
+        err <- try({
+          system(paste0("cdo -P ", ncores," -s ", sellonlatbox, "remap", method, ",", 
+                        grid, " ", tmp_file, " ", tmp_file2), ignore.stdout = T, ignore.stderr = T)
+        })
+      }
       file.remove(tmp_file)
       if (is(err, 'try-error') || err > 0) {
         stop("CDO remap failed. Possible problem: parameter 'grid'.")

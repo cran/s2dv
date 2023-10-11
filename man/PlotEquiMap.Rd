@@ -404,5 +404,5 @@ sampleData <- s2dv:::.LoadSampleData('tos', c('experiment'),
  }
 PlotEquiMap(sampleData$mod[1, 1, 1, 1, , ], sampleData$lon, sampleData$lat, 
            toptitle = 'Predicted sea surface temperature for Nov 1960 from 1st Nov',
-           sizetit = 0.5)
+           title_scale = 0.5)
 }

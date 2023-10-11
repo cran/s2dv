@@ -8,22 +8,22 @@ RatioPredictableComponents(
   exp,
   obs,
   time_dim = "year",
-  member_dim = "member",
+  memb_dim = "member",
   na.rm = FALSE,
   ncores = NULL
 )
 }
 \arguments{
-\item{exp}{A numerical array with, at least, 'time_dim' and 'member_dim' 
+\item{exp}{A numerical array with, at least, 'time_dim' and 'memb_dim' 
 dimensions.}
 
 \item{obs}{A numerical array with the same dimensions than 'exp' except the
-'member_dim' dimension.}
+'memb_dim' dimension.}
 
 \item{time_dim}{A character string indicating the name of the time dimension.
 The default value is 'year'.}
 
-\item{member_dim}{A character string indicating the name of the member 
+\item{memb_dim}{A character string indicating the name of the member 
 dimension. The default value is 'member'.}
 
 \item{na.rm}{A logical value indicating whether to remove NA values during
@@ -34,7 +34,7 @@ computation. The default value is NULL.}
 }
 \value{
 An array of the ratio of the predictable components. it has the same
- dimensions as 'exp' except 'time_dim' and 'member_dim' dimensions.
+ dimensions as 'exp' except 'time_dim' and 'memb_dim' dimensions.
 }
 \description{
 This function computes the ratio of predictable components (RPC; Eade et al., 2014).

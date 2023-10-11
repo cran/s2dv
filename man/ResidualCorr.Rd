@@ -12,8 +12,10 @@ ResidualCorr(
   time_dim = "sdate",
   memb_dim = NULL,
   method = "pearson",
-  alpha = NULL,
+  alpha = 0.05,
   handle.na = "return.na",
+  pval = TRUE,
+  sign = FALSE,
   ncores = NULL
 )
 }
@@ -47,8 +49,7 @@ computed ("pearson", "kendall", or "spearman"). The default value is
 "pearson".}
 
 \item{alpha}{A numeric of the significance level to be used in the statistical
-significance test. If it is a numeric, "sign" will be returned. If NULL, the
-p-value will be returned instead. The default value is NULL.}
+significance test (output "sign"). The default value is 0.05.}
 
 \item{handle.na}{A charcater string indicating how to handle missing values.
 If "return.na", NAs will be returned for the cases that contain at least one
@@ -56,6 +57,13 @@ NA in "exp", "ref", or "obs". If "only.complete.triplets", only the time
 steps with no missing values in all "exp", "ref", and "obs" will be used. If
 "na.fail", an error will arise if any of "exp", "ref", or "obs" contains any
 NA. The default value is "return.na".}
+
+\item{pval}{A logical value indicating whether to return the p-value of the
+significance test Ho: DiffCorr = 0. The default value is TRUE.}
+
+\item{sign}{A logical value indicating whether to return the statistical
+significance of the test Ho: DiffCorr = 0 based on 'alpha'. The default
+value is FALSE.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
@@ -69,12 +77,12 @@ A list with:
 \item{$sign}{
  A logical array indicating whether the residual correlation is statistically 
  significant or not with the same dimensions as the input arrays except "time_dim"
- (and "memb_dim" if provided). Returned only if "alpha" is a numeric.
+ (and "memb_dim" if provided). Returned only if "sign" is TRUE.
 }
 \item{$p.val}{
  A numeric array of the p-values with the same dimensions as the input arrays
- except "time_dim" (and "memb_dim" if provided). Returned only if "alpha" is
- NULL.
+ except "time_dim" (and "memb_dim" if provided). Returned only if "pval" is
+ TRUE.
 }
 }
 \description{

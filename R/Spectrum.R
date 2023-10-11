@@ -15,8 +15,8 @@
 #'  evenly spaced in time.
 #'@param time_dim A character string indicating the dimension along which to 
 #'  compute the frequency spectrum. The default value is 'ftime'.
-#'@param conf.lev A numeric indicating the confidence level for the Monte-Carlo
-#'  significance test. The default value is 0.95.
+#'@param alpha A numeric indicating the significance level for the Monte-Carlo
+#'  significance test. The default value is 0.05.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -45,7 +45,7 @@
 #'@import multiApply
 #'@importFrom stats spectrum cor rnorm sd quantile
 #'@export
-Spectrum <- function(data, time_dim = 'ftime', conf.lev = 0.95, ncores = NULL) {
+Spectrum <- function(data, time_dim = 'ftime', alpha = 0.05, ncores = NULL) {
 
   # Check inputs 
   ## data
@@ -69,9 +69,9 @@ Spectrum <- function(data, time_dim = 'ftime', conf.lev = 0.95, ncores = NULL) {
   if (!time_dim %in% names(dim(data))) {
     stop("Parameter 'time_dim' is not found in 'data' dimension.")
   }
-  ## conf.lev
-  if (!is.numeric(conf.lev) | conf.lev < 0 | conf.lev > 1 | length(conf.lev) > 1) {
-    stop("Parameter 'conf.lev' must be a numeric number between 0 and 1.")
+  ## alpha
+  if (!is.numeric(alpha) | alpha < 0 | alpha > 1 | length(alpha) > 1) {
+    stop("Parameter 'alpha' must be a numeric number between 0 and 1.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -88,13 +88,13 @@ Spectrum <- function(data, time_dim = 'ftime', conf.lev = 0.95, ncores = NULL) {
                   target_dims = time_dim,
                   fun = .Spectrum,
                   output_dims = c(time_dim, 'stats'),
-                  conf.lev = conf.lev,
+                  alpha = alpha,
                   ncores = ncores)$output1
 
   return(output)
 }
 
-.Spectrum <- function(data, conf.lev = 0.95) {
+.Spectrum <- function(data, alpha = 0.05) {
   # data: [time]
 
   data <- data[is.na(data) == FALSE]
@@ -119,7 +119,7 @@ Spectrum <- function(data, time_dim = 'ftime', conf.lev = 0.95, ncores = NULL) {
       store[jt, ] <- toto2$spec
     }
     for (jx in 1:length(tmp$spec)) {
-      output[jx, 3] <- quantile(store[, jx], conf.lev)
+      output[jx, 3] <- quantile(store[, jx], 1 - alpha)
     }
   } else {
     output <- NA

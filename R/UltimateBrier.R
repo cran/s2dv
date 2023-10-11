@@ -12,7 +12,7 @@
 #'  'memb_dim', the length  must be 1. The dimensions should be consistent with
 #'  'exp' except 'dat_dim' and 'memb_dim'. It can be provided by \code{Ano()}. 
 #'@param dat_dim A character string indicating the name of the dataset 
-#'  dimension in 'exp' and 'obs'. The default value is 'dataset'. If there is no dataset 
+#'  dimension in 'exp' and 'obs'. The default value is NULL (no dataset).
 #'  dimension, set NULL.
 #'@param memb_dim A character string indicating the name of the member 
 #'  dimension in 'exp' (and 'obs') for ensemble mean calculation. The default
@@ -81,12 +81,12 @@
 #'clim <- Clim(sampleData$mod, sampleData$obs)
 #'exp <- Ano(sampleData$mod, clim$clim_exp)
 #'obs <- Ano(sampleData$obs, clim$clim_obs)
-#'bs <- UltimateBrier(exp, obs)
-#'bss <- UltimateBrier(exp, obs, type = 'BSS')
+#'bs <- UltimateBrier(exp, obs, dat_dim = 'dataset')
+#'bss <- UltimateBrier(exp, obs, type = 'BSS', dat_dim = 'dataset')
 #'
 #'@import SpecsVerification plyr multiApply
 #'@export
-UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', time_dim = 'sdate', 
+UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', time_dim = 'sdate', 
                           quantile = TRUE, thr = c(5/100, 95/100), type = 'BS', 
                           decomposition = TRUE, ncores = NULL) {
 
@@ -223,7 +223,7 @@ UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', ti
   return(res)
 }
 
-.UltimateBrier <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member', thr = c(5/100, 95/100), 
+.UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', thr = c(5/100, 95/100), 
                            type = 'BS', decomposition = TRUE) {
   # If exp and obs are probablistics
   # exp: [sdate, nexp]

@@ -19,8 +19,10 @@
 #'  or not. The default value is TRUE.
 #'@param conf A logical value indicating whether to retrieve the confidence 
 #'  intervals or not. The default value is TRUE.
-#'@param conf.lev A numeric indicating the confidence level for the 
-#'  regression computation. The default value is 0.95.
+#'@param sign A logical value indicating whether to compute or not the 
+#'  statistical significance of the test The default value is FALSE.
+#'@param alpha A numeric of the significance level to be used in the 
+#'  statistical significance test. The default value is 0.05.
 #'@param na.action A function or an integer. A function (e.g., na.omit, 
 #'  na.exclude, na.fail, na.pass) indicates what should happen when the data 
 #'  contain NAs. A numeric indicates the maximum number of NA position (it
@@ -60,6 +62,10 @@
 #'  A numeric array with same dimensions as parameter 'daty' and 'datax' except
 #'  the 'reg_dim' dimension, The array contains the p-value.
 #'}
+#'\item{sign}{
+#'  A logical array of the statistical significance of the regression with the
+#'  same dimensions as $regression. Only present if \code{sign = TRUE}.
+#'}
 #'\item{$filtered}{
 #'  A numeric array with the same dimension as paramter 'datay' and 'datax', 
 #'  the filtered datay from the regression onto datax along the 'reg_dim' 
@@ -74,13 +80,13 @@
 #'datax <- sampleData$obs[, 1, , ]
 #'names(dim(datax)) <- c('sdate', 'ftime')
 #'res1 <- Regression(datay, datax, formula = y~poly(x, 2, raw = TRUE))
-#'res2 <- Regression(datay, datax, conf.lev = 0.9)
+#'res2 <- Regression(datay, datax, alpha = 0.1)
 #'
 #'@importFrom stats lm na.omit confint
 #'@import multiApply
 #'@export
 Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x, 
-                       pval = TRUE, conf = TRUE, conf.lev = 0.95,
+                       pval = TRUE, conf = TRUE, sign = FALSE, alpha = 0.05,
                        na.action = na.omit, ncores = NULL) {
 
   # Check inputs 
@@ -134,9 +140,13 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
   if (!is.logical(conf) | length(conf) > 1) {
     stop("Parameter 'conf' must be one logical value.")
   }
-  ##conf.lev
-  if (!is.numeric(conf.lev) | conf.lev < 0 | conf.lev > 1 | length(conf.lev) > 1) {
-    stop("Parameter 'conf.lev' must be a numeric number between 0 and 1.")
+  ## sign
+  if (!is.logical(sign) | length(sign) > 1) {
+    stop("Parameter 'sign' must be one logical value.")
+  }
+  ## alpha
+  if (!is.numeric(alpha) | alpha < 0 | alpha > 1 | length(alpha) > 1) {
+    stop("Parameter 'alpha' must be a numeric number between 0 and 1.")
   }
   ## na.action
   if (!is.function(na.action) & !is.numeric(na.action)) {
@@ -169,33 +179,27 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
 
   ###############################
   # Calculate Regression
-    if (conf & pval) {
-    output_dims <- list(regression = 'stats', conf.lower = 'stats',
-                        conf.upper = 'stats', p.val = NULL, filtered = reg_dim)
-  } else if (conf & !pval) {
-    output_dims <- list(regression = 'stats', conf.lower = 'stats',
-                        conf.upper = 'stats', filtered = reg_dim)
-  } else if (!conf & pval) {
-    output_dims <- list(regression = 'stats',
-                        p.val = NULL, filtered = reg_dim)
-  } else if (!conf & !pval) {
-    output_dims <- list(regression = 'stats', filtered = reg_dim)
-  }
-  
+
+  ## output_dims
+  output_dims <- list(regression = 'stats', filtered = reg_dim)
+  if (conf) output_dims <- c(output_dims, list(conf.lower = 'stats', conf.upper = 'stats'))
+  if (pval) output_dims <- c(output_dims, list(p.val = NULL))
+  if (sign) output_dims <- c(output_dims, list(sign = NULL))
+
   res <- Apply(list(datay, datax), 
                target_dims = reg_dim, 
                output_dims = output_dims,
                fun = .Regression, 
-               formula = formula, pval = pval, conf = conf,
-               conf.lev = conf.lev, na.action = na.action, 
+               formula = formula, pval = pval, conf = conf, sign = sign,
+               alpha = alpha, na.action = na.action, 
                ncores = ncores)
 
   return(invisible(res))
 }
 
 
-.Regression <- function(y, x, formula = y~x, pval = TRUE, conf = TRUE, 
-                        conf.lev = 0.95, na.action = na.omit) {
+.Regression <- function(y, x, formula = y~x, pval = TRUE, conf = TRUE,
+                        sign = FALSE, alpha = 0.05, na.action = na.omit) {
 
   NApos <- 1:length(x)
   NApos[which(is.na(x) | is.na(y))] <- NA
@@ -211,12 +215,13 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
   lm.out <- lm(formula, data = data.frame(x = x, y = y), na.action = na.action)
   coeff <- lm.out$coefficients
   if (conf) {
-    conf.lower <- confint(lm.out, level = conf.lev)[, 1]
-    conf.upper <- confint(lm.out, level = conf.lev)[, 2]
+    conf.lower <- confint(lm.out, level = 1 - alpha)[, 1]
+    conf.upper <- confint(lm.out, level = 1 - alpha)[, 2]
   }
-  if (pval) {
+  if (pval | sign) {
     f <- summary(lm.out)$fstatistic
-    p.val <- pf(f[1], f[2], f[3],lower.tail = F)
+    p.val <- pf(f[1], f[2], f[3], lower.tail = F)
+    if (sign) signif <- !is.na(p.val) & p.val <= alpha
   }
   filtered[!is.na(NApos)] <- y[!is.na(NApos)] - lm.out$fitted.values
 
@@ -228,25 +233,17 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
         conf.lower[which(!is.na(conf.lower))] <- NA
         conf.upper[which(!is.na(conf.upper))] <- NA
       }
-      if (pval) {
-        p.val[which(!is.na(p.val))] <- NA
-      }
+      if (pval) p.val[which(!is.na(p.val))] <- NA
+      if (sign) signif[which(!is.na(signif))] <- NA
       filtered[which(!is.na(filtered))] <- NA
     }
   }
 
-  if (conf & pval) {
-    return(list(regression = coeff, conf.lower = conf.lower, conf.upper = conf.upper, 
-                p.val = p.val, filtered = filtered))
-  } else if (conf & !pval) {
-    return(list(regression = coeff, conf.lower = conf.lower, conf.upper = conf.upper,
-                filtered = filtered))
-  } else if (!conf & pval) {
-    return(list(regression = coeff,
-                p.val = p.val, filtered = filtered))
-  } else if (!conf & !pval) {
-    return(list(regression = coeff, filtered = filtered))
-  }
+  res <- list(regression = coeff, filtered = filtered)
+  if (conf) res <- c(res, list(conf.lower = conf.lower, conf.upper = conf.upper))
+  if (pval) res <- c(res, list(p.val = p.val))
+  if (sign) res <- c(res, list(sign = signif))
 
+  return(res)
 }
 

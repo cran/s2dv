@@ -10,7 +10,7 @@ Spread(
   compute_dim = "member",
   na.rm = TRUE,
   conf = TRUE,
-  conf.lev = 0.95,
+  alpha = 0.05,
   ncores = NULL
 )
 }
@@ -27,8 +27,8 @@ kept (FALSE) for computation. The default value is TRUE.}
 \item{conf}{A logical value indicating whether to compute the confidence 
 intervals or not. The default value is TRUE.}
 
-\item{conf.lev}{A numeric value of the confidence level for the computation. 
-The default value is 0.95.}
+\item{alpha}{A numeric of the significance level to be used in the 
+statistical significance test. The default value is 0.05.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
@@ -72,7 +72,9 @@ smooth_ano_exp_m_sub <- smooth_ano_exp - InsertDim(MeanDims(smooth_ano_exp, 'mem
                                                   posdim = 3, 
                                                   lendim = dim(smooth_ano_exp)['member'], 
                                                   name = 'member')
+suppressWarnings({
 spread <- Spread(smooth_ano_exp_m_sub, compute_dim = c('member', 'sdate'))
+})
 
 \dontrun{
 PlotVsLTime(Reorder(spread$iqr, c('dataset', 'stats', 'ftime')), 

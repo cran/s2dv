@@ -12,6 +12,9 @@ CRPSS(
   memb_dim = "member",
   dat_dim = NULL,
   Fair = FALSE,
+  clim.cross.val = TRUE,
+  sig_method.type = "two.sided.approx",
+  alpha = 0.05,
   ncores = NULL
 )
 }
@@ -27,9 +30,12 @@ and 'dat_dim'.}
 least time and member dimension. The dimensions must be the same as 'exp' 
 except 'memb_dim' and 'dat_dim'. If there is only one reference dataset,
 it should not have dataset dimension. If there is corresponding reference 
-for each experiement, the dataset dimension must have the same length as in
+for each experiment, the dataset dimension must have the same length as in
 'exp'. If 'ref' is NULL, the climatological forecast is used as reference 
-forecast. The default value is NULL.}
+forecast. To build the climatological forecast, the observed values along
+the whole time period are used as different members for all time steps. The 
+parameter 'clim.cross.val' controls whether to build it using 
+cross-validation. The default value is NULL.}
 
 \item{time_dim}{A character string indicating the name of the time dimension.
 The default value is 'sdate'.}
@@ -45,6 +51,19 @@ The default value is NULL.}
 \item{Fair}{A logical indicating whether to compute the FairCRPSS (the 
 potential CRPSS that the forecast would have with an infinite ensemble 
 size). The default value is FALSE.}
+
+\item{clim.cross.val}{A logical indicating whether to build the climatological
+forecast in cross-validation (i.e. excluding the observed value of the time 
+step when building the probabilistic distribution function for that 
+particular time step). Only used if 'ref' is NULL. The default value is TRUE.}
+
+\item{sig_method.type}{A character string indicating the test type of the
+significance method. Check \code{RandomWalkTest()} parameter 
+\code{test.type} for details. The default is 'two.sided.approx', which is 
+the default of \code{RandomWalkTest()}.}
+
+\item{alpha}{A numeric of the significance level to be used in the statistical
+significance test. The default value is 0.05.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
@@ -70,11 +89,10 @@ worsening with respect to a reference forecast. The CRPSS ranges between minus
 infinite and 1. If the CRPSS is positive, it indicates that the forecast has 
 higher skill than the reference forecast, while a negative value means that it
 has a lower skill. Examples of reference forecasts are the climatological 
-forecast (same probabilities for all categories for all time steps), 
-persistence, a previous model version, or another model. It is computed as 
-CRPSS = 1 - CRPS_exp / CRPS_ref. The statistical significance is obtained 
-based on a Random Walk test at the 95% confidence level (DelSole and Tippett,
-2016).
+forecast, persistence, a previous model version, or another model. It is 
+computed as 'CRPSS = 1 - CRPS_exp / CRPS_ref. The statistical significance is 
+obtained based on a Random Walk test at the specified confidence level 
+(DelSole and Tippett, 2016).
 }
 \examples{
 exp <- array(rnorm(1000), dim = c(lat = 3, lon = 2, member = 10, sdate = 50))

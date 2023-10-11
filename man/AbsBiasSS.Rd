@@ -12,6 +12,8 @@ AbsBiasSS(
   memb_dim = NULL,
   dat_dim = NULL,
   na.rm = FALSE,
+  sig_method.type = "two.sided.approx",
+  alpha = 0.05,
   ncores = NULL
 )
 }
@@ -45,6 +47,14 @@ The default value is NULL.}
 \item{na.rm}{A logical value indicating if NAs should be removed (TRUE) or
 kept (FALSE) for computation. The default value is FALSE.}
 
+\item{sig_method.type}{A character string indicating the test type of the
+significance method. Check \code{RandomWalkTest()} parameter 
+\code{test.type} for details. The default is 'two.sided.approx', which is 
+the default of \code{RandomWalkTest()}.}
+
+\item{alpha}{A numeric of the significance level to be used in the statistical
+significance test. The default value is 0.05.}
+
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
 }
@@ -71,9 +81,9 @@ forecast, while negative values indicate that it has a lower skill. Examples
 of reference forecasts are the climatological forecast (average of the 
 observations), a previous model version, or another model. It is computed as
 \code{AbsBiasSS = 1 - AbsBias_exp / AbsBias_ref}. The statistical significance
-is obtained based on a Random Walk test at the 95% confidence level (DelSole 
-and Tippett, 2016). If there is more than one dataset, the result will be 
-computed for each pair of exp and obs data.
+is obtained based on a Random Walk test at the confidence level specified
+(DelSole and Tippett, 2016). If there is more than one dataset, the result 
+will be computed for each pair of exp and obs data.
 }
 \examples{
 exp <- array(rnorm(1000), dim = c(dat = 1, lat = 3, lon = 5, member = 10, sdate = 50))

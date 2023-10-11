@@ -1,17 +1,16 @@
-#'Compute root mean square error
+#'Compute mean square error
 #'
-#'Compute the root mean square error for an array of forecasts and an array of
-#'observations. The RMSEs are computed along time_dim, the dimension which 
-#'corresponds to the start date dimension. If comp_dim is given, the RMSEs are 
+#'Compute the mean square error for an array of forecasts and an array of
+#'observations. The MSEs are computed along time_dim, the dimension which 
+#'corresponds to the start date dimension. If comp_dim is given, the MSEs are 
 #'computed only if obs along the comp_dim dimension are complete between 
 #'limits[1] and limits[2], i.e. there are no NAs between limits[1] and 
-#'limits[2]. This option can be activated if the user wishes to account only 
+#'limits[2]. This option can be activated if the user wants to account only 
 #'for the forecasts for which the corresponding observations are available at 
 #'all leadtimes.\cr
 #'The confidence interval is computed by the chi2 distribution.\cr
 #'
-#'@param exp A named numeric array of experimental data, with at least 
-#'  'time_dim' dimension. It can also be a vector with the same length as 'obs'.
+#'@param exp A named numeric array of experimental data, with at least #'  'time_dim' dimension. It can also be a vector with the same length as 'obs'.
 #'@param obs A named numeric array of observational data, same dimensions as  
 #'  parameter 'exp' except along 'dat_dim' and 'memb_dim'. It can also be a 
 #'  vector with the same length as 'exp'.
@@ -22,7 +21,7 @@
 #'  already the ensemble mean. The default value is NULL.
 #'@param dat_dim A character string indicating the name of dataset or member 
 #'  (nobs/nexp) dimension. The datasets of exp and obs will be paired and 
-#'  computed RMS for each pair. The default value is NULL.
+#'  computed MSE for each pair. The default value is NULL.
 #'@param comp_dim A character string indicating the name of dimension along which
 #'  obs is taken into account only if it is complete. The default value
 #'  is NULL.
@@ -39,10 +38,9 @@
 #'A list containing the numeric arrays with dimension:\cr 
 #'  c(nexp, nobs, all other dimensions of exp except time_dim).\cr
 #'nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
-#'number of observation (i.e., dat_dim in obs). If dat_dim is NULL, nexp and 
-#'nobs are omitted.\cr
-#'\item{$rms}{
-#'  The root mean square error. 
+#'number of observation (i.e., dat_dim in obs).\cr
+#'\item{$mse}{
+#'  The mean square error. 
 #'}
 #'\item{$conf.lower}{
 #'  The lower confidence interval. Only present if \code{conf = TRUE}.
@@ -59,26 +57,25 @@
 #'ano_obs <- Ano(sampleData$obs, clim$clim_obs)
 #'smooth_ano_exp <- Smoothing(ano_exp, runmeanlen = 12, time_dim = 'ftime')
 #'smooth_ano_obs <- Smoothing(ano_obs, runmeanlen = 12, time_dim = 'ftime')
-#'res <- RMS(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', 
+#'res <- MSE(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', 
 #'           comp_dim = 'ftime', limits = c(7, 54))
 #'
 #'# Synthetic data:
 #'exp1 <- array(rnorm(120), dim = c(dat = 3, sdate = 10, ftime = 4))
 #'obs1 <- array(rnorm(80),  dim = c(dat = 2, sdate = 10, ftime = 4))
-#'na <- floor(runif(10, min = 1, max = 80))
-#'obs1[na] <- NA
-#'res1 <- RMS(exp1, obs1, comp_dim = 'ftime', dat_dim = 'dat')
+#'res1 <- MSE(exp1, obs1, comp_dim = 'ftime', dat_dim = 'dat')
 #'  
 #'exp2 <- array(rnorm(20), dim = c(sdate = 5, member = 4))
 #'obs2 <- array(rnorm(10),  dim = c(sdate = 5, member = 2))
-#'res2 <- RMS(exp2, obs2, memb_dim = 'member')
-#'  
+#'res2 <- MSE(exp2, obs2, memb_dim = 'member')
+#'
 #'@import multiApply
 #'@importFrom ClimProjDiags Subset
 #'@importFrom stats qchisq
 #'@export
-RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL, 
-                comp_dim = NULL, limits = NULL, conf = TRUE, alpha = 0.05, ncores = NULL) {       
+MSE <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, memb_dim = NULL,
+                comp_dim = NULL, limits = NULL, conf = TRUE, alpha = 0.05, ncores = NULL) {
+
   # Check inputs 
   ## exp and obs (1)
   if (is.null(exp) | is.null(obs)) {
@@ -101,8 +98,8 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
     stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
                 "dimensions time_dim and dat_dim, or vector of same length."))
   }
-  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
-      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
+  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
+     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## time_dim
@@ -118,7 +115,7 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
       stop("Parameter 'memb_dim' must be a character string.")
     }
     if (!memb_dim %in% names(dim(exp)) & !memb_dim %in% names(dim(obs))) {
-      stop("Parameter 'memb_dim' is not found in 'exp' nor 'obs' dimension.")
+      stop("Parameter 'memb_dim' is not found in 'exp' dimension.")
     }
   }
   ## dat_dim
@@ -162,11 +159,10 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
   ## ncores
   if (!is.null(ncores)) {
     if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
-      length(ncores) > 1) {
+        length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
   } 
-  
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
@@ -185,14 +181,14 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
   if (!all(name_exp == name_obs)) {
     stop("Parameter 'exp' and 'obs' must have the same dimension names.")
   }
-  if (!identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
+  if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
                 "all dimensions except 'dat_dim' and 'memb_dim'."))
   }
   if (dim(exp)[time_dim] < 2) {
-    stop("The length of time_dim must be at least 2 to compute RMS.")
+    stop("The length of time_dim must be at least 2 to compute MSE.")
   }
-  
+
   ###############################
   ## Ensemble mean
   if (!is.null(memb_dim)) {
@@ -203,17 +199,16 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
       obs <- MeanDims(obs, memb_dim, na.rm = T)
     }
   }
-  
+
   ###############################
   # Sort dimension
   name_exp <- names(dim(exp))
   name_obs <- names(dim(obs))
   order_obs <- match(name_exp, name_obs)
   obs <- Reorder(obs, order_obs)
-
-
+  
   ###############################
-  # Calculate RMS
+  # Calculate MSE
   
   #  Remove data along comp_dim dim if there is at least one NA between limits
   if (!is.null(comp_dim)) {
@@ -230,22 +225,23 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
   res <- Apply(list(exp, obs), 
                target_dims = list(c(time_dim, dat_dim), 
                                   c(time_dim, dat_dim)),
-               fun = .RMS, 
+               fun = .MSE, 
                time_dim = time_dim, dat_dim = dat_dim,
                conf = conf, alpha = alpha,
                ncores = ncores)
   return(res)
 }
 
-.RMS <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, conf = TRUE, alpha = 0.05) { 
+.MSE <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, conf = TRUE, alpha = 0.05) {
+
   if (is.null(dat_dim)) {
     # exp: [sdate]
     # obs: [sdate]
     nexp <- 1
     nobs <- 1
     ini_dims <- dim(exp)
-    dim(exp) <- c(ini_dims, dat = 1)
-    dim(obs) <- c(ini_dims, dat = 1)
+    dim(exp) <- c(ini_dims, dat_dim = 1)
+    dim(obs) <- c(ini_dims, dat_dim = 1)
   } else {
     # exp: [sdate, dat_exp]
     # obs: [sdate, dat_obs]
@@ -254,22 +250,23 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
   }
   
   dif <- array(dim = c(dim(exp)[1], nexp = nexp, nobs = nobs))
-
+  chi <- array(dim = c(nexp = nexp, nobs = nobs))
+  
   if (conf) {
     conflow <- alpha / 2
     confhigh <- 1 - conflow
     conf.lower <- array(dim = c(nexp = nexp, nobs = nobs))
     conf.upper <- array(dim = c(nexp = nexp, nobs = nobs))
   }
-
+  
   # dif
   for (i in 1:nobs) {
     dif[, , i] <- sapply(1:nexp, function(x) {exp[, x] - obs[, i]})
   }
-
-  rms <- colMeans(dif^2, na.rm = TRUE)^0.5  # [nexp, nobs]
-
-  if (conf) {  #NOTE: pval and sign also need
+  
+  mse <- colMeans(dif^2, na.rm = TRUE) # array(dim = c(nexp, nobs))
+  
+  if (conf) {
     #count effective sample along sdate. eno: c(nexp, nobs)
 #    eno <- Eno(dif, time_dim)  # slower than for loop below?
     eno <- array(dim = c(nexp = nexp, nobs = nobs))
@@ -278,43 +275,35 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
         eno[n_exp, n_obs] <- .Eno(dif[, n_exp, n_obs], na.action = na.pass)
       }
     }
+    
     # conf.lower
     chi <- sapply(1:nobs, function(i) {
-                             qchisq(confhigh, eno[, i] - 1)
-                           })
-    conf.lower <- (eno * rms ** 2 / chi) ** 0.5
-
+                            qchisq(confhigh, eno[, i] - 1)
+                          })
+    conf.lower <- (eno * mse ** 2 / chi) ** 0.5
+    
     # conf.upper
     chi <- sapply(1:nobs, function(i) {
-                             qchisq(conflow, eno[, i] - 1)
-                           })
-    conf.upper <- (eno * rms ** 2 / chi) ** 0.5
+                            qchisq(conflow, eno[, i] - 1)
+                          })
+    conf.upper <- (eno * mse ** 2 / chi) ** 0.5
   }
-
-#NOTE: Not sure if the calculation is correct. p_val is reasonable compared to the chi-square chart though.
-#  if (pval | sign) {
-#    chi <- array(dim = c(nexp = nexp, nobs = nobs))
-#    for (i in 1:nobs) {
-#      chi[, i] <- sapply(1:nexp, function(x) {sum((obs[, i] - exp[, x])^2 / exp[, x])})
-#    }
-#    p_val <- pchisq(chi, eno - 1, lower.tail = FALSE)
-#    if (sign) signif <- p_val <= alpha 
-#  }
-
+  
   ###################################
   # Remove nexp and nobs if dat_dim = NULL
   if (is.null(dat_dim)) {
-    dim(rms) <- NULL
+    dim(mse) <- NULL
     if (conf) {
       dim(conf.lower) <- NULL
       dim(conf.upper) <- NULL
     }
   }
-
+  
   ###################################
-  res <- list(rms = rms)
+ 
+  res <- list(mse = mse)
   if (conf) res <- c(res, list(conf.lower = conf.lower, conf.upper = conf.upper))
-
+ 
   return(res)
-
+  
 }

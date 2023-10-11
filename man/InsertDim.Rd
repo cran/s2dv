@@ -4,7 +4,7 @@
 \alias{InsertDim}
 \title{Add a named dimension to an array}
 \usage{
-InsertDim(data, posdim, lendim, name = NULL, ncores = NULL)
+InsertDim(data, posdim, lendim, name = NULL)
 }
 \arguments{
 \item{data}{An array to which the additional dimension to be added.}
@@ -15,9 +15,6 @@ InsertDim(data, posdim, lendim, name = NULL, ncores = NULL)
 
 \item{name}{A character string indicating the name for the new dimension. 
 The default value is NULL.}
-
-\item{ncores}{An integer indicating the number of cores to use for parallel 
-computation. The default value is NULL. This parameter is deprecated now.}
 }
 \value{
 An array as parameter 'data' but with the added named dimension.

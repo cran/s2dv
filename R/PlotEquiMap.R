@@ -253,7 +253,7 @@
 #'  }
 #'PlotEquiMap(sampleData$mod[1, 1, 1, 1, , ], sampleData$lon, sampleData$lat, 
 #'            toptitle = 'Predicted sea surface temperature for Nov 1960 from 1st Nov',
-#'            sizetit = 0.5)
+#'            title_scale = 0.5)
 #'@import graphics maps
 #'@importFrom grDevices dev.cur dev.new dev.off gray
 #'@importFrom stats cor
@@ -530,7 +530,26 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
     title_scale <- sizetit
   }
 
-  var_limits <- c(min(var, na.rm = TRUE), max(var, na.rm = TRUE))
+  if (!all(is.na(var))) {
+    var_limits <- c(min(var, na.rm = TRUE), max(var, na.rm = TRUE))
+  } else {
+    .warning("All the data are NAs. The map will be filled with colNA.")
+    if (!is.null(brks) && length(brks) > 1) {
+      #NOTE: var_limits be like this to avoid warnings from ColorBar
+      var_limits <- c(min(brks, na.rm = TRUE) + diff(brks)[1], 
+                      max(brks, na.rm = TRUE))
+    } else if (!is.null(bar_limits)) {
+      var_limits <- c(bar_limits[1] + 0.01, bar_limits[2])
+    } else {
+      var_limits <- c(-0.5, 0.5) # random range since colorbar is not going to be plotted
+      if (drawleg) {
+        drawleg <- FALSE
+        .warning("All data are NAs. Color bar won't be drawn. If you want to have ",
+                 "color bar still, define parameter 'brks' or 'bar_limits'.")
+      }
+    }
+  }
+
   # Check: brks, cols, subsampleg, bar_limits, color_fun, bar_extra_labels, draw_bar_ticks
   #        draw_separators, triangle_ends_scale, label_scale, units, units_scale, 
   #        bar_label_digits

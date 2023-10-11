@@ -2,13 +2,13 @@
 #'
 #'This function computes the ratio of predictable components (RPC; Eade et al., 2014).
 #'
-#'@param exp A numerical array with, at least, 'time_dim' and 'member_dim' 
+#'@param exp A numerical array with, at least, 'time_dim' and 'memb_dim' 
 #'  dimensions.
 #'@param obs A numerical array with the same dimensions than 'exp' except the
-#'  'member_dim' dimension.
+#'  'memb_dim' dimension.
 #'@param time_dim A character string indicating the name of the time dimension.
 #'  The default value is 'year'.
-#'@param member_dim A character string indicating the name of the member 
+#'@param memb_dim A character string indicating the name of the member 
 #'  dimension. The default value is 'member'.
 #'@param na.rm A logical value indicating whether to remove NA values during
 #'  the computation. The default value is FALSE.
@@ -16,7 +16,7 @@
 #'  computation. The default value is NULL.
 #'
 #'@return An array of the ratio of the predictable components. it has the same
-#'  dimensions as 'exp' except 'time_dim' and 'member_dim' dimensions.
+#'  dimensions as 'exp' except 'time_dim' and 'memb_dim' dimensions.
 #'
 #'@examples
 #'exp <- array(data = runif(600), dim = c(year = 15, member = 10, lat = 2, lon = 2))
@@ -25,7 +25,7 @@
 #'
 #'@import multiApply stats
 #'@export
-RatioPredictableComponents <- function(exp, obs, time_dim = 'year', member_dim = 'member', na.rm = FALSE, ncores = NULL) {
+RatioPredictableComponents <- function(exp, obs, time_dim = 'year', memb_dim = 'member', na.rm = FALSE, ncores = NULL) {
 
   ## Checkings
   if (is.null(exp)) {
@@ -43,14 +43,14 @@ RatioPredictableComponents <- function(exp, obs, time_dim = 'year', member_dim =
   if (!(is.character(time_dim) & length(time_dim) == 1)) {
     stop("Parameter 'time_dim' must be a character string.")
   }
-  if (!(is.character(member_dim) & length(member_dim) == 1)) {
-    stop("Parameter 'member_dim' must be a character string.")
+  if (!(is.character(memb_dim) & length(memb_dim) == 1)) {
+    stop("Parameter 'memb_dim' must be a character string.")
   }
   if (!time_dim %in% names(dim(exp))) {
     stop("'exp' must have 'time_dim' dimension.")
   }
-  if (!member_dim %in% names(dim(exp))) {
-    stop("'exp' must have 'member_dim' dimension.")
+  if (!memb_dim %in% names(dim(exp))) {
+    stop("'exp' must have 'memb_dim' dimension.")
   }
   if (!time_dim %in% names(dim(obs))) {
     stop("'obs' must have 'time_dim' dimension.")
@@ -68,7 +68,7 @@ RatioPredictableComponents <- function(exp, obs, time_dim = 'year', member_dim =
   }
   
   RPC <- multiApply::Apply(data = list(exp, obs), 
-                           target_dims = list(exp = c(time_dim, member_dim),
+                           target_dims = list(exp = c(time_dim, memb_dim),
                                               obs = time_dim), 
                            output_dims = NULL,
                            fun = .RatioPredictableComponents,

@@ -129,11 +129,12 @@ required_complete_row <- 'ftime'  # discard startdates for which there are NA le
 leadtimes_per_startdate <- 60
 corr <- Corr(MeanDims(smooth_ano_exp, dim_to_mean), 
             MeanDims(smooth_ano_obs, dim_to_mean), 
-            comp_dim = required_complete_row, 
+            comp_dim = required_complete_row, dat_dim = 'dataset', 
             limits = c(ceiling((runmean_months + 1) / 2), 
                        leadtimes_per_startdate - floor(runmean_months / 2)))
 # Combine corr results for plotting
-corr_combine <- abind::abind(corr$conf.lower, corr$corr, corr$conf.upper, corr$p.val, along = 0)
+corr_combine <- abind::abind(corr$conf.lower, corr$corr, corr$conf.upper, corr$p.val, 
+                            along = 0)
 corr_combine <- Reorder(corr_combine, c(2, 3, 1, 4))
 \donttest{
 PlotVsLTime(corr_combine, toptitle = "correlations", ytitle = "correlation", 

@@ -10,9 +10,9 @@
 #'of reference forecasts are the climatological forecast (average of the 
 #'observations), a previous model version, or another model. It is computed as
 #'\code{AbsBiasSS = 1 - AbsBias_exp / AbsBias_ref}. The statistical significance
-#'is obtained based on a Random Walk test at the 95% confidence level (DelSole 
-#'and Tippett, 2016). If there is more than one dataset, the result will be 
-#'computed for each pair of exp and obs data.
+#'is obtained based on a Random Walk test at the confidence level specified
+#'(DelSole and Tippett, 2016). If there is more than one dataset, the result 
+#'will be computed for each pair of exp and obs data.
 #'
 #'@param exp A named numerical array of the forecast with at least time 
 #'  dimension.  
@@ -36,6 +36,12 @@
 #'  The default value is NULL.
 #'@param na.rm A logical value indicating if NAs should be removed (TRUE) or
 #'  kept (FALSE) for computation. The default value is FALSE.
+#'@param sig_method.type A character string indicating the test type of the
+#'  significance method. Check \code{RandomWalkTest()} parameter 
+#'  \code{test.type} for details. The default is 'two.sided.approx', which is 
+#'  the default of \code{RandomWalkTest()}.
+#'@param alpha A numeric of the significance level to be used in the statistical
+#'  significance test. The default value is 0.05.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -65,7 +71,8 @@
 #'@import multiApply
 #'@export
 AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL, 
-                      dat_dim = NULL, na.rm = FALSE, ncores = NULL) {
+                      dat_dim = NULL, na.rm = FALSE, sig_method.type = 'two.sided.approx', 
+                      alpha = 0.05, ncores = NULL) {
   
   # Check inputs
   ## exp, obs, and ref (1)
@@ -163,6 +170,22 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
   if (!is.logical(na.rm) | length(na.rm) > 1) {
     stop("Parameter 'na.rm' must be one logical value.")
   }
+  ## alpha
+  if (any(!is.numeric(alpha) | alpha <= 0 | alpha >= 1 | length(alpha) > 1)) {
+    stop("Parameter 'alpha' must be a number between 0 and 1.")
+  }
+  ## sig_method.type
+  #NOTE: These are the types of RandomWalkTest()
+  if (!sig_method.type %in% c('two.sided.approx', 'two.sided', 'greater', 'less')) {
+    stop("Parameter 'sig_method.type' must be 'two.sided.approx', 'two.sided', 'greater', or 'less'.")
+  }
+  if (sig_method.type == 'two.sided.approx') {
+    if (alpha != 0.05) {
+      .warning("DelSole and Tippett (2016) aproximation is valid for alpha ",
+              "= 0.05 only. Returning the significance at the 0.05 significance level.")
+    } 
+  }
+
   ## ncores
   if (!is.null(ncores)) {
     if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
@@ -202,13 +225,14 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
                   target_dims = target_dims,
                   fun = .AbsBiasSS,
                   dat_dim = dat_dim, 
-                  na.rm = na.rm, 
+                  na.rm = na.rm, alpha = alpha, sig_method.type = sig_method.type, 
                   ncores = ncores)
 
   return(output)
 }
 
-.AbsBiasSS <- function(exp, obs, ref = NULL, dat_dim = NULL, na.rm = FALSE) {
+.AbsBiasSS <- function(exp, obs, ref = NULL, dat_dim = NULL, na.rm = FALSE,
+                       sig_method.type = 'two.sided.approx', alpha = 0.05) {
   # exp and obs: [sdate, (dat_dim)]
   # ref: [sdate, (dat_dim)] or NULL
 
@@ -267,7 +291,9 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
       bias_ref <- .Bias(exp = ref_data, obs = obs_data, na.rm = na.rm, absolute = TRUE, time_mean = FALSE)
       ## Skill score and significance
       biasSS[i, j] <- 1 - mean(bias_exp) / mean(bias_ref)
-      sign[i, j] <- .RandomWalkTest(skill_A = bias_exp, skill_B = bias_ref, sign = T, pval = F)$sign
+      sign[i, j] <- .RandomWalkTest(skill_A = bias_exp, skill_B = bias_ref, 
+                                    test.type = sig_method.type, alpha = alpha,
+                                    sign = T, pval = F)$sign
     }
   }
 

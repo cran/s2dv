@@ -7,19 +7,19 @@
 ACC(
   exp,
   obs,
-  dat_dim = "dataset",
+  dat_dim = NULL,
   lat_dim = "lat",
   lon_dim = "lon",
-  space_dim = c("lat", "lon"),
   avg_dim = "sdate",
   memb_dim = "member",
   lat = NULL,
   lon = NULL,
   lonlatbox = NULL,
+  alpha = 0.05,
+  pval = TRUE,
+  sign = FALSE,
   conf = TRUE,
   conftype = "parametric",
-  conf.lev = 0.95,
-  pval = TRUE,
   ncores = NULL
 )
 }
@@ -32,8 +32,7 @@ The dimension should be the same as 'exp' except the length of 'dat_dim'
 and 'memb_dim'.}
 
 \item{dat_dim}{A character string indicating the name of dataset (nobs/nexp) 
-dimension. The default value is 'dataset'. If there is no dataset 
-dimension, set NULL.}
+dimension. The default value is NULL (no dataset).}
 
 \item{lat_dim}{A character string indicating the name of the latitude
 dimension of 'exp' and 'obs' along which ACC is computed. The default value
@@ -42,11 +41,6 @@ is 'lat'.}
 \item{lon_dim}{A character string indicating the name of the longitude
 dimension of 'exp' and 'obs' along which ACC is computed. The default value
 is 'lon'.}
-
-\item{space_dim}{A character string vector of 2 indicating the name of the
-latitude and longitude dimensions (in order) along which ACC is computed. 
-The default value is c('lat', 'lon'). This argument has been deprecated.
-Use 'lat_dim' and 'lon_dim' instead.}
 
 \item{avg_dim}{A character string indicating the name of the dimension to be
 averaged, which is usually the time dimension. If no need to calculate mean
@@ -67,6 +61,16 @@ NULL.}
 interested: c(lonmin, lonmax, latmin, latmax). The default value is NULL 
 and the whole data will be used.}
 
+\item{alpha}{A numeric indicating the significance level for the statistical
+significance test. The default value is 0.05.}
+
+\item{pval}{A logical value indicating whether to compute the p-value or not.
+The default value is TRUE.}
+
+\item{sign}{A logical value indicating whether to retrieve the statistical
+significance of the test Ho: ACC = 0 based on 'alpha'. The default value is
+FALSE.}
+
 \item{conf}{A logical value indicating whether to retrieve the confidence 
 intervals or not. The default value is TRUE.}
 
@@ -80,12 +84,6 @@ make sure that your experiment and observation always have the same number
 of members. "bootstrap" requires 'memb_dim' has value. The default value is
 'parametric'.}
 
-\item{conf.lev}{A numeric indicating the confidence level for the 
-regression computation. The default value is 0.95.}
-
-\item{pval}{A logical value indicating whether to compute the p-value or not.
-The default value is TRUE.}
-
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
 }
@@ -96,6 +94,12 @@ A list containing the numeric arrays:\cr
  lat_dim, lon_dim and memb_dim). nexp is the number of experiment (i.e., dat_dim in
  exp), and nobs is the number of observation (i.e., dat_dim in obs). If 
  dat_dim is NULL, nexp and nobs are omitted.
+}
+\item{macc}{
+ The mean anomaly correlation coefficient with dimensions
+ c(nexp, nobs, the rest of the dimension except lat_dim, lon_dim, memb_dim, and 
+ avg_dim). Only present if 'avg_dim' is not NULL. If dat_dim is NULL, nexp 
+ and nobs are omitted.
 }
 \item{conf.lower (if conftype = "parametric") or acc_conf.lower (if 
      conftype = "bootstrap")}{
@@ -109,13 +113,10 @@ A list containing the numeric arrays:\cr
 }
 \item{p.val}{
  The p-value with the same dimensions as ACC. Only present if 
- \code{pval = TRUE} and code{conftype = "parametric"}.  
+ \code{pval = TRUE} and \code{conftype = "parametric"}.  
 }
-\item{macc}{
- The mean anomaly correlation coefficient with dimensions
- c(nexp, nobs, the rest of the dimension except lat_dim, lon_dim, memb_dim, and 
- avg_dim). Only present if 'avg_dim' is not NULL. If dat_dim is NULL, nexp 
- and nobs are omitted.
+\item{$sign}{
+ The statistical significance. Only present if \code{sign = TRUE}.
 }
 \item{macc_conf.lower}{
  The lower confidence interval of MACC with the same dimensions as MACC. 
@@ -153,8 +154,9 @@ sampleData$obs <- Season(sampleData$obs, monini = 11, moninf = 12, monsup = 2)
 clim <- Clim(sampleData$mod, sampleData$obs)
 ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 ano_obs <- Ano(sampleData$obs, clim$clim_obs)
-acc <- ACC(ano_exp, ano_obs, lat = sampleData$lat)
-acc_bootstrap <- ACC(ano_exp, ano_obs, conftype = 'bootstrap', lat = sampleData$lat)
+acc <- ACC(ano_exp, ano_obs, lat = sampleData$lat, dat_dim = 'dataset')
+acc_bootstrap <- ACC(ano_exp, ano_obs, conftype = 'bootstrap', 
+                    lat = sampleData$lat, dat_dim = 'dataset')
 # Combine acc results for PlotACC
 res <- array(c(acc$conf.lower, acc$acc, acc$conf.upper, acc$p.val), 
             dim = c(dim(acc$acc), 4))

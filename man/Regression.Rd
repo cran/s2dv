@@ -11,7 +11,8 @@ Regression(
   formula = y ~ x,
   pval = TRUE,
   conf = TRUE,
-  conf.lev = 0.95,
+  sign = FALSE,
+  alpha = 0.05,
   na.action = na.omit,
   ncores = NULL
 )
@@ -34,8 +35,11 @@ or not. The default value is TRUE.}
 \item{conf}{A logical value indicating whether to retrieve the confidence 
 intervals or not. The default value is TRUE.}
 
-\item{conf.lev}{A numeric indicating the confidence level for the 
-regression computation. The default value is 0.95.}
+\item{sign}{A logical value indicating whether to compute or not the 
+statistical significance of the test The default value is FALSE.}
+
+\item{alpha}{A numeric of the significance level to be used in the 
+statistical significance test. The default value is 0.05.}
 
 \item{na.action}{A function or an integer. A function (e.g., na.omit, 
 na.exclude, na.fail, na.pass) indicates what should happen when the data 
@@ -75,6 +79,10 @@ A list containing:
  A numeric array with same dimensions as parameter 'daty' and 'datax' except
  the 'reg_dim' dimension, The array contains the p-value.
 }
+\item{sign}{
+ A logical array of the statistical significance of the regression with the
+ same dimensions as $regression. Only present if \code{sign = TRUE}.
+}
 \item{$filtered}{
  A numeric array with the same dimension as paramter 'datay' and 'datax', 
  the filtered datay from the regression onto datax along the 'reg_dim' 
@@ -98,6 +106,6 @@ names(dim(datay)) <- c('sdate', 'ftime')
 datax <- sampleData$obs[, 1, , ]
 names(dim(datax)) <- c('sdate', 'ftime')
 res1 <- Regression(datay, datax, formula = y~poly(x, 2, raw = TRUE))
-res2 <- Regression(datay, datax, conf.lev = 0.9)
+res2 <- Regression(datay, datax, alpha = 0.1)
 
 }

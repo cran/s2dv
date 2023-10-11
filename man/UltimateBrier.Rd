@@ -7,7 +7,7 @@
 UltimateBrier(
   exp,
   obs,
-  dat_dim = "dataset",
+  dat_dim = NULL,
   memb_dim = "member",
   time_dim = "sdate",
   quantile = TRUE,
@@ -28,7 +28,7 @@ dimensions that at least include 'time_dim'. If it has
 'exp' except 'dat_dim' and 'memb_dim'. It can be provided by \code{Ano()}.}
 
 \item{dat_dim}{A character string indicating the name of the dataset 
-dimension in 'exp' and 'obs'. The default value is 'dataset'. If there is no dataset 
+dimension in 'exp' and 'obs'. The default value is NULL (no dataset).
 dimension, set NULL.}
 
 \item{memb_dim}{A character string indicating the name of the member 
@@ -109,7 +109,7 @@ sampleData$obs <- Season(sampleData$obs, monini = 11, moninf = 12, monsup = 2)
 clim <- Clim(sampleData$mod, sampleData$obs)
 exp <- Ano(sampleData$mod, clim$clim_exp)
 obs <- Ano(sampleData$obs, clim$clim_obs)
-bs <- UltimateBrier(exp, obs)
-bss <- UltimateBrier(exp, obs, type = 'BSS')
+bs <- UltimateBrier(exp, obs, dat_dim = 'dataset')
+bss <- UltimateBrier(exp, obs, type = 'BSS', dat_dim = 'dataset')
 
 }

@@ -65,8 +65,9 @@
 #'ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 #'ano_obs <- Ano(sampleData$obs, clim$clim_obs)
 
-#'acc <- ACC(ano_exp, ano_obs, lat = sampleData$lat)
-#'acc_bootstrap <- ACC(ano_exp, ano_obs, lat = sampleData$lat, conftype = 'bootstrap')
+#'acc <- ACC(ano_exp, ano_obs, lat = sampleData$lat, dat_dim = 'dataset')
+#'acc_bootstrap <- ACC(ano_exp, ano_obs, lat = sampleData$lat, conftype = 'bootstrap', 
+#'                     dat_dim = 'dataset')
 #'# Combine acc results for PlotACC
 #'res <- array(c(acc$conf.lower, acc$acc, acc$conf.upper, acc$p.val), 
 #'             dim = c(dim(acc$acc), 4))
@@ -86,7 +87,8 @@ PlotACC <- function(ACC, sdates, toptitle = "", sizetit = 1, ytitle = "",
                     width = 8, height = 5, size_units = 'in', res = 100, ...) {
   # Process the user graphical parameters that may be passed in the call
   ## Graphical parameters to exclude
-  excludedArgs <- c("cex", "cex.axis", "cex.lab", "cex.main", "col", "lab", "las", "lty", "lwd", "mai", "mgp", "new", "pch", "pin", "ps", "pty")
+  excludedArgs <- c("cex", "cex.axis", "cex.lab", "cex.main", "col", "lab", "las", "lty",
+                    "lwd", "mai", "mgp", "new", "pch", "pin", "ps", "pty")
   userArgs <- .FilterUserGraphicArgs(excludedArgs, ...)
 
   # If there is any filenames to store the graphics, process them

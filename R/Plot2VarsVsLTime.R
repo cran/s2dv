@@ -63,15 +63,17 @@
 #'leadtimes_per_startdate <- 60
 #'rms <- RMS(MeanDims(smooth_ano_exp, dim_to_mean), 
 #'           MeanDims(smooth_ano_obs, dim_to_mean), 
-#'           comp_dim = required_complete_row, 
+#'           comp_dim = required_complete_row, dat_dim = 'dataset',
 #'           limits = c(ceiling((runmean_months + 1) / 2), 
-#'                      leadtimes_per_startdate - floor(runmean_months / 2)))
+#'           leadtimes_per_startdate - floor(runmean_months / 2)))
 #'smooth_ano_exp_m_sub <- smooth_ano_exp - InsertDim(MeanDims(smooth_ano_exp, 'member', 
 #'                                                            na.rm = TRUE), 
 #'                                                   posdim = 3, 
 #'                                                   lendim = dim(smooth_ano_exp)['member'], 
 #'                                                   name = 'member')
+#'suppressWarnings({
 #'spread <- Spread(smooth_ano_exp_m_sub, compute_dim = c('member', 'sdate'))
+#'})
 #'#Combine rms outputs into one array 
 #'rms_combine <- abind::abind(rms$conf.lower, rms$rms, rms$conf.upper, along = 0)
 #'rms_combine <- Reorder(rms_combine, c(2, 3, 1, 4))

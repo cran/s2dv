@@ -4,7 +4,7 @@
 \alias{Spectrum}
 \title{Estimate frequency spectrum}
 \usage{
-Spectrum(data, time_dim = "ftime", conf.lev = 0.95, ncores = NULL)
+Spectrum(data, time_dim = "ftime", alpha = 0.05, ncores = NULL)
 }
 \arguments{
 \item{data}{A vector or numeric array of which the frequency spectrum is 
@@ -15,8 +15,8 @@ evenly spaced in time.}
 \item{time_dim}{A character string indicating the dimension along which to 
 compute the frequency spectrum. The default value is 'ftime'.}
 
-\item{conf.lev}{A numeric indicating the confidence level for the Monte-Carlo
-significance test. The default value is 0.95.}
+\item{alpha}{A numeric indicating the significance level for the Monte-Carlo
+significance test. The default value is 0.05.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}

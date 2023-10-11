@@ -8,7 +8,7 @@ Corr(
   exp,
   obs,
   time_dim = "sdate",
-  dat_dim = "dataset",
+  dat_dim = NULL,
   comp_dim = NULL,
   limits = NULL,
   method = "pearson",
@@ -18,7 +18,6 @@ Corr(
   conf = TRUE,
   sign = FALSE,
   alpha = 0.05,
-  conf.lev = NULL,
   ncores = NULL
 )
 }
@@ -33,8 +32,7 @@ parameter 'exp' except along 'dat_dim' and 'memb_dim'.}
 which the correlations are computed. The default value is 'sdate'.}
 
 \item{dat_dim}{A character string indicating the name of dataset (nobs/nexp) 
-dimension. The default value is 'dataset'. If there is no dataset 
-dimension, set NULL.}
+dimension. The default value is NULL (no dataset).}
 
 \item{comp_dim}{A character string indicating the name of dimension along which
 obs is taken into account only if it is complete. The default value
@@ -66,8 +64,6 @@ FALSE.}
 
 \item{alpha}{A numeric indicating the significance level for the statistical
 significance test. The default value is 0.05.}
-
-\item{conf.lev}{Deprecated. Use alpha now instead. alpha = 1 - conf.lev.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
@@ -129,13 +125,14 @@ required_complete_row <- 3  # Discard start dates which contain any NA lead-time
 leadtimes_per_startdate <- 60 
 corr <- Corr(MeanDims(smooth_ano_exp, 'member'),              
             MeanDims(smooth_ano_obs, 'member'),              
-            comp_dim = 'ftime',              
+            comp_dim = 'ftime', dat_dim = 'dataset', 
             limits = c(ceiling((runmean_months + 1) / 2),                         
             leadtimes_per_startdate - floor(runmean_months / 2))) 
 
 # Case 2: Keep member dimension
-corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member')
+corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', dat_dim = 'dataset')
 # ensemble mean
-corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', memb = FALSE)
+corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', memb = FALSE,
+            dat_dim = 'dataset')
 
 }

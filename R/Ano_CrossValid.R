@@ -72,37 +72,12 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
-  if(!all(names(dim(exp)) %in% names(dim(obs))) |
-     !all(names(dim(obs)) %in% names(dim(exp)))) {
-    stop("Parameter 'exp' and 'obs' must have same dimension name.")
-  }
   ## time_dim
   if (!is.character(time_dim) | length(time_dim) > 1) {
     stop("Parameter 'time_dim' must be a character string.")
   }
   if (!time_dim %in% names(dim(exp)) | !time_dim %in% names(dim(obs))) {
     stop("Parameter 'time_dim' is not found in 'exp' or 'obs' dimension.")
-  }
-  ## dat_dim
-  if (!is.null(dat_dim)) {
-    if (!is.character(dat_dim)) {
-      stop("Parameter 'dat_dim' must be a character vector.")
-    }
-    if (!all(dat_dim %in% names(dim(exp))) | !all(dat_dim %in% names(dim(obs)))) {
-      stop("Parameter 'dat_dim' is not found in 'exp' or 'obs' dimension.",
-           " Set it as NULL if there is no dataset dimension.")
-    }
-    # If dat_dim is not in obs, add it in
-    if (any(!dat_dim %in% names(dim(obs)))) {
-      reset_obs_dim <- TRUE
-      ori_obs_dim <- dim(obs)
-      dim(obs) <- c(dim(obs), rep(1, length(dat_dim[which(!dat_dim %in% names(dim(obs)))])))
-      names(dim(obs)) <- c(names(ori_obs_dim), dat_dim[which(!dat_dim %in% names(dim(obs)))])
-    } else {
-      reset_obs_dim <- FALSE
-    }
-  } else {
-    reset_obs_dim <- FALSE
   }
   ## memb
   if (!is.logical(memb) | length(memb) > 1) {
@@ -113,13 +88,53 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
     if (!is.character(memb_dim) | length(memb_dim) > 1) {
       stop("Parameter 'memb_dim' must be a character string.")
     }
-    if (!memb_dim %in% names(dim(exp)) | !memb_dim %in% names(dim(obs))) {
-      stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.")
+    if (!memb_dim %in% names(dim(exp)) & !memb_dim %in% names(dim(obs))) {
+      stop("Parameter 'memb_dim' is not found in 'exp' nor 'obs' dimension. ", 
+           "Set it as NULL if there is no member dimension.")
     }
+#    # Add [member = 1] 
+#    if (memb_dim %in% names(dim(exp)) & !memb_dim %in% names(dim(obs))) {
+#      dim(obs) <- c(dim(obs), 1)
+#      names(dim(obs))[length(dim(obs))] <- memb_dim
+#    }
+#    if (!memb_dim %in% names(dim(exp)) & memb_dim %in% names(dim(obs))) {
+#      dim(exp) <- c(dim(exp), 1)
+#      names(dim(exp))[length(dim(exp))] <- memb_dim
+#    }
+  }
+
+  ## dat_dim
+  reset_obs_dim <- reset_exp_dim <- FALSE
+  if (!is.null(dat_dim)) {
+    if (!is.character(dat_dim)) {
+      stop("Parameter 'dat_dim' must be a character vector.")
+    }
+    if (!any(dat_dim %in% names(dim(exp))) & !any(dat_dim %in% names(dim(obs)))) {
+      stop("Parameter 'dat_dim' is not found in 'exp' nor 'obs' dimension.",
+           " Set it as NULL if there is no dataset dimension.")
+    }
+    # If dat_dim is not in obs, add it in
+    if (any(!dat_dim %in% names(dim(obs)))) {
+      reset_obs_dim <- TRUE
+      ori_obs_dim <- dim(obs)
+      dim(obs) <- c(dim(obs), rep(1, length(dat_dim[which(!dat_dim %in% names(dim(obs)))])))
+      names(dim(obs)) <- c(names(ori_obs_dim), dat_dim[which(!dat_dim %in% names(dim(obs)))])
+    }
+    # If dat_dim is not in obs, add it in
+    if (any(!dat_dim %in% names(dim(exp)))) {
+      reset_exp_dim <- TRUE
+      ori_exp_dim <- dim(exp)
+      dim(exp) <- c(dim(exp), rep(1, length(dat_dim[which(!dat_dim %in% names(dim(exp)))])))
+      names(dim(exp)) <- c(names(ori_exp_dim), dat_dim[which(!dat_dim %in% names(dim(exp)))])
+    }
+  }
+  # memb_dim and dat_dim
+  if (!memb) {
     if (!memb_dim %in% dat_dim) {
       stop("Parameter 'memb_dim' must be one element in parameter 'dat_dim'.")
-    }     
+    }
   }
+
   ## ncores
   if (!is.null(ncores)) {
     if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
@@ -136,7 +151,7 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
       name_obs <- name_obs[-which(name_obs == dat_dim[i])]
     }
   }
-  if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
+  if (!identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have the same length of ",
                 "all dimensions except 'dat_dim'."))
   }
@@ -160,10 +175,10 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
     outrows_exp <- MeanDims(exp, pos, na.rm = FALSE) +
                     MeanDims(obs, pos, na.rm = FALSE)
     outrows_obs <- outrows_exp
-
-    for (i in 1:length(pos)) {
-        outrows_exp <- InsertDim(outrows_exp, pos[i], dim(exp)[pos[i]])
-        outrows_obs <- InsertDim(outrows_obs, pos[i], dim(obs)[pos[i]])
+#browser()
+    for (i_pos in sort(pos)) {
+      outrows_exp <- InsertDim(outrows_exp, i_pos, dim(exp)[i_pos])
+      outrows_obs <- InsertDim(outrows_obs, i_pos, dim(obs)[i_pos])
     }
     exp_for_clim <- exp
     obs_for_clim <- obs
@@ -184,16 +199,24 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
 
   # Remove dat_dim in obs if obs doesn't have at first place
   if (reset_obs_dim) {
-    res_obs_dim <- ori_obs_dim[-which(names(ori_obs_dim) == time_dim)]
-    if (!memb & memb_dim %in% names(res_obs_dim)) {
-      res_obs_dim <- res_obs_dim[-which(names(res_obs_dim) == memb_dim)]
-    }
-    if (is.integer(res_obs_dim) & length(res_obs_dim) == 0) {
-      res$obs <- as.vector(res$obs)
-    } else {
-      res$obs <- array(res$obs, dim = res_obs_dim)
-    }
+     tmp <- match(names(dim(res$obs)), names(ori_obs_dim))
+     dim(res$obs) <- ori_obs_dim[tmp[which(!is.na(tmp))]]
   }
+  if (reset_exp_dim) {
+     tmp <- match(names(dim(res$exp)), names(ori_exp_dim))
+     dim(res$exp) <- ori_exp_dim[tmp[which(!is.na(tmp))]]
+  }
+
+#    res_obs_dim <- ori_obs_dim[-which(names(ori_obs_dim) == time_dim)]
+#    if (!memb & memb_dim %in% names(res_obs_dim)) {
+#      res_obs_dim <- res_obs_dim[-which(names(res_obs_dim) == memb_dim)]
+#    }
+#    if (is.integer(res_obs_dim) & length(res_obs_dim) == 0) {
+#      res$obs <- as.vector(res$obs)
+#    } else {
+#      res$obs <- array(res$obs, dim = res_obs_dim)
+#    }
+#  }
 
   return(res)
 }

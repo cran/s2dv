@@ -1,3 +1,23 @@
+# s2dv 2.0.0 (Release date: 2023-10-11)
+The compability break happens at the parameter changes. All the functionality remains 
+the same but please pay attention to the parameter changes like name or default value if some error is raised.
+
+**Bugfixes**
+- ColorBar() bug fix for an if condition for warning when var_limits is not provided
+- PlotEquiMap() and PlotLayout() are able to plot all NAs maps now.
+
+**Development**
+- ACC() remove parameter "space_dim". Use "lat_dim" and "lon_dim" instead.
+- ACC(), Ano_CrossValid(), RMS(), Corr(), and RatioSDRMS() parameter "memb_dim" is optional for obs
+- Change the default value of the parameter "dat_dim" in all the functions to NULL (except Ano_CrossValid(), Clim(), and Consistent_Trend())
+- Change parameter "conf.lev" to "alpha" in all appliable functions
+- New function: GetProbs(), MSE(), MSSS()
+- RPSS() efficiency improvement
+- CDORemap() new parameter "ncores" to use multiple cores
+- RMSSS(), RPSS(), CRPSS(), AbsBiasSS() have parameter "sig_method.type" to choose the test type of Random Walk test
+- CRPSS() has non-cross-validation climatological forecast
+- RPS() and RPSS() have new parameter "na.rm" to set the criterion of NA amount
+
 # s2dv 1.4.1 (Release date: 2023-06-02)
 - Resubmit to CRAN because it was archived due to dependency issue.
 

@@ -37,14 +37,18 @@
 #'  computed ("pearson", "kendall", or "spearman"). The default value is 
 #'  "pearson".
 #'@param alpha A numeric of the significance level to be used in the statistical
-#'  significance test. If it is a numeric, "sign" will be returned. If NULL, the
-#'  p-value will be returned instead. The default value is NULL.
+#'  significance test (output "sign"). The default value is 0.05.
 #'@param handle.na A charcater string indicating how to handle missing values.
 #'  If "return.na", NAs will be returned for the cases that contain at least one
 #'  NA in "exp", "ref", or "obs". If "only.complete.triplets", only the time 
 #'  steps with no missing values in all "exp", "ref", and "obs" will be used. If
 #'  "na.fail", an error will arise if any of "exp", "ref", or "obs" contains any
 #'  NA. The default value is "return.na".
+#'@param pval A logical value indicating whether to return the p-value of the
+#'  significance test Ho: DiffCorr = 0. The default value is TRUE.
+#'@param sign A logical value indicating whether to return the statistical
+#'  significance of the test Ho: DiffCorr = 0 based on 'alpha'. The default
+#'  value is FALSE.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -56,12 +60,12 @@
 #'\item{$sign}{
 #'  A logical array indicating whether the residual correlation is statistically 
 #'  significant or not with the same dimensions as the input arrays except "time_dim"
-#'  (and "memb_dim" if provided). Returned only if "alpha" is a numeric.
+#'  (and "memb_dim" if provided). Returned only if "sign" is TRUE.
 #'}
 #'\item{$p.val}{
 #'  A numeric array of the p-values with the same dimensions as the input arrays
-#'  except "time_dim" (and "memb_dim" if provided). Returned only if "alpha" is
-#'  NULL.
+#'  except "time_dim" (and "memb_dim" if provided). Returned only if "pval" is
+#'  TRUE.
 #'}
 #'
 #'@examples
@@ -73,8 +77,8 @@
 #'@import multiApply
 #'@export
 ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
-                         memb_dim = NULL, method = 'pearson', alpha = NULL, 
-                         handle.na = 'return.na', ncores = NULL) {
+                         memb_dim = NULL, method = 'pearson', alpha = 0.05, 
+                         handle.na = 'return.na', pval = TRUE, sign = FALSE, ncores = NULL) {
 
   # Check inputs
   ## exp, ref, and obs (1)
@@ -132,15 +136,20 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
     stop('Parameter "method" must be "pearson", "kendall", or "spearman".')
   }
   ## alpha
-  if (!is.null(alpha)) {
-    if (any(!is.numeric(alpha) | alpha <= 0 | alpha >= 1 |  
-        length(alpha) > 1)) {
-      stop('Parameter "alpha" must be NULL or a number between 0 and 1.')
-    }
+  if (sign & any(!is.numeric(alpha) | alpha <= 0 | alpha >= 1 | length(alpha) > 1)) {
+    stop('Parameter "alpha" must be a number between 0 and 1.')
   }
   ## handle.na
   if (!handle.na %in% c('return.na', 'only.complete.triplets', 'na.fail')) {
     stop('Parameter "handle.na" must be "return.na", "only.complete.triplets" or "na.fail".')
+  }
+  ## pval
+  if (!is.logical(pval) | length(pval) > 1) {
+    stop("Parameter 'pval' must be one logical value.")
+  }
+  ## sign
+  if (!is.logical(sign) | length(sign) > 1) {
+    stop("Parameter 'sign' must be one logical value.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -169,14 +178,15 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
     if (is.null(dim(exp))) exp <- array(exp, dim = c(dim_exp[time_dim]))
     if (is.null(dim(ref))) ref <- array(ref, dim = c(dim_ref[time_dim]))
   }
- 
+
   # output_dims
-  if (is.null(alpha)) {
-    output_dims <- list(res.corr = NULL, p.val = NULL)
-  } else {
-    output_dims <- list(res.corr = NULL, sign = NULL)
+  output_dims <- list(res.corr = NULL)
+  if (pval) {
+    output_dims <- c(output_dims, list(p.val = NULL))
   }
- 
+  if (sign) {
+    output_dims <- c(output_dims, list(sign = NULL))
+  } 
 
   # Residual correlation
   if (is.array(N.eff)) {
@@ -186,23 +196,26 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
                                        ref = time_dim, N.eff = NULL),
                     output_dims = output_dims,
                     fun = .ResidualCorr, method = method,
-                    alpha = alpha, handle.na = handle.na, ncores = ncores)
+                    alpha = alpha, handle.na = handle.na, pval = pval, sign = sign,
+                    ncores = ncores)
   } else { 
     output <- Apply(data = list(exp = exp, obs = obs, ref = ref),
                     target_dims = list(exp = time_dim, obs = time_dim, 
                                        ref = time_dim), 
                     output_dims = output_dims, N.eff = N.eff,
                     fun = .ResidualCorr, method = method, 
-                    alpha = alpha, handle.na = handle.na, ncores = ncores)
+                    alpha = alpha, handle.na = handle.na, pval = pval, sign = sign,
+                    ncores = ncores)
   }
 
   return(output)
 }
 
-.ResidualCorr <- function(exp, obs, ref, N.eff = NA, method = 'pearson', alpha = NULL, 
-                          handle.na = 'return.na') {
+.ResidualCorr <- function(exp, obs, ref, N.eff = NA, method = 'pearson', alpha = 0.05, 
+                          handle.na = 'return.na', pval = TRUE, sign = FALSE) {
   # exp and ref and obs: [time]
-  .residual.corr <- function(exp, obs, ref, method, N.eff, alpha) {
+  .residual.corr <- function(exp, obs, ref, N.eff = NA, method = 'pearson', alpha = 0.05,
+                             pval = TRUE, sign = FALSE) {
 
     # Residuals of 'exp' and 'obs' (regressing 'ref' out in both 'exp' and 'obs')
     exp_res <- lm(formula = y ~ x, data = list(y = exp, x = ref), na.action = NULL)$residuals
@@ -218,9 +231,13 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
     }  
     t <- abs(output$res.corr) * sqrt(N.eff - 2) / sqrt(1 - output$res.corr^2)
     
-    if (is.null(alpha)) { # p-value
-      output$p.val <- pt(q = t, df = N.eff - 2, lower.tail = FALSE)
-    } else {
+    if (pval | sign) { # p-value
+      p.value <- pt(q = t, df = N.eff - 2, lower.tail = FALSE)
+    } 
+    if (pval) {
+      output$p.val <- p.value
+    }
+    if (sign) {
       t_alpha2_n2 <- qt(p = alpha / 2, df = N.eff - 2, lower.tail = FALSE)
       if (!anyNA(c(t, t_alpha2_n2)) & t >= t_alpha2_n2) {
         output$sign <- TRUE
@@ -245,20 +262,22 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
       ref <- ref[!nna]
 
       output <- .residual.corr(exp = exp, obs = obs, ref = ref, method = method, 
-                               N.eff = N.eff, alpha = alpha)
+                               N.eff = N.eff, alpha = alpha, pval = pval, sign = sign)
       
     } else if (handle.na == 'return.na') {
-      # Data contain NA, return NAs directly without passing to .diff.corr
-      if (is.null(alpha)) {
-        output <- list(res.corr = NA, p.val = NA)
-      } else {
-        output <- list(res.corr = NA, sign = NA)
+      # Data contain NA, return NAs directly without passing to .residual.corr
+      output <- list(res.corr = NA)
+      if (pval) {
+        output <- c(output, list(p.val = NA))
+      }
+      if (sign) {
+        output <- c(output, list(sign = NA))
       }
     }
     
   } else { ## There is no NA  
     output <- .residual.corr(exp = exp, obs = obs, ref = ref, method = method, 
-                         N.eff = N.eff, alpha = alpha)
+                             N.eff = N.eff, alpha = alpha, pval = pval, sign = sign)
   }
 
   return(output)

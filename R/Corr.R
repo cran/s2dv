@@ -23,8 +23,7 @@
 #'@param time_dim A character string indicating the name of dimension along  
 #'  which the correlations are computed. The default value is 'sdate'.
 #'@param dat_dim A character string indicating the name of dataset (nobs/nexp) 
-#'  dimension. The default value is 'dataset'. If there is no dataset 
-#'  dimension, set NULL.
+#'  dimension. The default value is NULL (no dataset).
 #'@param comp_dim A character string indicating the name of dimension along which
 #'  obs is taken into account only if it is complete. The default value
 #'  is NULL.
@@ -47,7 +46,6 @@
 #'  FALSE.
 #'@param alpha A numeric indicating the significance level for the statistical
 #'  significance test. The default value is 0.05.
-#'@param conf.lev Deprecated. Use alpha now instead. alpha = 1 - conf.lev. 
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -91,24 +89,25 @@
 #'leadtimes_per_startdate <- 60 
 #'corr <- Corr(MeanDims(smooth_ano_exp, 'member'),              
 #'             MeanDims(smooth_ano_obs, 'member'),              
-#'             comp_dim = 'ftime',              
+#'             comp_dim = 'ftime', dat_dim = 'dataset', 
 #'             limits = c(ceiling((runmean_months + 1) / 2),                         
 #'             leadtimes_per_startdate - floor(runmean_months / 2))) 
 #'
 #'# Case 2: Keep member dimension
-#'corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member')
+#'corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', dat_dim = 'dataset')
 #'# ensemble mean
-#'corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', memb = FALSE)
+#'corr <- Corr(smooth_ano_exp, smooth_ano_obs, memb_dim = 'member', memb = FALSE,
+#'             dat_dim = 'dataset')
 #'
 #'@import multiApply
 #'@importFrom ClimProjDiags Subset
 #'@importFrom stats cor pt qnorm 
 #'@export
-Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset', 
+Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, 
                  comp_dim = NULL, limits = NULL, method = 'pearson', 
                  memb_dim = NULL, memb = TRUE,
                  pval = TRUE, conf = TRUE, sign = FALSE,
-                 alpha = 0.05, conf.lev = NULL, ncores = NULL) {
+                 alpha = 0.05, ncores = NULL) {
 
   # Check inputs 
   ## exp and obs (1)
@@ -125,10 +124,6 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
-  }
-  if(!all(names(dim(exp)) %in% names(dim(obs))) | 
-     !all(names(dim(obs)) %in% names(dim(exp)))) {
-    stop("Parameter 'exp' and 'obs' must have same dimension name")
   }
   ## time_dim
   if (!is.character(time_dim) | length(time_dim) > 1) {
@@ -176,8 +171,17 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
     if (!is.character(memb_dim) | length(memb_dim) > 1) {
       stop("Parameter 'memb_dim' must be a character string.")
     }
-    if (!memb_dim %in% names(dim(exp)) | !memb_dim %in% names(dim(obs))) {
-      stop("Parameter 'memb_dim' is not found in 'exp' or 'obs' dimension.")
+    if (!memb_dim %in% names(dim(exp)) & !memb_dim %in% names(dim(obs))) {
+      stop("Parameter 'memb_dim' is not found in 'exp' nor 'obs' dimension. Set it as NULL if there is no member dimension.")
+    }
+    # Add [member = 1] 
+    if (memb_dim %in% names(dim(exp)) & !memb_dim %in% names(dim(obs))) {
+      dim(obs) <- c(dim(obs), 1)
+      names(dim(obs))[length(dim(obs))] <- memb_dim
+    }
+    if (!memb_dim %in% names(dim(exp)) & memb_dim %in% names(dim(obs))) {
+      dim(exp) <- c(dim(exp), 1)
+      names(dim(exp))[length(dim(exp))] <- memb_dim
     }
   }
   ## memb
@@ -195,12 +199,6 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
   ## sign
   if (!is.logical(sign) | length(sign) > 1) {
     stop("Parameter 'sign' must be one logical value.")
-  }
-  ## conf.lev 
-  ##NOTE: remove the parameter and the warning after v1.4.0
-  if (!missing("conf.lev")) {
-    .warning(paste0("Argument 'conf.lev' is deprecated. Please use 'alpha' instead. ",
-                    "'alpha' = ", 1 - conf.lev, " is used."), tag = '! Deprecation: ')
   }
   ## alpha
   if (!is.numeric(alpha) | alpha < 0 | alpha > 1 | length(alpha) > 1) {
@@ -224,7 +222,7 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
     name_exp <- name_exp[-which(name_exp == memb_dim)]
     name_obs <- name_obs[-which(name_obs == memb_dim)]
   }
-  if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
+  if (!identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
     stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
                 "all dimension except 'dat_dim' and 'memb_dim'."))
   }
@@ -257,7 +255,6 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
     obs[which(outrows)] <- NA
     rm(obs_sub, outrows)
   }
-
   if (!is.null(memb_dim)) {
     if (!memb) { #ensemble mean
       exp <- MeanDims(exp, memb_dim, na.rm = TRUE)
@@ -282,7 +279,7 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = 'dataset',
  return(res)
 }
 
-.Corr <- function(exp, obs, dat_dim = 'dataset', memb_dim = 'member',
+.Corr <- function(exp, obs, dat_dim = NULL, memb_dim = 'member',
 		  time_dim = 'sdate', method = 'pearson',
                   conf = TRUE, pval = TRUE, sign = FALSE, alpha = 0.05) {
   if (is.null(memb_dim)) {

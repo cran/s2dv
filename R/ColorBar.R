@@ -288,7 +288,7 @@ ColorBar <- function(brks = NULL, cols = NULL, vertical = TRUE,
       triangle_ends <- triangle_ends
     }
   }
-  if (plot) {
+  if (plot && !is.null(var_limits)) {
     if ((bar_limits[1] >= var_limits[1]) && !triangle_ends[1]) {
       .warning("There are variable values smaller or equal to the lower limit ",
                "of the colour bar and the lower triangle end has been ",

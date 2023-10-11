@@ -9,9 +9,10 @@ Trend(
   time_dim = "ftime",
   interval = 1,
   polydeg = 1,
+  alpha = 0.05,
   conf = TRUE,
-  conf.lev = 0.95,
   pval = TRUE,
+  sign = FALSE,
   ncores = NULL
 )
 }
@@ -28,14 +29,17 @@ points along 'time_dim' dimension. The default value is 1.}
 \item{polydeg}{A positive integer indicating the degree of polynomial 
 regression. The default value is 1.}
 
+\item{alpha}{A numeric indicating the significance level for the statistical
+significance test. The default value is 0.05.}
+
 \item{conf}{A logical value indicating whether to retrieve the confidence 
 intervals or not. The default value is TRUE.}
 
-\item{conf.lev}{A numeric indicating the confidence level for the 
-regression computation. The default value is 0.95.}
-
 \item{pval}{A logical value indicating whether to compute the p-value or not. 
 The default value is TRUE.}
+
+\item{sign}{A logical value indicating whether to retrieve the statistical
+significance based on 'alpha'. The default value is FALSE.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
@@ -53,7 +57,7 @@ A list containing:
  A numeric array with the first dimension 'stats', followed by the same 
  dimensions as parameter 'data' except the 'time_dim' dimension. The length
  of the 'stats' dimension should be \code{polydeg + 1}, containing the 
- lower limit of the \code{conf.lev}\% confidence interval for all the 
+ lower limit of the \code{(1-alpha)}\% confidence interval for all the 
  regression coefficients with the same order as \code{$trend}. Only present 
  \code{conf = TRUE}.
 }
@@ -61,7 +65,7 @@ A list containing:
  A numeric array with the first dimension 'stats', followed by the same 
  dimensions as parameter 'data' except the 'time_dim' dimension. The length
  of the 'stats' dimension should be \code{polydeg + 1}, containing the 
- upper limit of the \code{conf.lev}\% confidence interval for all the 
+ upper limit of the \code{(1-alpha)}\% confidence interval for all the 
  regression coefficients with the same order as \code{$trend}. Only present 
  \code{conf = TRUE}.
 }
@@ -69,6 +73,9 @@ A list containing:
  A numeric array of p-value calculated by anova(). The first dimension 
  'stats' is 1, followed by the same dimensions as parameter 'data' except 
  the 'time_dim' dimension. Only present if \code{pval = TRUE}.
+}
+\item{$sign}{
+ The statistical significance. Only present if \code{sign = TRUE}.
 }
 \item{$detrended}{
  A numeric array with the same dimensions as paramter 'data', containing the 

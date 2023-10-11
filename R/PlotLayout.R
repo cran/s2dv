@@ -346,13 +346,26 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
   }
 
   # Check the rest of parameters (unless the user simply wants to build an empty layout)
-  var_limits <- NULL
   if (!all(sapply(var, is_single_na))) {
-    var_limits <- c(min(unlist(var), na.rm = TRUE), max(unlist(var), na.rm = TRUE))
-    if ((any(is.infinite(var_limits)) || var_limits[1] == var_limits[2]))  {
-      stop("Arrays in parameter 'var' must contain at least 2 different values.")
+    if (!all(is.na(unlist(var)))) {
+      var_limits <- c(min(unlist(var), na.rm = TRUE), max(unlist(var), na.rm = TRUE))
+    } else {
+      if (!is.null(brks)) {
+        #NOTE: var_limits be like this to avoid warnings from ColorBar
+        var_limits <- c(min(brks, na.rm = TRUE) + diff(brks)[1],
+                        max(brks, na.rm = TRUE))
+      } else if (!is.null(bar_limits)) {
+        var_limits <- c(bar_limits[1] + 0.01, bar_limits[2])
+      } else {
+        var_limits <- c(-0.5, 0.5) # random range since colorbar is not going to be plotted
+        if (!isFALSE(drawleg)) {
+          drawleg <- FALSE
+          .warning("All data are NAs. Color bar won't be drawn. If you want to have color bar still, define parameter 'brks' or 'bar_limits'.")
+        }
+      }
     }
   }
+
   colorbar <- ColorBar(brks, cols, FALSE, subsampleg, bar_limits,
                        var_limits, triangle_ends, col_inf, col_sup, color_fun, 
                        plot = FALSE, draw_bar_ticks, 

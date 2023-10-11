@@ -38,7 +38,7 @@ the tropical Atlantic (bounded by 10N-25N and 80W-20W) and the tropics at
 large (bounded by 30N-30S). The anomalies are for the JJASON season.\cr
 The estimated seasonal average is either 1) number of hurricanes, 2) number 
 of tropical cyclones with lifetime >=48h or 3) power dissipation index 
-(PDI; in 10^11 m^3 s^{-2}).\cr
+(PDI; in 10^11 m^3 s^(-2)).\cr
 The statistical models used in this function are described in references.
 }
 \examples{

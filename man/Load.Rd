@@ -273,6 +273,10 @@ interpolating to the specified grid.\cr
 If not specified and the selected output type is 'lon', 'lat' or 'lonlat', 
 this parameter takes as default value the grid of the first experimental 
 dataset, which is read automatically from the source files.\cr
+Note that the auto-detected grid type is not guarenteed to be correct, and
+it won't be correct if the netCDF file doesn't contain global domain.
+Please check the warning carefully to ensure the detected grid type is 
+expected, or assign this parameter even regridding is not needed.
 The grid must be supported by 'cdo' tools. Now only supported: rNXxNY 
 or tTRgrid.\cr
 Both rNXxNY and tRESgrid yield rectangular regular grids. rNXxNY yields 

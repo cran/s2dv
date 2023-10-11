@@ -7,11 +7,10 @@
 #'infinite and 1. If the CRPSS is positive, it indicates that the forecast has 
 #'higher skill than the reference forecast, while a negative value means that it
 #'has a lower skill. Examples of reference forecasts are the climatological 
-#'forecast (same probabilities for all categories for all time steps), 
-#'persistence, a previous model version, or another model. It is computed as 
-#'CRPSS = 1 - CRPS_exp / CRPS_ref. The statistical significance is obtained 
-#'based on a Random Walk test at the 95% confidence level (DelSole and Tippett,
-#'2016).
+#'forecast, persistence, a previous model version, or another model. It is 
+#'computed as 'CRPSS = 1 - CRPS_exp / CRPS_ref. The statistical significance is 
+#'obtained based on a Random Walk test at the specified confidence level 
+#'(DelSole and Tippett, 2016).
 #'
 #'@param exp A named numerical array of the forecast with at least time 
 #'  dimension.
@@ -22,9 +21,12 @@
 #'  least time and member dimension. The dimensions must be the same as 'exp' 
 #'  except 'memb_dim' and 'dat_dim'. If there is only one reference dataset,
 #'  it should not have dataset dimension. If there is corresponding reference 
-#'  for each experiement, the dataset dimension must have the same length as in
+#'  for each experiment, the dataset dimension must have the same length as in
 #'  'exp'. If 'ref' is NULL, the climatological forecast is used as reference 
-#'  forecast. The default value is NULL.
+#'  forecast. To build the climatological forecast, the observed values along
+#'  the whole time period are used as different members for all time steps. The 
+#'  parameter 'clim.cross.val' controls whether to build it using 
+#'  cross-validation. The default value is NULL.
 #'@param time_dim A character string indicating the name of the time dimension.
 #'  The default value is 'sdate'.
 #'@param memb_dim A character string indicating the name of the member dimension
@@ -36,6 +38,16 @@
 #'@param Fair A logical indicating whether to compute the FairCRPSS (the 
 #'  potential CRPSS that the forecast would have with an infinite ensemble 
 #'  size). The default value is FALSE.
+#'@param clim.cross.val A logical indicating whether to build the climatological
+#'  forecast in cross-validation (i.e. excluding the observed value of the time 
+#'  step when building the probabilistic distribution function for that 
+#'  particular time step). Only used if 'ref' is NULL. The default value is TRUE.
+#'@param sig_method.type A character string indicating the test type of the
+#'  significance method. Check \code{RandomWalkTest()} parameter 
+#'  \code{test.type} for details. The default is 'two.sided.approx', which is 
+#'  the default of \code{RandomWalkTest()}.
+#'@param alpha A numeric of the significance level to be used in the statistical
+#'  significance test. The default value is 0.05.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -67,7 +79,8 @@
 #'@importFrom ClimProjDiags Subset
 #'@export
 CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', dat_dim = NULL,
-                  Fair = FALSE, ncores = NULL) {
+                  Fair = FALSE, clim.cross.val = TRUE, sig_method.type = 'two.sided.approx', 
+                  alpha = 0.05, ncores = NULL) {
   
   # Check inputs
   ## exp, obs, and ref (1)
@@ -159,8 +172,27 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
     }
   }
   ## Fair
-  if (!is.logical(Fair)  | length(Fair) > 1) {
+  if (!is.logical(Fair) | is.na(Fair) | length(Fair) > 1) {
     stop("Parameter 'Fair' must be either TRUE or FALSE.")
+  }
+  ## clim.cross.val
+  if (!is.logical(clim.cross.val) | is.na(clim.cross.val) | length(clim.cross.val) != 1) {
+    stop("Parameter 'clim.cross.val' must be either TRUE or FALSE.")
+  }
+  ## alpha
+  if (any(!is.numeric(alpha) | alpha <= 0 | alpha >= 1 | length(alpha) > 1)) {
+    stop("Parameter 'alpha' must be a number between 0 and 1.")
+  }
+  ## sig_method.type
+  #NOTE: These are the types of RandomWalkTest()
+  if (!sig_method.type %in% c('two.sided.approx', 'two.sided', 'greater', 'less')) {
+    stop("Parameter 'sig_method.type' must be 'two.sided.approx', 'two.sided', 'greater', or 'less'.")
+  }
+  if (sig_method.type == 'two.sided.approx') {
+    if (alpha != 0.05) {
+      .warning("DelSole and Tippett (2016) aproximation is valid for alpha ",
+              "= 0.05 only. Returning the significance at the 0.05 significance level.")
+    }
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -192,14 +224,16 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
                   fun = .CRPSS,
                   time_dim = time_dim, memb_dim = memb_dim, 
                   dat_dim = dat_dim, 
-                  Fair = Fair,
+                  Fair = Fair, clim.cross.val = clim.cross.val,
+                  sig_method.type = sig_method.type, alpha = alpha,
                   ncores = ncores)
   
   return(output)
 }
 
-.CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', dat_dim = NULL,
-                   Fair = FALSE) {
+.CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
+                   dat_dim = NULL, Fair = FALSE, clim.cross.val = TRUE, 
+                   sig_method.type = 'two.sided.approx', alpha = 0.05) {
   
   # exp: [sdate, memb, (dat)]
   # obs: [sdate, (dat)]
@@ -228,12 +262,13 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
     obs_time_len <- dim(obs)[time_dim]
     if (is.null(dat_dim)) {
       
-      ## Without cross-validation: 
-      ## ref <- array(data = rep(obs, each = obs_time_len), dim = c(obs_time_len, obs_time_len))
-      ## With cross-validation (excluding the value of that year to create ref for that year):
-      ref <- array(data = NA, dim = c(obs_time_len, obs_time_len - 1))
-      for (i in 1:obs_time_len) {
-        ref[i, ] <- obs[-i]
+      if (isFALSE(clim.cross.val)) { ## Without cross-validation
+        ref <- array(data = rep(obs, each = obs_time_len), dim = c(obs_time_len, obs_time_len))
+      } else if (isTRUE(clim.cross.val)) { ## With cross-validation (excluding the value of that year to create ref for that year)
+        ref <- array(data = NA, dim = c(obs_time_len, obs_time_len - 1))
+        for (i in 1:obs_time_len) {
+          ref[i, ] <- obs[-i]
+        }
       }
       
       names(dim(ref)) <- c(time_dim, memb_dim)
@@ -247,12 +282,13 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       names(dim(crps_ref)) <- c(time_dim, 'nobs')
       for (i_obs in 1:nobs) {
         
-        ## Without cross-validation: 
-        ## ref <- array(data = rep(obs[, i_obs], each = obs_time_len), dim = c(obs_time_len, obs_time_len))
-        ## With cross-validation (excluding the value of that year to create ref for that year):
-        ref <- array(data = NA, dim = c(obs_time_len, obs_time_len - 1))
-        for (i in 1:obs_time_len) {
-          ref[i, ] <- obs[-i, i_obs]
+        if (isFALSE(clim.cross.val)) { ## Without cross-validation
+          ref <- array(data = rep(obs[, i_obs], each = obs_time_len), dim = c(obs_time_len, obs_time_len))
+        } else if (isTRUE(clim.cross.val)) { ## With cross-validation (excluding the value of that year to create ref for that year)
+          ref <- array(data = NA, dim = c(obs_time_len, obs_time_len - 1))
+          for (i in 1:obs_time_len) {
+            ref[i, ] <- obs[-i, i_obs]
+          }
         }
         
         names(dim(ref)) <- c(time_dim, memb_dim)
@@ -293,14 +329,18 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           crpss[i, j] <- 1 - crps_exp_mean[i, j] / crps_ref_mean[j]
-          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[j], sign = T, pval = F)$sign
+          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[j],
+                                        test.type = sig_method.type, alpha = alpha,
+                                        sign = T, pval = F)$sign
         }
       }
     } else {
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           crpss[i, j] <- 1 - crps_exp_mean[i, j] / crps_ref_mean[i, j]
-          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[i, j], sign = T, pval = F)$sign
+          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[i, j],
+                                        test.type = sig_method.type, alpha = alpha,
+                                        sign = T, pval = F)$sign
         }
       }
     }
@@ -308,7 +348,9 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   } else {
     crpss <- 1 - mean(crps_exp) / mean(crps_ref)
     # Significance
-    sign <- .RandomWalkTest(skill_A = crps_exp, skill_B = crps_ref, sign = T, pval = F)$sign
+    sign <- .RandomWalkTest(skill_A = crps_exp, skill_B = crps_ref,
+                            test.type = sig_method.type, alpha = alpha,
+                            sign = T, pval = F)$sign
   }
   
   return(list(crpss = crpss, sign = sign))

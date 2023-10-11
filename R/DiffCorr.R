@@ -30,8 +30,7 @@
 #'@param method A character string indicating the correlation coefficient to be
 #'  computed ("pearson" or "spearman"). The default value is "pearson".
 #'@param alpha A numeric of the significance level to be used in the statistical
-#'  significance test. If it is a numeric, "sign" will be returned. If NULL, the
-#'  p-value will be returned instead. The default value is NULL.
+#'  significance test (output "sign"). The default value is 0.05.
 #'@param handle.na A charcater string indicating how to handle missing values.
 #'  If "return.na", NAs will be returned for the cases that contain at least one
 #'  NA in "exp", "ref", or "obs". If "only.complete.triplets", only the time 
@@ -43,6 +42,11 @@
 #'  significantly different) or "one-sided" (to assess whether the skill of  
 #'  "exp" is significantly higher than that of "ref") following Steiger (1980).
 #'  The default value is "two-sided".
+#'@param pval A logical value indicating whether to return the p-value of the
+#'  significance test Ho: DiffCorr = 0. The default value is TRUE.
+#'@param sign A logical value indicating whether to return the statistical
+#'  significance of the test Ho: DiffCorr = 0 based on 'alpha'. The default
+#'  value is FALSE.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -54,12 +58,12 @@
 #'\item{$sign}{
 #'  A logical array of the statistical significance of the correlation 
 #'  differences with the same dimensions as the input arrays except "time_dim"
-#'  (and "memb_dim" if provided). Returned only if "alpha" is a numeric.
+#'  (and "memb_dim" if provided). Returned only if "sign" is TRUE.
 #'}
 #'\item{$p.val}{
 #'  A numeric array of the p-values with the same dimensions as the input arrays
-#'  except "time_dim" (and "memb_dim" if provided). Returned only if "alpha" is 
-#'  NULL.
+#'  except "time_dim" (and "memb_dim" if provided). Returned only if "pval" is 
+#'  TRUE.
 #'}
 #'
 #'@references 
@@ -79,8 +83,9 @@
 #'@import multiApply
 #'@export
 DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate', 
-                     memb_dim = NULL, method = 'pearson', alpha = NULL, 
-                     handle.na = 'return.na', test.type = "two-sided", ncores = NULL) {
+                     memb_dim = NULL, method = 'pearson', alpha = 0.05, 
+                     handle.na = 'return.na', test.type = "two-sided", 
+                     pval = TRUE, sign = FALSE, ncores = NULL) {
   
   # Check inputs
   ## exp, ref, and obs (1)
@@ -141,11 +146,8 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
                     "Monte-Carlo simulations that are done in Siegert et al., 2017"))
   }
   ## alpha
-  if (!is.null(alpha)) {
-    if (any(!is.numeric(alpha) | alpha <= 0 | alpha >= 1 |  
-        length(alpha) > 1)) {
-      stop('Parameter "alpha" must be NULL or a number between 0 and 1.')
-    }
+  if (sign & any(!is.numeric(alpha) | alpha <= 0 | alpha >= 1 | length(alpha) > 1)) {
+    stop('Parameter "alpha" must be a number between 0 and 1.')
   }
   ## handle.na
   if (!handle.na %in% c('return.na', 'only.complete.triplets', 'na.fail')) {
@@ -185,10 +187,12 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
   }
 
   # output_dims
-  if (is.null(alpha)) {
-    output_dims <- list(diff.corr = NULL, p.val = NULL)
-  } else {
-    output_dims <- list(diff.corr = NULL, sign = NULL)
+  output_dims <- list(diff.corr = NULL)
+  if (pval) {
+    output_dims <- c(output_dims, list(p.val = NULL))
+  }
+  if (sign) {
+    output_dims <- c(output_dims, list(sign = NULL))
   }
   # Correlation difference
   if (is.array(N.eff)) {
@@ -199,7 +203,7 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
                     output_dims = output_dims,
                     fun = .DiffCorr, method = method,
                     alpha = alpha, handle.na = handle.na, 
-                    test.type = test.type, ncores = ncores)
+                    test.type = test.type, pval = pval, sign = sign, ncores = ncores)
   } else { 
     output <- Apply(data = list(exp = exp, obs = obs, ref = ref),
                     target_dims = list(exp = time_dim, obs = time_dim, 
@@ -207,16 +211,18 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
                     output_dims = output_dims, N.eff = N.eff,
                     fun = .DiffCorr, method = method, 
                     alpha = alpha, handle.na = handle.na, 
-                    test.type = test.type, ncores = ncores)
+                    test.type = test.type, pval = pval, sign = sign, ncores = ncores)
   }
 
   return(output)
 }
 
-.DiffCorr <- function(exp, obs, ref, N.eff = NA, method = 'pearson', alpha = NULL, 
-                      handle.na = 'return.na', test.type = 'two.sided') {
+.DiffCorr <- function(exp, obs, ref, N.eff = NA, method = 'pearson', alpha = 0.05, 
+                      handle.na = 'return.na', test.type = 'two.sided',
+                      pval = TRUE, sign = FALSE) {
 
-  .diff.corr <- function(exp, obs, ref, method = 'pearson', N.eff = NA, alpha = NULL, test.type = 'two.sided') {
+  .diff.corr <- function(exp, obs, ref, method = 'pearson', N.eff = NA, alpha = 0.05,
+                         test.type = 'two.sided', pval = TRUE, sign = FALSE) {
     # Correlation difference
     cor.exp <- cor(x = exp, y = obs, method = method)
     cor.ref <- cor(x = ref, y = obs, method = method)
@@ -237,12 +243,14 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
       
       ## H0: the skill of exp is not higher than that of ref
       ## H1: the skill of exp is higher than that of ref
-      
-      p.value <- pt(t, df = N.eff - 3, lower.tail = FALSE)
-      
-      if (is.null(alpha)) {
+
+      if (pval | sign) {      
+        p.value <- pt(t, df = N.eff - 3, lower.tail = FALSE)
+      }    
+      if (pval) {
         output$p.val <- p.value
-      } else {
+      }
+      if (sign) {
         output$sign <- ifelse(!is.na(p.value) & p.value <= alpha & output$diff.corr > 0, TRUE, FALSE)
       }
 
@@ -250,12 +258,14 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
       
       ## H0: the skill difference of exp and ref is zero
       ## H1: the skill difference of exp and ref is different from zero
-      
-      p.value <- pt(abs(t), df = N.eff - 3, lower.tail = FALSE)
 
-      if (is.null(alpha)) {
+      if (pval | sign) {      
+        p.value <- pt(abs(t), df = N.eff - 3, lower.tail = FALSE)
+      }
+      if (pval) {
         output$p.val <- p.value
-      } else {
+      }
+      if (sign) {
         output$sign <- ifelse(!is.na(p.value) & p.value <= alpha / 2, TRUE, FALSE)
       }
  
@@ -278,20 +288,22 @@ DiffCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
       ref <- ref[!nna]
 
       output <- .diff.corr(exp = exp, obs = obs, ref = ref, method = method, 
-                           N.eff = N.eff, alpha = alpha, test.type = test.type)
+                           N.eff = N.eff, alpha = alpha, pval = pval, sign = sign, test.type = test.type)
       
     } else if (handle.na == 'return.na') {
       # Data contain NA, return NAs directly without passing to .diff.corr
-      if (is.null(alpha)) {
-        output <- list(diff.corr = NA, p.val = NA)
-      } else {
-        output <- list(diff.corr = NA, sign = NA)
+      output <- list(diff.corr = NA)
+      if (pval) {
+        output <- c(output, list(p.val = NA))
+      } 
+      if (sign) {
+        output <- c(output, list(sign = NA))
       }
     }
     
   } else { ## There is no NA  
     output <- .diff.corr(exp = exp, obs = obs, ref = ref, method = method, 
-                         N.eff = N.eff, alpha = alpha, test.type = test.type)
+                         N.eff = N.eff, alpha = alpha, pval = pval, sign = sign, test.type = test.type)
   }
 
   return(output)

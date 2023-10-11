@@ -13,7 +13,8 @@ CDORemap(
   avoid_writes = TRUE,
   crop = TRUE,
   force_remap = FALSE,
-  write_dir = tempdir()
+  write_dir = tempdir(),
+  ncores = NULL
 )
 }
 \arguments{
@@ -85,6 +86,10 @@ is already on the target grid.}
 \item{write_dir}{Path to the directory where to create the intermediate 
 files for CDO to work. By default, the R session temporary directory is 
 used (\code{tempdir()}).}
+
+\item{ncores}{An integer indicating the number of theads used for 
+interpolation (i.e., \code{-P} in cdo command.) The default value is NULL
+and \code{-P} is not used.}
 }
 \value{
 A list with the following components:

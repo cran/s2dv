@@ -16,8 +16,8 @@
 #'  kept (FALSE) for computation. The default value is TRUE.
 #'@param conf A logical value indicating whether to compute the confidence 
 #'  intervals or not. The default value is TRUE.
-#'@param conf.lev A numeric value of the confidence level for the computation. 
-#'  The default value is 0.95.
+#'@param alpha A numeric of the significance level to be used in the 
+#'  statistical significance test. The default value is 0.05.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -52,7 +52,9 @@
 #'                                                   posdim = 3, 
 #'                                                   lendim = dim(smooth_ano_exp)['member'], 
 #'                                                   name = 'member')
+#'suppressWarnings({
 #'spread <- Spread(smooth_ano_exp_m_sub, compute_dim = c('member', 'sdate'))
+#'})
 #'
 #'\dontrun{
 #'PlotVsLTime(Reorder(spread$iqr, c('dataset', 'stats', 'ftime')), 
@@ -81,7 +83,7 @@
 #'@importFrom stats IQR sd mad runif quantile
 #'@export
 Spread <- function(data, compute_dim = 'member', na.rm = TRUE, 
-                   conf = TRUE, conf.lev = 0.95, ncores = NULL) {
+                   conf = TRUE, alpha = 0.05, ncores = NULL) {
 
   # Check inputs 
   ## data
@@ -113,9 +115,9 @@ Spread <- function(data, compute_dim = 'member', na.rm = TRUE,
   if (!is.logical(conf) | length(conf) > 1) {
     stop("Parameter 'conf' must be one logical value.")
   }
-  ## conf.lev
-  if (!is.numeric(conf.lev) | any(conf.lev < 0) | any(conf.lev > 1) | length(conf.lev) > 1) {
-    stop("Parameter 'conf.lev' must be a numeric number between 0 and 1.")
+  ## alpha
+  if (any(!is.numeric(alpha) | alpha < 0 | alpha > 1) | length(alpha) > 1) {
+    stop("Parameter 'alpha' must be a numeric number between 0 and 1.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -134,14 +136,14 @@ Spread <- function(data, compute_dim = 'member', na.rm = TRUE,
                   output_dims = list(iqr = 'stats', maxmin = 'stats', 
                                      sd = 'stats', mad = 'stats'),
                   na.rm = na.rm,
-                  conf = conf, conf.lev = conf.lev,
+                  conf = conf, alpha = alpha,
                   ncores = ncores)
 
   return(output)
 }
 
 .Spread <- function(data, compute_dim = 'member', na.rm = TRUE,
-                    conf = TRUE, conf.lev = 0.95) {
+                    conf = TRUE, alpha = 0.05) {
 
   # data: compute_dim. [member] or [member, sdate] for example
 
@@ -159,24 +161,24 @@ Spread <- function(data, compute_dim = 'member', na.rm = TRUE,
     res_sd <- rep(res_sd, 3)
     res_mad <- rep(res_mad, 3)
 
-    conf_low <- (1 - conf.lev) / 2
+    conf_low <- alpha / 2
     conf_high <- 1 - conf_low
   
     # Create vector for saving bootstrap result
-    iqr_bs <- c()
-    maxmin_bs <- c()
-    sd_bs <- c()
-    mad_bs <- c()
+    iqr_bs <- rep(NA, 100)
+    maxmin_bs <- rep(NA, 100)
+    sd_bs <- rep(NA, 100)
+    mad_bs <- rep(NA, 100)
 
     # bootstrapping for 100 times
     num <- length(data)
     for (jmix in 1:100) {
       drawings <- round(runif(num, 0.5, num + 0.5))
-      iqr_bs <- c(iqr_bs, IQR(data[drawings], na.rm = na.rm))
-      maxmin_bs <- c(maxmin_bs, max(data[drawings], na.rm = na.rm) - 
-                                min(data[drawings], na.rm = na.rm))
-      sd_bs <- c(sd_bs, sd(data[drawings], na.rm = na.rm))
-      mad_bs <- c(mad_bs, mad(data[drawings], na.rm = na.rm))
+      iqr_bs[jmix] <- IQR(data[drawings], na.rm = na.rm)
+      maxmin_bs[jmix] <- max(data[drawings], na.rm = na.rm) - 
+                           min(data[drawings], na.rm = na.rm)
+      sd_bs[jmix] <- sd(data[drawings], na.rm = na.rm)
+      mad_bs[jmix] <- mad(data[drawings], na.rm = na.rm)
     }
     
     # Calculate confidence interval with the bootstrapping results

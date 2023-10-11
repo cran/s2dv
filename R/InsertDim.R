@@ -8,8 +8,6 @@
 #'@param lendim An integer indicating the length of the new dimension.
 #'@param name A character string indicating the name for the new dimension. 
 #'  The default value is NULL.
-#'@param ncores An integer indicating the number of cores to use for parallel 
-#'  computation. The default value is NULL. This parameter is deprecated now.
 #'
 #'@return An array as parameter 'data' but with the added named dimension.
 #'
@@ -20,7 +18,7 @@
 #'
 #'@import multiApply
 #'@export
-InsertDim <- function(data, posdim, lendim, name = NULL, ncores = NULL) {
+InsertDim <- function(data, posdim, lendim, name = NULL) {
 
   # Check inputs 
   ## data
@@ -61,9 +59,6 @@ InsertDim <- function(data, posdim, lendim, name = NULL, ncores = NULL) {
       stop("Parameter 'name' must be a character string.")
     }
   }
-  ## ncores
-  if (!missing("ncores"))
-    .warning("Argument 'ncores' is deprecated.", tag = '! Deprecation: ')
 
   ###############################
   # Calculate InsertDim

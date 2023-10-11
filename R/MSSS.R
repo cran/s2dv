@@ -1,12 +1,11 @@
-#'Compute root mean square error skill score
+#'Compute mean square error skill score
 #'
-#'Compute the root mean square error skill score (RMSSS) between an array of 
-#'forecast 'exp' and an array of observation 'obs'. The two arrays should 
-#'have the same dimensions except along 'dat_dim' and 'memb_dim'. The RMSSSs
-#'are computed along 'time_dim', the dimension which corresponds to the start
-#'date dimension.
-#'RMSSS computes the root mean square error skill score of each exp in 1:nexp 
-#'against each obs in 1:nobs which gives nexp * nobs RMSSS for each grid point 
+#'Compute the mean square error skill score (MSSS) between an array of forecast 
+#''exp' and an array of observation 'obs'. The two arrays should have the same
+#'dimensions except along 'dat_dim' and 'memb_dim'. The MSSSs are computed along
+#''time_dim', the dimension which corresponds to the start date dimension.
+#'MSSS computes the mean square error skill score of each exp in 1:nexp 
+#'against each obs in 1:nobs which gives nexp * nobs MSSS for each grid point 
 #'of the array.\cr
 #'The p-value and significance test are optionally provided by an one-sided 
 #'Fisher test or Random Walk test.\cr
@@ -31,14 +30,14 @@
 #'@param dat_dim A character string indicating the name of dataset (nobs/nexp) 
 #'  dimension. The default value is NULL.
 #'@param time_dim A character string indicating the name of dimension along  
-#'  which the RMSSS are computed. The default value is 'sdate'.
+#'  which the MSSS are computed. The default value is 'sdate'.
 #'@param memb_dim A character string indicating the name of the member dimension
 #'  to compute the ensemble mean; it should be set to NULL if the data are
 #'  already the ensemble mean. The default value is NULL.
 #'@param pval A logical value indicating whether to compute or not the p-value 
-#'  of the test Ho: RMSSS = 0. The default value is TRUE.
+#'  of the test Ho: MSSS = 0. The default value is TRUE.
 #'@param sign A logical value indicating whether to compute or not the 
-#'  statistical significance of the test Ho: RMSSS = 0. The default value is 
+#'  statistical significance of the test Ho: MSSS = 0. The default value is 
 #'  FALSE.
 #'@param alpha A numeric of the significance level to be used in the 
 #'  statistical significance test. The default value is 0.05.
@@ -58,16 +57,16 @@
 #'nexp is the number of experiment (i.e., dat_dim in exp), and nobs is the 
 #'number of observation (i.e., dat_dim in obs). If dat_dim is NULL, nexp and 
 #'nobs are omitted.\cr
-#'\item{$rmsss}{
-#'  A numerical array of the root mean square error skill score. 
+#'\item{$msss}{
+#'  A numerical array of the mean square error skill score. 
 #'}
 #'\item{$p.val}{
-#'  A numerical array of the p-value with the same dimensions as $rmsss.
+#'  A numerical array of the p-value with the same dimensions as $msss.
 #'  Only present if \code{pval = TRUE}.
 #'}
 #'\item{sign}{
-#'  A logical array of the statistical significance of the RMSSS with the same
-#'  dimensions as $rmsss. Only present if \code{sign = TRUE}.
+#'  A logical array of the statistical significance of the MSSS with the same
+#'  dimensions as $msss. Only present if \code{sign = TRUE}.
 #'}
 #'
 #'@examples
@@ -76,29 +75,20 @@
 #'clim <- Clim(sampleData$mod, sampleData$obs)
 #'ano_exp <- Ano(sampleData$mod, clim$clim_exp)
 #'ano_obs <- Ano(sampleData$obs, clim$clim_obs)
-#'rmsss <- RMSSS(ano_exp, ano_obs, dat_dim = 'dataset', memb_dim = 'member')
+#'rmsss <- MSSS(ano_exp, ano_obs, dat_dim = 'dataset', memb_dim = 'member')
 #'
-#' set.seed(1)
-#' exp1 <- array(rnorm(30), dim = c(dataset = 2, time = 3, memb = 5))
-#' set.seed(2)
-#' obs1 <- array(rnorm(15), dim = c(time = 3, memb = 5, dataset = 1))
-#' res1 <- RMSSS(exp1, obs1, time_dim = 'time', dat_dim = 'dataset')
-#' 
-#' exp2 <- array(rnorm(30), dim = c(lat = 2, time = 3, memb = 5))
-#' obs2 <- array(rnorm(15), dim = c(time = 3, lat = 2))
-#' res2 <- RMSSS(exp2, obs2, time_dim = 'time', memb_dim = 'memb')
-#' 
-#' exp3 <- array(rnorm(30), dim = c(lat = 2, time = 3))
-#' obs3 <- array(rnorm(15), dim = c(time = 3, lat = 2))
-#' res3 <- RMSSS(exp3, obs3, time_dim = 'time')
+#'# Synthetic data:
+#'exp <- array(rnorm(30), dim = c(dataset = 2, time = 3, memb = 5))
+#'obs <- array(rnorm(15), dim = c(time = 3, dataset = 1))
+#'res <- MSSS(exp, obs, time_dim = 'time', dat_dim = 'dataset', memb_dim = 'memb')
 #'
-#'@rdname RMSSS
+#'@rdname MSSS
 #'@import multiApply
 #'@importFrom stats pf
 #'@export
-RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
-                  memb_dim = NULL, pval = TRUE, sign = FALSE, alpha = 0.05, 
-                  sig_method = 'one-sided Fisher', sig_method.type = NULL, ncores = NULL) {
+MSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
+                 memb_dim = NULL, pval = TRUE, sign = FALSE, alpha = 0.05, 
+                 sig_method = 'one-sided Fisher', sig_method.type = NULL, ncores = NULL) {
   
   # Check inputs 
   ## exp, obs, and ref (1)
@@ -122,8 +112,8 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
     stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
                 "dimensions time_dim and dat_dim, or vector of same length."))
   }
-  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
-      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   if (!is.null(ref)) {
@@ -143,7 +133,7 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   if (!is.array(ref)) { # 0 or 1
     ref <- array(data = ref, dim = dim(exp))
   }
-
+  
   ## time_dim
   if (!is.character(time_dim) | length(time_dim) > 1) {
     stop("Parameter 'time_dim' must be a character string.")
@@ -191,9 +181,6 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
     if (is.null(sig_method.type)) {
       .warning("Parameter 'sig_method.type' must be specified if 'sig_method' is ",
                "Random Walk. Assign it as 'two.sided'.")
-      .warning("Note that in s2dv <= 1.4.1, Random Walk uses 'two.sided.approx' method.",
-               "If you want to retain the same functionality, please specify parameter ",
-               "'sig_method.type' as 'two.sided.approx'.")
       sig_method.type <- "two.sided"
     }
     if (!any(sig_method.type %in% c('two.sided.approx', 'two.sided', 'greater', 'less'))) {
@@ -245,7 +232,7 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   if (!is.null(dat_dim)) {
     if (dat_dim %in% name_ref) {
       if (!identical(dim(exp)[dat_dim], dim(ref)[dat_dim])) {
-        stop(paste0("If parameter 'ref' has dataset dimension, it must be ", 
+        stop(paste0("If parameter 'ref' has dataset dimension, it must be ",
                     "equal to dataset dimension of 'exp'."))
       }
       name_ref <- name_ref[-which(name_ref == dat_dim)]
@@ -259,10 +246,9 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   }
 
   if (dim(exp)[time_dim] <= 2) {
-    stop("The length of time_dim must be more than 2 to compute RMSSS.")
+    stop("The length of time_dim must be more than 2 to compute MSSS.")
   }
-  
-  
+
   ###############################
   #  # Sort dimension
   #  name_exp <- names(dim(exp))
@@ -283,28 +269,28 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
       ref <- MeanDims(ref, memb_dim, na.rm = T)
     }
   }
-
+  
   ###############################
-  # Calculate RMSSS
-
+  # Calculate MSSS
+  
   data <- list(exp = exp, obs = obs, ref = ref)
   if (!is.null(dat_dim)) {
     if (dat_dim %in% names(dim(ref))) {
-       target_dims <- list(exp = c(time_dim, dat_dim),
-                           obs = c(time_dim, dat_dim),
-                           ref = c(time_dim, dat_dim))
+      target_dims <- list(exp = c(time_dim, dat_dim),
+                          obs = c(time_dim, dat_dim),
+                          ref = c(time_dim, dat_dim))
     } else {
-       target_dims <- list(exp = c(time_dim, dat_dim),
-                           obs = c(time_dim, dat_dim),
-                           ref = c(time_dim))
+      target_dims <- list(exp = c(time_dim, dat_dim),
+                          obs = c(time_dim, dat_dim),
+                          ref = c(time_dim))
     }
   } else {
     target_dims <- list(exp = time_dim, obs = time_dim, ref = time_dim)
   }
-    
+  
   res <- Apply(data, 
                target_dims = target_dims,
-               fun = .RMSSS, 
+               fun = .MSSS, 
                time_dim = time_dim, dat_dim = dat_dim,
                pval = pval, sign = sign, alpha = alpha,
                sig_method = sig_method, sig_method.type = sig_method.type,
@@ -313,19 +299,19 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   return(res)
 }
 
-.RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL, pval = TRUE, 
-                   sign = FALSE, alpha = 0.05, sig_method = 'one-sided Fisher',
-                   sig_method.type = NULL) {
+.MSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL, pval = TRUE, 
+                  sign = FALSE, alpha = 0.05, sig_method = 'one-sided Fisher',
+                  sig_method.type = NULL) {
   # exp: [sdate, (dat)]
   # obs: [sdate, (dat)]
   # ref: [sdate, (dat)] or NULL
-
+  
   if (is.null(ref)) {
     ref <- array(data = 0, dim = dim(obs))
   } else if (identical(ref, 0) | identical(ref, 1)) {
     ref <- array(ref, dim = dim(exp))
   }
-
+  
   if (is.null(dat_dim)) {
     # exp: [sdate]
     # obs: [sdate]
@@ -336,7 +322,7 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
     dim(exp) <- c(dim(exp), dat = 1)
     dim(obs) <- c(dim(obs), dat = 1)
     dim(ref) <- c(dim(ref), dat = 1)
-
+    
   } else {
     # exp: [sdate, dat_exp]
     # obs: [sdate, dat_obs]
@@ -349,36 +335,36 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
       nref <- 1
     }
   }
-
+  
   nsdate <- as.numeric(dim(exp)[1])
-
-  # RMS of forecast
+  
+  # MSE of forecast
   dif1 <- array(dim = c(nsdate, nexp, nobs))
   names(dim(dif1)) <- c(time_dim, 'nexp', 'nobs')
-
+  
   for (i in 1:nobs) {
     dif1[, , i] <- sapply(1:nexp, function(x) {exp[, x] - obs[, i]})
   }
-
-  rms_exp <- colMeans(dif1^2, na.rm = TRUE)^0.5   # [nexp, nobs]
-
-  # RMS of reference
+  
+  mse_exp <- colMeans(dif1^2, na.rm = TRUE)  # [nexp, nobs]
+  
+  # MSE of reference
   dif2 <- array(dim = c(nsdate, nref, nobs))
   names(dim(dif2)) <- c(time_dim, 'nexp', 'nobs')
   for (i in 1:nobs) {
     dif2[, , i] <- sapply(1:nref, function(x) {ref[, x] - obs[, i]})
   }
-  rms_ref <- colMeans(dif2^2, na.rm = TRUE)^0.5  # [nref, nobs]
+  mse_ref <- colMeans(dif2^2, na.rm = TRUE)  # [nref, nobs]
   if (nexp != nref) {
-    # expand rms_ref to nexp (nref is 1)
-    rms_ref <- array(rms_ref, dim = c(nobs = nobs, nexp = nexp))
-    rms_ref <- Reorder(rms_ref, c(2, 1))
+    # expand mse_ref to nexp (nref is 1)
+    mse_ref <- array(mse_ref, dim = c(nobs = nobs, nexp = nexp))
+    mse_ref <- Reorder(mse_ref, c(2, 1))
   }
 
-  rmsss <- 1 - rms_exp / rms_ref
-
-#################################################
-
+  msss <- 1 - mse_exp / mse_ref
+  
+  #################################################
+  
   if (sig_method == 'one-sided Fisher') {
     p_val <- array(dim = c(nexp = nexp, nobs = nobs))
     ## pval and sign 
@@ -395,26 +381,26 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
           eno2 <- Reorder(eno2, c(2, 1))
         }
       }
-
-      F.stat <- (eno2 * rms_ref^2 / (eno2 - 1)) / ((eno1 * rms_exp^2 / (eno1- 1)))
+      
+      F.stat <- (eno2 * mse_ref^2 / (eno2 - 1)) / ((eno1 * mse_exp^2 / (eno1- 1)))
       tmp <- !is.na(eno1) & !is.na(eno2) & eno1 > 2 & eno2 > 2
       p_val <- 1 - pf(F.stat, eno1 - 1, eno2 - 1)
       if (sign) signif <- p_val <= alpha 
       # If there isn't enough valid data, return NA
       p_val[which(!tmp)] <- NA
       if (sign) signif[which(!tmp)] <- NA
-    
-      # change not enough valid data rmsss to NA
-      rmsss[which(!tmp)] <- NA
+      
+      # change not enough valid data msss to NA
+      msss[which(!tmp)] <- NA
     }
-
+    
   } else if (sig_method == "Random Walk") {
 
     if (sign) signif <- array(dim = c(nexp = nexp, nobs = nobs))
     if (pval) p_val <- array(dim = c(nexp = nexp, nobs = nobs))
 
     for (i in 1:nexp) {
-      for (j in 1:nobs) {
+      for (j in 1:nobs) {        
         error_exp <- array(data = abs(exp[, i] - obs[, j]), dim = c(time = nsdate))
         if (nref == nexp) {
           error_ref <- array(data = abs(ref[, i] - obs[, j]), dim = c(time = nsdate))
@@ -422,7 +408,7 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
           # nref = 1
           error_ref <- array(data = abs(ref - obs[, j]), dim = c(time = nsdate))
         }
-        aux <- .RandomWalkTest(skill_A = error_exp, skill_B = error_ref,
+        aux <- .RandomWalkTest(skill_A = error_exp, skill_B = error_ref, 
                                test.type = sig_method.type,
                                pval = pval, sign = sign, alpha = alpha)
         if (sign) signif[i, j] <- aux$sign
@@ -430,26 +416,20 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
       }
     }
   }
-
+  
   ###################################
   # Remove extra dimensions if dat_dim = NULL
   if (is.null(dat_dim)) {
-    dim(rmsss) <- NULL
+    dim(msss) <- NULL
     if (pval) dim(p_val) <- NULL
     if (sign) dim(signif) <- NULL
   }
   ###################################
-
+  
   # output  
-  res <- list(rmsss = rmsss)
-  if (pval) {
-    p.val <- list(p.val = p_val)
-    res <- c(res, p.val)
-  }
-  if (sign) {
-    signif <- list(sign = signif)
-    res <- c(res, signif)
-  }
-
+  res <- list(msss = msss)
+  if (pval) res <- c(res, list(p.val = p_val))
+  if (sign) res <- c(res, list(sign = signif))
+  
   return(res)
 }

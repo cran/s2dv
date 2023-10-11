@@ -7,7 +7,7 @@
 RatioSDRMS(
   exp,
   obs,
-  dat_dim = "dataset",
+  dat_dim = NULL,
   memb_dim = "member",
   time_dim = "sdate",
   pval = TRUE,
@@ -23,8 +23,7 @@ dimensions 'memb_dim' and 'time_dim'. It should have the same dimensions as
 parameter 'exp' except along 'dat_dim' and 'memb_dim'.}
 
 \item{dat_dim}{A character string indicating the name of dataset (nobs/nexp) 
-dimension. If there is no dataset dimension, set as NULL. The default value
-is 'dataset'.}
+dimension. The default value is NULL (no dataset).}
 
 \item{memb_dim}{A character string indicating the name of the member 
 dimension. It must be one dimension in 'exp' and 'obs'. The default value 
@@ -43,13 +42,12 @@ computation. The default value is NULL.}
 A list of two arrays with dimensions c(nexp, nobs, the rest of 
  dimensions of 'exp' and 'obs' except memb_dim and time_dim), which nexp is
  the length of dat_dim of 'exp' and nobs is the length of dat_dim of 'obs'. 
-(only present if \code{pval = TRUE}) of the one-sided Fisher test with 
-Ho: SD/RMSE = 1.\cr\cr
+ If dat_dim is NULL, nexp and nobs are omitted. \cr
 \item{$ratio}{
  The ratio of the ensemble spread and RMSE.
 }
 \item{$p_val}{
- The p-value of the one-sided Fisher test with Ho: SD/RMSE = 1. Only present
+ The p-value of the one-sided Fisher's test with Ho: SD/RMSE = 1. Only present
  if \code{pval = TRUE}.
 }
 }
@@ -57,12 +55,12 @@ Ho: SD/RMSE = 1.\cr\cr
 Compute the ratio between the standard deviation of the members around the 
 ensemble mean in experimental data and the RMSE between the ensemble mean of 
 experimental and observational data. The p-value is provided by a one-sided 
-Fischer test.
+Fisher's test.
 }
 \examples{
 # Load sample data as in Load() example:
 example(Load)
-rsdrms <- RatioSDRMS(sampleData$mod, sampleData$obs)
+rsdrms <- RatioSDRMS(sampleData$mod, sampleData$obs, dat_dim = 'dataset')
 # Reorder the data in order to plot it with PlotVsLTime
 rsdrms_plot <- array(dim = c(dim(rsdrms$ratio)[1:2], 4, dim(rsdrms$ratio)[3]))
 rsdrms_plot[, , 2, ] <- rsdrms$ratio
