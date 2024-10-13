@@ -42,6 +42,12 @@
 #'  FALSE.
 #'@param alpha A numeric of the significance level to be used in the 
 #'  statistical significance test. The default value is 0.05.
+#'@param N.eff Effective sample size to be used in the statistical significance
+#'  test with the Random Walk. It can be NA (and it will be computed with the 
+#'  s2dv:::.Eno), FALSE (and it will use the length of 'obs' along 'time_dim', so the 
+#'  autocorrelation is not taken into account), a numeric (which is used for 
+#'  all cases), or an array with the same dimensions as 'obs' except 'time_dim'
+#'  (for a particular N.eff to be used for each case). The default value is NA.
 #'@param sig_method A character string indicating the significance method. The
 #'  options are "one-sided Fisher" (default) and "Random Walk". 
 #'@param sig_method.type A character string indicating the test type of the
@@ -97,7 +103,7 @@
 #'@importFrom stats pf
 #'@export
 RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
-                  memb_dim = NULL, pval = TRUE, sign = FALSE, alpha = 0.05, 
+                  memb_dim = NULL, pval = TRUE, sign = FALSE, alpha = 0.05, N.eff = NA,
                   sig_method = 'one-sided Fisher', sig_method.type = NULL, ncores = NULL) {
   
   # Check inputs 
@@ -115,12 +121,12 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
       obs <- array(obs, dim = c(length(obs)))
       names(dim(obs)) <- c(time_dim)
     } else {
-      stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
-                  "dimensions time_dim and dat_dim, or vector of same length."))
+      stop("Parameter 'exp' and 'obs' must be array with as least two ",
+           "dimensions time_dim and dat_dim, or vector of same length.")
     }
   } else if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
-                "dimensions time_dim and dat_dim, or vector of same length."))
+    stop("Parameter 'exp' and 'obs' must be array with as least two ",
+         "dimensions time_dim and dat_dim, or vector of same length.")
   }
   if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
       any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
@@ -131,14 +137,18 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
       stop("Parameter 'ref' must be numeric.")
     }
     if (is.array(ref)) {
-      if (any(is.null(names(dim(ref))))| any(nchar(names(dim(ref))) == 0)) {
+      if (any(is.null(names(dim(ref)))) | any(nchar(names(dim(ref))) == 0)) {
         stop("Parameter 'ref' must have dimension names.")
       }
-    } else if (length(ref) != 1 | any(!ref %in% c(0, 1))) {
+    } else if (length(ref) != 1 | !all(ref %in% c(0, 1))) {
       stop("Parameter 'ref' must be a numeric array or number 0 or 1.")
     }
   } else {
     ref <- 0
+    .warning("If a reference dataset is not provided (ref = NULL), the default ", 
+            "value for the climatology is 0 and RMSSS results will only be ",
+            "correct if 'exp' and 'obs' are anomalies. Provide a non-null ",
+            "'ref' for full-field data.")
   }
   if (!is.array(ref)) { # 0 or 1
     ref <- array(data = ref, dim = dim(exp))
@@ -182,6 +192,19 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   if (!is.numeric(alpha) | length(alpha) > 1) {
     stop("Parameter 'alpha' must be one numeric value.")
   }
+  ## N.eff
+  if (is.array(N.eff)) {
+    if (!is.numeric(N.eff)) stop("Parameter 'N.eff' must be numeric.")
+    if (!all(names(dim(N.eff)) %in% names(dim(obs))) |
+        any(dim(obs)[match(names(dim(N.eff)), names(dim(obs)))] != dim(N.eff))) {
+      stop("If parameter 'N.eff' is provided with an array, it must ",
+           "have the same dimensions as 'obs' except 'time_dim'.")
+    }
+  } else if (any((!is.na(N.eff) & !isFALSE(N.eff) & 
+                  !is.numeric(N.eff)) | length(N.eff) != 1)) {
+    stop("Parameter 'N.eff' must be NA, FALSE, a numeric, or an array with ",
+         "the same dimensions as 'obs' except 'time_dim'.")
+  }
   ## sig_method
   if (length(sig_method) != 1 | !any(sig_method %in% c('one-sided Fisher', 'Random Walk'))) {
     stop("Parameter 'sig_method' must be one of 'one-sided Fisher' or 'Random Walk'.")
@@ -197,7 +220,11 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
       sig_method.type <- "two.sided"
     }
     if (!any(sig_method.type %in% c('two.sided.approx', 'two.sided', 'greater', 'less'))) {
-      stop("Parameter 'sig_method.type' must be a method accepted by RandomWalkTest() parameter 'test.type'.")
+      stop("Parameter 'sig_method.type' must be a method accepted by RandomWalkTest() ",
+           "parameter 'test.type'.")
+    }
+    if ((!is.na(N.eff) & !isFALSE(N.eff)) && sig_method.type == 'two.sided.approx') {
+      .warning("'N.eff' will not be used if 'sig_method.type' is 'two.sided.approx'.")
     }
     if (sig_method.type == 'two.sided.approx' & pval == T) {
       .warning("p-value cannot be calculated by Random Walk 'two.sided.approx' method.")
@@ -234,8 +261,8 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
     stop("Parameter 'exp' and 'obs' must have the same dimension names.")
   }
   if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'dat_dim' and 'memb_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'dat_dim' and 'memb_dim'.")
   }
   
   name_ref <- sort(names(dim(ref)))
@@ -245,17 +272,17 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   if (!is.null(dat_dim)) {
     if (dat_dim %in% name_ref) {
       if (!identical(dim(exp)[dat_dim], dim(ref)[dat_dim])) {
-        stop(paste0("If parameter 'ref' has dataset dimension, it must be ", 
-                    "equal to dataset dimension of 'exp'."))
+        stop("If parameter 'ref' has dataset dimension, it must be ", 
+             "equal to dataset dimension of 'exp'.")
       }
       name_ref <- name_ref[-which(name_ref == dat_dim)]
     }
   }
   if (!identical(length(name_exp), length(name_ref)) |
       !identical(dim(exp)[name_exp], dim(ref)[name_ref])) {
-    stop(paste0("Parameter 'exp' and 'ref' must have the same length of ",
-                "all dimensions except 'memb_dim' and 'dat_dim' if there is ",
-                "only one reference dataset."))
+    stop("Parameter 'exp' and 'ref' must have the same length of ",
+         "all dimensions except 'memb_dim' and 'dat_dim' if there is ",
+         "only one reference dataset.")
   }
 
   if (dim(exp)[time_dim] <= 2) {
@@ -301,20 +328,32 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   } else {
     target_dims <- list(exp = time_dim, obs = time_dim, ref = time_dim)
   }
-    
-  res <- Apply(data, 
-               target_dims = target_dims,
-               fun = .RMSSS, 
-               time_dim = time_dim, dat_dim = dat_dim,
-               pval = pval, sign = sign, alpha = alpha,
-               sig_method = sig_method, sig_method.type = sig_method.type,
-               ncores = ncores)
+  
+  if (is.array(N.eff)) {
+    data$N.eff <- N.eff
+    target_dims[length(target_dims) + 1] <- list(NULL)
+    res <- Apply(data, 
+                 target_dims = target_dims,
+                 fun = .RMSSS, 
+                 time_dim = time_dim, dat_dim = dat_dim,
+                 pval = pval, sign = sign, alpha = alpha,
+                 sig_method = sig_method, sig_method.type = sig_method.type,
+                 ncores = ncores)
+  } else {
+    res <- Apply(data, 
+                 target_dims = target_dims,
+                 fun = .RMSSS, 
+                 time_dim = time_dim, dat_dim = dat_dim,
+                 pval = pval, sign = sign, alpha = alpha, N.eff = N.eff,
+                 sig_method = sig_method, sig_method.type = sig_method.type,
+                 ncores = ncores)
+  }
   
   return(res)
 }
 
 .RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL, pval = TRUE, 
-                   sign = FALSE, alpha = 0.05, sig_method = 'one-sided Fisher',
+                   sign = FALSE, alpha = 0.05, N.eff = NA, sig_method = 'one-sided Fisher',
                    sig_method.type = NULL) {
   # exp: [sdate, (dat)]
   # obs: [sdate, (dat)]
@@ -357,7 +396,9 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   names(dim(dif1)) <- c(time_dim, 'nexp', 'nobs')
 
   for (i in 1:nobs) {
-    dif1[, , i] <- sapply(1:nexp, function(x) {exp[, x] - obs[, i]})
+    dif1[, , i] <- sapply(1:nexp, function(x) {
+                                    exp[, x] - obs[, i]
+                                    })
   }
 
   rms_exp <- colMeans(dif1^2, na.rm = TRUE)^0.5   # [nexp, nobs]
@@ -366,7 +407,9 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
   dif2 <- array(dim = c(nsdate, nref, nobs))
   names(dim(dif2)) <- c(time_dim, 'nexp', 'nobs')
   for (i in 1:nobs) {
-    dif2[, , i] <- sapply(1:nref, function(x) {ref[, x] - obs[, i]})
+    dif2[, , i] <- sapply(1:nref, function(x) {
+                                    ref[, x] - obs[, i]
+                                    })
   }
   rms_ref <- colMeans(dif2^2, na.rm = TRUE)^0.5  # [nref, nobs]
   if (nexp != nref) {
@@ -396,7 +439,7 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
         }
       }
 
-      F.stat <- (eno2 * rms_ref^2 / (eno2 - 1)) / ((eno1 * rms_exp^2 / (eno1- 1)))
+      F.stat <- (eno2 * rms_ref^2 / (eno2 - 1)) / ((eno1 * rms_exp^2 / (eno1 - 1)))
       tmp <- !is.na(eno1) & !is.na(eno2) & eno1 > 2 & eno2 > 2
       p_val <- 1 - pf(F.stat, eno1 - 1, eno2 - 1)
       if (sign) signif <- p_val <= alpha 
@@ -422,8 +465,11 @@ RMSSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', dat_dim = NULL,
           # nref = 1
           error_ref <- array(data = abs(ref - obs[, j]), dim = c(time = nsdate))
         }
+        if (is.na(N.eff)) {
+          N.eff <- .Eno(x = obs[, j], na.action = na.pass) ## effective degrees of freedom
+        }
         aux <- .RandomWalkTest(skill_A = error_exp, skill_B = error_ref,
-                               test.type = sig_method.type,
+                               test.type = sig_method.type, N.eff = N.eff,
                                pval = pval, sign = sign, alpha = alpha)
         if (sign) signif[i, j] <- aux$sign
         if (pval) p_val[i, j] <- aux$p.val

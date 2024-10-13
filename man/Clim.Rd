@@ -74,7 +74,8 @@ A list of 2:
 This function computes per-pair climatologies for the experimental 
 and observational data using one of the following methods:
 \enumerate{
- \item{per-pair method (Garcia-Serrano and Doblas-Reyes, CD, 2012 https://doi.org/10.1007/s00382-012-1413-1)}
+ \item{per-pair method (Garcia-Serrano and Doblas-Reyes, CD, 2012 
+       https://doi.org/10.1007/s00382-012-1413-1)}
  \item{Kharin method (Kharin et al, GRL, 2012 https://doi.org/10.1029/2012GL052647)}
  \item{Fuckar method (Fuckar et al, GRL, 2014 https://doi.org/10.1002/2014GL060815)}
 }

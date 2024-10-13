@@ -94,12 +94,12 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
     if (!is.numeric(N.eff)) stop("Parameter 'N.eff' must be numeric.")
     if (!all(names(dim(N.eff)) %in% names(dim(obs))) |
         any(dim(obs)[match(names(dim(N.eff)), names(dim(obs)))] != dim(N.eff))) {
-      stop(paste0('If parameter "N.eff" is provided with an array, it must ',
-                  'have the same dimensions as "obs" except "time_dim".'))
+      stop('If parameter "N.eff" is provided with an array, it must ',
+           'have the same dimensions as "obs" except "time_dim".')
     }
   } else if (any((!is.na(N.eff) & !is.numeric(N.eff)) | length(N.eff) != 1)) {
-    stop(paste0('Parameter "N.eff" must be NA, a numeric, or an array with ',
-                'the same dimensions as "obs" except "time_dim".'))
+    stop('Parameter "N.eff" must be NA, a numeric, or an array with ',
+         'the same dimensions as "obs" except "time_dim".')
   }
   
   ## time_dim
@@ -126,10 +126,12 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
     name_exp <- name_exp[-which(name_exp == memb_dim)]
     name_ref <- name_ref[-which(name_ref == memb_dim)]
   }
-  if (length(name_exp) != length(name_obs) | length(name_exp) != length(name_ref) |
-      any(dim(exp)[name_exp] != dim(obs)[name_obs]) | any(dim(exp)[name_exp] != dim(ref)[name_ref])) {
-    stop(paste0("Parameter 'exp', 'obs', and 'ref' must have same length of ",
-                "all dimensions except 'memb_dim'."))
+  if (length(name_exp) != length(name_obs) | 
+      length(name_exp) != length(name_ref) |
+      any(dim(exp)[name_exp] != dim(obs)[name_obs]) |
+      any(dim(exp)[name_exp] != dim(ref)[name_ref])) {
+    stop("Parameter 'exp', 'obs', and 'ref' must have same length of ",
+         "all dimensions except 'memb_dim'.")
   }
   ## method
   if (!method %in% c("pearson", "kendall", "spearman")) {
@@ -167,14 +169,13 @@ ResidualCorr <- function(exp, obs, ref, N.eff = NA, time_dim = 'sdate',
 
   # Calculate ensemble mean
   dim_exp <- dim(exp)
-  dim_obs <- dim(obs)
   dim_ref <- dim(ref)
 
   if (!is.null(memb_dim)) {
     exp_memb_dim_ind <- which(names(dim_exp) == memb_dim)
     ref_memb_dim_ind <- which(names(dim_ref) == memb_dim)
-    exp <- apply(exp, c(1:length(dim_exp))[-exp_memb_dim_ind], mean, na.rm = FALSE)
-    ref <- apply(ref, c(1:length(dim_ref))[-ref_memb_dim_ind], mean, na.rm = FALSE)
+    exp <- apply(exp, c(seq_along(dim_exp))[-exp_memb_dim_ind], mean, na.rm = FALSE)
+    ref <- apply(ref, c(seq_along(dim_ref))[-ref_memb_dim_ind], mean, na.rm = FALSE)
     if (is.null(dim(exp))) exp <- array(exp, dim = c(dim_exp[time_dim]))
     if (is.null(dim(ref))) ref <- array(ref, dim = c(dim_ref[time_dim]))
   }

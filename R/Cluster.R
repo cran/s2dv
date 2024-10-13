@@ -142,7 +142,7 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
     dim(data) <- c(length(data))
     names(dim(data)) <- time_dim
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
 
@@ -154,7 +154,7 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
     if (is.null(dim(weights))) {  #is vector
       dim(weights) <- c(length(weights))
     }
-    if (any(is.null(names(dim(weights))))| any(nchar(names(dim(weights))) == 0)) {
+    if (any(is.null(names(dim(weights)))) | any(nchar(names(dim(weights))) == 0)) {
       stop("Parameter 'weights' must have dimension names.")
     }
     if (any(!names(dim(weights)) %in% names(dim(data)) |
@@ -174,7 +174,7 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
     if (!is.character(space_dim)) {
       stop("Parameter 'space_dim' must be a character vector.")
     }
-    if (any(!space_dim %in% names(dim(data)))) {
+    if (!all(space_dim %in% names(dim(data)))) {
       stop("Parameter 'space_dim' is not found in 'data' dimensions.")
     }
     if (!is.null(weights)) {
@@ -202,7 +202,8 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
 
   ## index
   if (!is.character(index) | length(index) > 1) {
-    stop("Parameter 'index' should be a character strings accepted as 'index' by the function NbClust::NbClust.")
+    stop("Parameter 'index' should be a character strings accepted as 'index' ",
+         "by the function NbClust::NbClust.")
   }
 
   ## ncores
@@ -240,7 +241,7 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
   return(output)
 }
 
-.Cluster <- function(data, weights = NULL, nclusters, index = 'sdindex') {
+.Cluster <- function(data, nclusters, weights = NULL, index = 'sdindex') {
   # data: [time, (lat, lon)]
   dat_dim <- dim(data)
 
@@ -252,7 +253,9 @@ Cluster <- function(data, weights = NULL, time_dim = 'sdate', space_dim = NULL,
     if (!is.null(weights)) {
       dim(weights) <- prod(dim(weights))  # a vector 
       data_list <- lapply(1:dat_dim[1], 
-                          function(x) { data[x, ] * weights })
+                          function(x) {
+                            data[x, ] * weights
+                            })
       data <- do.call(abind::abind, c(data_list, along = 0))
     }
   }

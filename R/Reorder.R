@@ -37,7 +37,7 @@ Reorder <- function(data, order) {
   }
 
   ## If attribute "dimensions" exists
-  attr.dim.reorder <- ifelse(!is.null(attributes(data)$dimensions), TRUE, FALSE)
+  attr.dim.reorder <- !is.null(attributes(data)$dimensions)
 
   ## order
   if (is.null(order)) {
@@ -63,11 +63,9 @@ Reorder <- function(data, order) {
       }
     } else {
       dim_names <- names(dim(data))
-      if (attr.dim.reorder) {
-        if (any(attributes(data)$dimensions != dim_names)) {
-          warning("Found attribute 'dimensions' has different names from ",
-                  "names(dim(x)). Use the latter one to reorder.")
-        }
+      if (attr.dim.reorder && any(attributes(data)$dimensions != dim_names)) {
+        warning("Found attribute 'dimensions' has different names from ",
+                "names(dim(x)). Use the latter one to reorder.")
       }
     }
     if (!all(order %in% dim_names)) {
@@ -75,8 +73,8 @@ Reorder <- function(data, order) {
     }
   }
   if (length(order) != length(dim(data))) {
-    stop(paste0("The length of parameter 'order' should be the same with the ",
-                "dimension length of parameter 'data'."))
+    stop("The length of parameter 'order' should be the same with the ",
+         "dimension length of parameter 'data'.")
   }
 
 
@@ -97,7 +95,7 @@ Reorder <- function(data, order) {
   if (is.numeric(data)) {
     data <- aperm(data, order)
   } else {
-    y <- array(1:length(data), dim = dim(data))
+    y <- array(seq_along(data), dim = dim(data))
     y <- aperm(y, order)
     data <- data[as.vector(y)]
     dim(data) <- old_dims[order]

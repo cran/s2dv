@@ -14,6 +14,7 @@ CDORemap(
   crop = TRUE,
   force_remap = FALSE,
   write_dir = tempdir(),
+  print_sys_msg = FALSE,
   ncores = NULL
 )
 }
@@ -86,6 +87,9 @@ is already on the target grid.}
 \item{write_dir}{Path to the directory where to create the intermediate 
 files for CDO to work. By default, the R session temporary directory is 
 used (\code{tempdir()}).}
+
+\item{print_sys_msg}{A logical value indicating to print the messages from 
+system CDO commands. The default is FALSE to keep function using clean.}
 
 \item{ncores}{An integer indicating the number of theads used for 
 interpolation (i.e., \code{-P} in cdo command.) The default value is NULL

@@ -348,7 +348,9 @@ PlotLayout <- function(fun, plot_dims, var, ..., special_args = NULL,
   # Check the rest of parameters (unless the user simply wants to build an empty layout)
   if (!all(sapply(var, is_single_na))) {
     if (!all(is.na(unlist(var)))) {
-      var_limits <- c(min(unlist(var), na.rm = TRUE), max(unlist(var), na.rm = TRUE))
+      tmp <- !is.infinite(unlist(var))
+      var_limits <- c(min(unlist(var)[tmp], na.rm = TRUE),
+                      max(unlist(var)[tmp], na.rm = TRUE))
     } else {
       if (!is.null(brks)) {
         #NOTE: var_limits be like this to avoid warnings from ColorBar

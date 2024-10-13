@@ -7,11 +7,11 @@
 Persistence(
   data,
   dates,
-  time_dim = "time",
   start,
   end,
   ft_start,
   ft_end = ft_start,
+  time_dim = "time",
   max_ft = 10,
   nmemb = 1,
   na.action = 10,
@@ -26,9 +26,6 @@ The data should start at least 40 time steps (years or days) before
 
 \item{dates}{A sequence of 4-digit integers (YYYY) or string (YYYY-MM-DD) 
 in class 'Date' indicating the dates available in the observations.}
-
-\item{time_dim}{A character string indicating the dimension along which to 
-compute the autoregression. The default value is 'time'.}
 
 \item{start}{A 4-digit integer (YYYY) or a string (YYYY-MM-DD) in class 'Date'
 indicating the first start date of the persistence forecast. It must be 
@@ -46,6 +43,9 @@ the average forecast times for which persistence should be calculated.}
 average forecast times for which persistence should be calculated in the
 case of a multi-timestep average persistence. The default value is 
 'ft_start'.}
+
+\item{time_dim}{A character string indicating the dimension along which to 
+compute the autoregression. The default value is 'time'.}
 
 \item{max_ft}{An integer indicating the maximum forecast time possible for 
 'data'. For example, for decadal prediction 'max_ft' would correspond to 10

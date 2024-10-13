@@ -108,17 +108,17 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
     dim(datax) <- c(length(datax))
     names(dim(datax)) <- reg_dim
   }
-  if(any(is.null(names(dim(datay))))| any(nchar(names(dim(datay))) == 0) |
-     any(is.null(names(dim(datax))))| any(nchar(names(dim(datax))) == 0)) {
+  if (any(is.null(names(dim(datay)))) | any(nchar(names(dim(datay))) == 0) |
+      any(is.null(names(dim(datax)))) | any(nchar(names(dim(datax))) == 0)) {
     stop("Parameter 'datay' and 'datax' must have dimension names.")
   }
-  if(!all(names(dim(datay)) %in% names(dim(datax))) | 
-     !all(names(dim(datax)) %in% names(dim(datay)))) {
+  if (!all(names(dim(datay)) %in% names(dim(datax))) | 
+      !all(names(dim(datax)) %in% names(dim(datay)))) {
     stop("Parameter 'datay' and 'datax' must have same dimension name")
   }
   name_datay <- sort(names(dim(datay)))
   name_datax <- sort(names(dim(datax)))
-  if(!all(dim(datay)[name_datay] == dim(datax)[name_datax])) {
+  if (!all(dim(datay)[name_datay] == dim(datax)[name_datax])) {
     stop("Parameter 'datay' and 'datax' must have same length of all dimensions.")
   }
   ## reg_dim
@@ -150,15 +150,15 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
   }
   ## na.action
   if (!is.function(na.action) & !is.numeric(na.action)) {
-      stop(paste0("Parameter 'na.action' must be a function for NA values or ",
-                  "a numeric indicating the number of NA values allowed ",
-                  "before returning NA."))
+      stop("Parameter 'na.action' must be a function for NA values or ",
+           "a numeric indicating the number of NA values allowed ",
+           "before returning NA.")
   }
   if (is.numeric(na.action)) {
     if (any(na.action %% 1 != 0) | any(na.action < 0) | length(na.action) > 1) {
-      stop(paste0("Parameter 'na.action' must be a function for NA values or ",
-                  "a numeric indicating the number of NA values allowed ",
-                  "before returning NA."))
+      stop("Parameter 'na.action' must be a function for NA values or ",
+           "a numeric indicating the number of NA values allowed ",
+           "before returning NA.")
     }
   }
   ## ncores
@@ -201,7 +201,7 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
 .Regression <- function(y, x, formula = y~x, pval = TRUE, conf = TRUE,
                         sign = FALSE, alpha = 0.05, na.action = na.omit) {
 
-  NApos <- 1:length(x)
+  NApos <- seq_along(x)
   NApos[which(is.na(x) | is.na(y))] <- NA
   filtered <- rep(NA, length(x))
   check_na <- FALSE
@@ -226,17 +226,15 @@ Regression <- function(datay, datax, reg_dim = 'sdate', formula = y ~ x,
   filtered[!is.na(NApos)] <- y[!is.na(NApos)] - lm.out$fitted.values
 
   # Check if NA is too many
-  if (check_na) {
-    if (sum(is.na(NApos)) > na_threshold) {  #turn everything into NA
-      coeff[which(!is.na(coeff))] <- NA
-      if (conf) {
-        conf.lower[which(!is.na(conf.lower))] <- NA
-        conf.upper[which(!is.na(conf.upper))] <- NA
-      }
-      if (pval) p.val[which(!is.na(p.val))] <- NA
-      if (sign) signif[which(!is.na(signif))] <- NA
-      filtered[which(!is.na(filtered))] <- NA
+  if (check_na && sum(is.na(NApos)) > na_threshold) {  #turn everything into NA
+    coeff[which(!is.na(coeff))] <- NA
+    if (conf) {
+      conf.lower[which(!is.na(conf.lower))] <- NA
+      conf.upper[which(!is.na(conf.upper))] <- NA
     }
+    if (pval) p.val[which(!is.na(p.val))] <- NA
+    if (sign) signif[which(!is.na(signif))] <- NA
+    filtered[which(!is.na(filtered))] <- NA
   }
 
   res <- list(regression = coeff, filtered = filtered)

@@ -43,7 +43,7 @@ Eno <- function(data, time_dim = 'sdate', na.action = na.pass, ncores = NULL) {
     dim(data) <- c(length(data))
     names(dim(data)) <- time_dim
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## time_dim
@@ -54,14 +54,14 @@ Eno <- function(data, time_dim = 'sdate', na.action = na.pass, ncores = NULL) {
     stop("Parameter 'time_dim' is not found in 'data' dimension.")
   }
   ## na.action
-  if (as.character(substitute(na.action)) != c("na.pass") &
-      as.character(substitute(na.action)) != c("na.fail")) {
+  if (as.character(substitute(na.action)) != "na.pass" &
+      as.character(substitute(na.action)) != "na.fail") {
       stop("Parameter 'na.action' must be a function either na.pass or na.fail.")
   }
-  if(as.character(substitute(na.action))== c("na.fail") && anyNA(data)) {
-    stop(paste0("Calculation fails because NA is found in paratemter 'data', ",
-                "which is not accepted when ",
-                "parameter 'na.action' = na.fail."))
+  if (as.character(substitute(na.action)) == "na.fail" && anyNA(data)) {
+    stop("Calculation fails because NA is found in paratemter 'data', ",
+         "which is not accepted when ",
+         "parameter 'na.action' = na.fail.")
   }
   ## ncores
   if (!is.null(ncores)) {

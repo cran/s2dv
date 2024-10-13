@@ -85,7 +85,7 @@ REOF <- function(ano, lat, lon, ntrunc = 15, time_dim = 'sdate',
   if (!is.numeric(ano)) {
     stop("Parameter 'ano' must be a numeric array.")
   }
-  if(any(is.null(names(dim(ano))))| any(nchar(names(dim(ano))) == 0)) {
+  if (any(is.null(names(dim(ano)))) | any(nchar(names(dim(ano))) == 0)) {
     stop("Parameter 'ano' must have dimension names.")
   }
   ## time_dim
@@ -99,21 +99,21 @@ REOF <- function(ano, lat, lon, ntrunc = 15, time_dim = 'sdate',
   if (!is.character(space_dim) | length(space_dim) != 2) {
     stop("Parameter 'space_dim' must be a character vector of 2.")
   }
-  if (any(!space_dim %in% names(dim(ano)))) {
+  if (!all(space_dim %in% names(dim(ano)))) {
     stop("Parameter 'space_dim' is not found in 'ano' dimension.")
   }
   ## lat
   if (!is.numeric(lat) | length(lat) != dim(ano)[space_dim[1]]) {
-    stop(paste0("Parameter 'lat' must be a numeric vector with the same ",
-                "length as the latitude dimension of 'ano'."))
+    stop("Parameter 'lat' must be a numeric vector with the same ",
+         "length as the latitude dimension of 'ano'.")
   }
   if (any(lat > 90 | lat < -90)) {
     stop("Parameter 'lat' must contain values within the range [-90, 90].")
   }
   ## lon
   if (!is.numeric(lon) | length(lon) != dim(ano)[space_dim[2]]) {
-    stop(paste0("Parameter 'lon' must be a numeric vector with the same ",
-                "length as the longitude dimension of 'ano'."))
+    stop("Parameter 'lon' must be a numeric vector with the same ",
+         "length as the longitude dimension of 'ano'.")
   }
   if (all(lon >= 0)) {
     if (any(lon > 360 | lon < 0)) {
@@ -154,7 +154,7 @@ REOF <- function(ano, lat, lon, ntrunc = 15, time_dim = 'sdate',
   # Area weighting is needed to compute the fraction of variance explained by 
   # each mode
   space_ind <- sapply(space_dim, function(a) which(names(dim(ano)) == a))
-  wght <- array(cos(lat * pi/180), dim = dim(ano)[space_ind])
+  wght <- array(cos(lat * pi / 180), dim = dim(ano)[space_ind])
   
   # We want the covariance matrix to be weigthed by the grid
   # cell area so the anomaly field is weighted by its square
@@ -180,12 +180,12 @@ REOF <- function(ano, lat, lon, ntrunc = 15, time_dim = 'sdate',
   # ano: [sdate, lat, lon]
 
   # Dimensions
-  nt <- dim(ano)[1]
   ny <- dim(ano)[2]
   nx <- dim(ano)[3]
   
   # Get the first ntrunc EOFs:
-  eofs <- .EOF(ano = ano, neofs = ntrunc, corr = corr, wght = wght) #list(EOFs = EOF, PCs = PC, var = var.eof, mask = mask)
+  eofs <- .EOF(ano = ano, neofs = ntrunc, corr = corr, wght = wght) 
+  #list(EOFs = EOF, PCs = PC, var = var.eof, mask = mask)
 
   # Recover loadings (with norm 1), weight the EOFs by the weigths
   # eofs$EOFs: [mode, lat, lon]
@@ -211,13 +211,17 @@ REOF <- function(ano, lat, lon, ntrunc = 15, time_dim = 'sdate',
   RPCs <- t(ano.wght) %*% varim_loadings # [sdate, mode]
 
   ## Alternative methods suggested here:
-  ## https://stats.stackexchange.com/questions/59213/how-to-compute-varimax-rotated-principal-components-in-r/137003#137003
-  ## gives same results as pinv is just transpose in this case, as loadings are ortonormal!
-  # invLoadings <- t(pracma::pinv(varim$loadings)) ## invert and traspose the rotated loadings. pinv uses a SVD again (!)
+  ##https://stats.stackexchange.com/questions/59213/
+  ##how-to-compute-varimax-rotated-principal-components-in-r/137003#137003
+  ##gives same results as pinv is just transpose in this case, as loadings are ortonormal!
+  # invLoadings <- t(pracma::pinv(varim$loadings)) 
+  ## invert and traspose the rotated loadings. pinv uses a SVD again (!)
   # RPCs <- ano.wght %*% invLoadings
 
   # Compute explained variance fraction:
-  var <- apply(RPCs, 2, function(x) { sum(x*x) } ) * 100 / eofs$tot_var  # [mode]
+  var <- apply(RPCs, 2, function(x) {
+                          sum(x * x)
+                          }) * 100 / eofs$tot_var  # [mode]
   dim(var) <- c(mode = length(var))
 
   return(invisible(list(REOFs = REOFs, RPCs = RPCs, var = var)))

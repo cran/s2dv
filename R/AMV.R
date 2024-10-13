@@ -123,13 +123,13 @@ AMV <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'lo
     stop("Parameter 'lon_dim' is not found in 'data' dimension.")
   }
   # data_lats and data_lons part2
-  if (dim(data)[lat_dim] != length(data_lats)){
-    stop(paste0("The latitude dimension of parameter 'data' must be the same",
-                " length of parameter 'data_lats'."))
+  if (dim(data)[lat_dim] != length(data_lats)) {
+    stop("The latitude dimension of parameter 'data' must be the same",
+         " length of parameter 'data_lats'.")
   }
-  if (dim(data)[lon_dim] != length(data_lons)){
-    stop(paste0("The longitude dimension of parameter 'data' must be the same",
-                " length of parameter 'data_lons'."))
+  if (dim(data)[lon_dim] != length(data_lons)) {
+    stop("The longitude dimension of parameter 'data' must be the same",
+         " length of parameter 'data_lons'.")
   }
   # ncores
   if (!is.null(ncores)) {
@@ -140,28 +140,26 @@ AMV <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'lo
   }
   # mask 
   if (!is.null(mask)) {
-    if (is.array(mask) & identical(names(dim(mask)), c(lat_dim,lon_dim)) &
+    if (is.array(mask) & identical(names(dim(mask)), c(lat_dim, lon_dim)) &
         identical(as.integer(dim(mask)), c(length(data_lats), length(data_lons)))) {
       ## To mask those grid point that are missing in the observations
       mask <- s2dv::Reorder(data = mask, order = c(lat_dim, lon_dim))
-      fun_mask <- function(data, mask){
+      fun_mask <- function(data, mask) {
         data[mask == 0] <- NA
         return(data)
       }
       data <- multiApply::Apply(data = data, target_dims = c(lat_dim, lon_dim),
                                 fun = fun_mask, mask = mask, ncores = ncores)$output1
     } else {
-      stop(paste0("Parameter 'mask' must be NULL (no mask) or a numerical array ",
-                  "with c(lat_dim, lon_dim) dimensions and 0 in those grid ",
-                  "points that have to be masked."))
+      stop("Parameter 'mask' must be NULL (no mask) or a numerical array ",
+           "with c(lat_dim, lon_dim) dimensions and 0 in those grid ",
+           "points that have to be masked.")
     }
   }
   # monini
-  if (type == 'dcpp') {
-    if (!is.numeric(monini) | monini %% 1 != 0 | monini < 1 |
-        monini > 12) {
-      stop("Parameter 'monini' must be an integer from 1 to 12.")
-    }
+  if (type == 'dcpp' && 
+      (!is.numeric(monini) | monini %% 1 != 0 | monini < 1 | monini > 12)) {
+    stop("Parameter 'monini' must be an integer from 1 to 12.")
   }
   # fmonth_dim
   if (type == 'dcpp') {
@@ -183,11 +181,11 @@ AMV <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'lo
   } 
   # indices_for_clim
   if (!is.null(indices_for_clim)) {
-    if (!class(indices_for_clim) %in% c('numeric', 'integer') 
-        & !(is.logical(indices_for_clim) & !any(indices_for_clim))) {
-      stop(paste0("The parameter 'indices_for_clim' must be a numeric vector ",
-                  "or NULL to compute the anomalies based on the whole period, ",
-                  "or FALSE if data are already anomalies"))
+    if (!(is(indices_for_clim, "numeric") || is(indices_for_clim, "integer")) &
+        !(is.logical(indices_for_clim) & !any(indices_for_clim))) {
+      stop("The parameter 'indices_for_clim' must be a numeric vector ",
+           "or NULL to compute the anomalies based on the whole period, ",
+           "or FALSE if data are already anomalies")
     }
   }
   # year_dim
@@ -209,7 +207,7 @@ AMV <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'lo
     } 
   }
   # na.rm
-  if (!na.rm %in% c(TRUE,FALSE)) {
+  if (!na.rm %in% c(TRUE, FALSE)) {
     stop("Parameter 'na.rm' must be TRUE or FALSE")
   }
   
@@ -230,12 +228,12 @@ AMV <- function(data, data_lats, data_lons, type, lat_dim = 'lat', lon_dim = 'lo
                                         region = regions$reg2,
                                         londim = lon_dim,
                                         latdim = lat_dim)
-  data <- ClimProjDiags::CombineIndices(indices = list(mean_1,mean_2), weights = NULL, 
+  data <- ClimProjDiags::CombineIndices(indices = list(mean_1, mean_2), weights = NULL, 
                                         operation = 'subtract') # (mean_1 - mean_2)
   
-  if (type == 'dcpp'){
+  if (type == 'dcpp') {
     target_dims <- c(sdate_dim, fmonth_dim)
-  } else if (type %in% c('hist','obs')){
+  } else if (type %in% c('hist', 'obs')) {
     target_dims <- c(year_dim, month_dim)
   }
   

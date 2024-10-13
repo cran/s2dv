@@ -25,6 +25,9 @@
 #'@param Fair A logical indicating whether to compute the FairCRPS (the 
 #'  potential CRPS that the forecast would have with an infinite ensemble size).
 #'  The default value is FALSE.
+#'@param return_mean A logical indicating whether to return the temporal mean
+#'  of the CRPS or not. If TRUE, the temporal mean is calculated along time_dim,
+#'  if FALSE the time dimension is not aggregated. The default is TRUE. 
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -47,15 +50,15 @@
 #'@importFrom ClimProjDiags Subset
 #'@export
 CRPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NULL,
-                 Fair = FALSE, ncores = NULL) {
+                 Fair = FALSE, return_mean = TRUE, ncores = NULL) {
   # Check inputs
   ## exp and obs (1)
   if (!is.array(exp) | !is.numeric(exp))
     stop("Parameter 'exp' must be a numeric array.")
   if (!is.array(obs) | !is.numeric(obs))
     stop("Parameter 'obs' must be a numeric array.")
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## time_dim
@@ -86,7 +89,8 @@ CRPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NU
     if (identical(as.numeric(dim(obs)[memb_dim]), 1)) {
       obs <- ClimProjDiags::Subset(x = obs, along = memb_dim, indices = 1, drop = 'selected')
     } else {
-      stop("Not implemented for observations with members ('obs' can have 'memb_dim', but it should be of length = 1).")
+      stop("Not implemented for observations with members ", 
+           "('obs' can have 'memb_dim', but it should be of length = 1).")
     }
   }
   name_exp <- sort(names(dim(exp)))
@@ -98,12 +102,16 @@ CRPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NU
   }
   if (!identical(length(name_exp), length(name_obs)) |
       !identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'memb_dim' and 'dat_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'memb_dim' and 'dat_dim'.")
   }
   ## Fair
-  if (!is.logical(Fair)  | length(Fair) > 1) {
+  if (!is.logical(Fair) | length(Fair) > 1) {
     stop("Parameter 'Fair' must be either TRUE or FALSE.")
+  }
+  ## return_mean
+  if (!is.logical(return_mean) | length(return_mean) > 1) {
+    stop("Parameter 'return_mean' must be either TRUE or FALSE.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -123,17 +131,21 @@ CRPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NU
                 Fair = Fair,
                 ncores = ncores)$output1
   
-  # Return only the mean CRPS
-  crps <- MeanDims(crps, time_dim, na.rm = FALSE)
+  if (return_mean) {
+    crps <- MeanDims(crps, time_dim, na.rm = FALSE) 
+  } else {
+    crps <- crps
+  }
   
   return(crps)
 }
 
 .CRPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NULL,
                   Fair = FALSE) {
+  
   # exp: [sdate, memb, (dat_dim)]
   # obs: [sdate, (dat_dim)]
-
+  
   # Adjust dimensions if needed
   if (is.null(dat_dim)) {
     nexp <- 1
@@ -144,28 +156,28 @@ CRPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', dat_dim = NU
     nexp <- as.numeric(dim(exp)[dat_dim])
     nobs <- as.numeric(dim(obs)[dat_dim])
   }
-
+  
   # for FairCRPS
   R_new <- ifelse(Fair, Inf, NA)
-
+  
   CRPS <- array(dim = c(dim(exp)[time_dim], nexp = nexp, nobs = nobs))
-
+  
   for (i in 1:nexp) {
     for (j in 1:nobs) {
-      exp_data <- exp[ , , i]
-      obs_data <- obs[ , j]
-
+      exp_data <- exp[, , i]
+      obs_data <- obs[, j]
+      
       if (is.null(dim(exp_data))) dim(exp_data) <- c(dim(exp)[1:2])
       if (is.null(dim(obs_data))) dim(obs_data) <- c(dim(obs)[1])
-
+      
       crps <- SpecsVerification::enscrps_cpp(ens = exp_data, obs = obs_data, R_new = R_new)
-      CRPS[ , i, j] <- crps
+      CRPS[, i, j] <- crps
     }
   }
-
+  
   if (is.null(dat_dim)) {
     dim(CRPS) <- c(dim(CRPS)[time_dim])
   }
-
+  
   return(CRPS)
 }

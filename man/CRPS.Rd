@@ -11,6 +11,7 @@ CRPS(
   memb_dim = "member",
   dat_dim = NULL,
   Fair = FALSE,
+  return_mean = TRUE,
   ncores = NULL
 )
 }
@@ -35,6 +36,10 @@ default value is NULL.}
 \item{Fair}{A logical indicating whether to compute the FairCRPS (the 
 potential CRPS that the forecast would have with an infinite ensemble size).
 The default value is FALSE.}
+
+\item{return_mean}{A logical indicating whether to return the temporal mean
+of the CRPS or not. If TRUE, the temporal mean is calculated along time_dim,
+if FALSE the time dimension is not aggregated. The default is TRUE.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}

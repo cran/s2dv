@@ -65,11 +65,11 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
     stop("Parameter 'exp' and 'obs' must be a numeric array.")
   }
   if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must have at least dimensions ",
-                "time_dim and dat_dim."))
+    stop("Parameter 'exp' and 'obs' must have at least dimensions ",
+         "time_dim and dat_dim.")
   }
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## time_dim
@@ -114,14 +114,14 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
            " Set it as NULL if there is no dataset dimension.")
     }
     # If dat_dim is not in obs, add it in
-    if (any(!dat_dim %in% names(dim(obs)))) {
+    if (!all(dat_dim %in% names(dim(obs)))) {
       reset_obs_dim <- TRUE
       ori_obs_dim <- dim(obs)
       dim(obs) <- c(dim(obs), rep(1, length(dat_dim[which(!dat_dim %in% names(dim(obs)))])))
       names(dim(obs)) <- c(names(ori_obs_dim), dat_dim[which(!dat_dim %in% names(dim(obs)))])
     }
     # If dat_dim is not in obs, add it in
-    if (any(!dat_dim %in% names(dim(exp)))) {
+    if (!all(dat_dim %in% names(dim(exp)))) {
       reset_exp_dim <- TRUE
       ori_exp_dim <- dim(exp)
       dim(exp) <- c(dim(exp), rep(1, length(dat_dim[which(!dat_dim %in% names(dim(exp)))])))
@@ -129,10 +129,8 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
     }
   }
   # memb_dim and dat_dim
-  if (!memb) {
-    if (!memb_dim %in% dat_dim) {
-      stop("Parameter 'memb_dim' must be one element in parameter 'dat_dim'.")
-    }
+  if (!memb && !memb_dim %in% dat_dim) {
+    stop("Parameter 'memb_dim' must be one element in parameter 'dat_dim'.")
   }
 
   ## ncores
@@ -146,14 +144,14 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
   if (!is.null(dat_dim)) {
-    for (i in 1:length(dat_dim)) {
+    for (i in seq_along(dat_dim)) {
       name_exp <- name_exp[-which(name_exp == dat_dim[i])]
       name_obs <- name_obs[-which(name_obs == dat_dim[i])]
     }
   }
   if (!identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have the same length of ",
-                "all dimensions except 'dat_dim'."))
+    stop("Parameter 'exp' and 'obs' must have the same length of ",
+         "all dimensions except 'dat_dim'.")
   }
 
   ###############################
@@ -161,15 +159,14 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
   name_exp <- names(dim(exp))
   name_obs <- names(dim(obs))
   order_obs <- match(name_exp, name_obs)
-  if (any(order_obs != sort(order_obs))) {
-    obs <- Reorder(obs, order_obs)
-  }
+  obs <- Reorder(obs, order_obs)
 
   #-----------------------------------
-  # Per-paired method: If any sdate along dat_dim is NA, turn all sdate points along dat_dim into NA.
+  # Per-paired method: If any sdate along dat_dim is NA, turn all sdate points 
+  # along dat_dim into NA.
   if (!is.null(dat_dim)) {
     pos <- rep(0, length(dat_dim))  # dat_dim: [dataset, member]
-    for (i in 1:length(dat_dim)) {
+    for (i in seq_along(dat_dim)) {
         pos[i] <- which(names(dim(obs)) == dat_dim[i])
     }
     outrows_exp <- MeanDims(exp, pos, na.rm = FALSE) +
@@ -226,8 +223,6 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
   if (is.null(dat_dim)) {
     ini_dims_exp <- dim(exp)
     ini_dims_obs <- dim(obs)
-    ini_dims_exp_for_clim <- dim(exp)
-    ini_dims_obs_for_clim <- dim(exp)
     exp <- InsertDim(exp, posdim = 2, lendim = 1, name = 'dataset')
     exp_for_clim <- InsertDim(exp_for_clim, posdim = 2, lendim = 1, name = 'dataset')
     obs <- InsertDim(obs, posdim = 2, lendim = 1, name = 'dataset')
@@ -239,12 +234,13 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
   ano_exp_list <- vector('list', length = dim(exp)[1])  #length: [sdate]
   ano_obs_list <- vector('list', length = dim(obs)[1])  
 
-  for (tt in 1:dim(exp)[1]) {  #[sdate]
+  for (tt in seq_len(dim(exp)[1])) {  #[sdate]
     # calculate clim
-    exp_sub <- ClimProjDiags::Subset(exp_for_clim, 1, c(1:dim(exp)[1])[-tt])
-    obs_sub <- ClimProjDiags::Subset(obs_for_clim, 1, c(1:dim(obs)[1])[-tt])
-    clim_exp <- apply(exp_sub, c(1:length(dim(exp)))[-1], mean, na.rm = TRUE)  # average out time_dim -> [dat, memb]
-    clim_obs <- apply(obs_sub, c(1:length(dim(obs)))[-1], mean, na.rm = TRUE)
+    exp_sub <- ClimProjDiags::Subset(exp_for_clim, 1, seq_len(dim(exp)[1])[-tt])
+    obs_sub <- ClimProjDiags::Subset(obs_for_clim, 1, seq_len(dim(obs)[1])[-tt])
+    # Average out time_dim -> [dat, memb]
+    clim_exp <- apply(exp_sub, seq_along(dim(exp))[-1], mean, na.rm = TRUE)
+    clim_obs <- apply(obs_sub, seq_along(dim(obs))[-1], mean, na.rm = TRUE)
 
     # ensemble mean
     if (!memb) {
@@ -253,7 +249,7 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
         clim_obs <- mean(clim_obs, na.rm = TRUE)
       } else {
         pos <- which(names(dim(clim_exp)) == memb_dim)
-        pos <- c(1:length(dim(clim_exp)))[-pos]
+        pos <- seq_along(dim(clim_exp))[-pos]
         dim_name <- names(dim(clim_exp))
         dim_exp_ori <- dim(clim_exp)
         dim_obs_ori <- dim(clim_obs)
@@ -272,13 +268,8 @@ Ano_CrossValid <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 
         clim_obs_tmp <- array(clim_obs, dim = c(dim_obs_ori[pos], dim_obs_ori[-pos]))
         # Reorder it back to dim(clim_exp)
         tmp <- match(dim_exp_ori, dim(clim_exp_tmp))
-        if (any(tmp != sort(tmp))) {
-          clim_exp <- Reorder(clim_exp_tmp, tmp)
-          clim_obs <- Reorder(clim_obs_tmp, tmp)
-        } else {
-          clim_exp <- clim_exp_tmp
-          clim_obs <- clim_obs_tmp
-        }
+        clim_exp <- Reorder(clim_exp_tmp, tmp)
+        clim_obs <- Reorder(clim_obs_tmp, tmp)
       }
     }
     # calculate ano

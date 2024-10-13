@@ -18,7 +18,8 @@ MSE(
 )
 }
 \arguments{
-\item{exp}{A named numeric array of experimental data, with at least #'  'time_dim' dimension. It can also be a vector with the same length as 'obs'.}
+\item{exp}{A named numeric array of experimental data, with at least 
+'time_dim' dimension. It can also be a vector with the same length as 'obs'.}
 
 \item{obs}{A named numeric array of observational data, same dimensions as
 parameter 'exp' except along 'dat_dim' and 'memb_dim'. It can also be a 

@@ -10,6 +10,8 @@ GetProbs(
   memb_dim = "member",
   indices_for_quantiles = NULL,
   prob_thresholds = c(1/3, 2/3),
+  abs_thresholds = NULL,
+  bin_dim_abs = "bin",
   weights = NULL,
   cross.val = FALSE,
   ncores = NULL
@@ -29,11 +31,25 @@ member). The default value is 'member'.}
 
 \item{indices_for_quantiles}{A vector of the indices to be taken along 
 'time_dim' for computing the absolute thresholds between the probabilistic
-categories. If NULL, the whole period is used. The default value is NULL.}
+categories. If NULL (default), the whole period is used. It is only used 
+when 'prob_thresholds' is provided.}
 
 \item{prob_thresholds}{A numeric vector of the relative thresholds (from 0 to
 1) between the categories. The default value is c(1/3, 2/3), which 
 corresponds to tercile equiprobable categories.}
+
+\item{abs_thresholds}{A numeric array or vector of the absolute thresholds in 
+the same units as \code{data}. If an array is provided, it should have at 
+least 'bin_dim_abs' dimension. If it has more dimensions (e.g. different 
+thresholds for different locations, i.e. lon and lat dimensions), they 
+should match the dimensions of \code{data}, except the member dimension 
+which should not be included. The default value is NULL and, in this case, 
+'prob_thresholds' is used for calculating the probabilities.}
+
+\item{bin_dim_abs}{A character string of the dimension name of 
+'abs_thresholds' array in which category limits are stored. It will also be
+the probabilistic category dimension name in the output. The default value
+is 'bin'.}
 
 \item{weights}{A named numerical array of the weights for 'data' with 
 dimensions 'time_dim' and 'memb_dim' (if 'data' has them). The default value
@@ -49,9 +65,9 @@ is FALSE.}
 computation. The default value is NULL.}
 }
 \value{
-A numerical array of probabilities with dimensions c(bin, the rest dimensions
-of 'data' except 'memb_dim'). 'bin' dimension has the length of probabilistic 
-categories, i.e., \code{length(prob_thresholds) + 1}.
+A numerical array of probabilities with dimensions c(bin_dim_abs, the rest
+dimensions of 'data' except 'memb_dim'). 'bin' dimension has the length of 
+probabilistic categories, i.e., \code{length(prob_thresholds) + 1}.
 }
 \description{
 Compute probabilistic forecasts from an ensemble based on the relative 
@@ -63,11 +79,20 @@ the probabilities are calculated as the percentage of members that fall into
 each category. For observations (or forecast without member dimension), 1 
 means that the event happened, while 0 indicates that the event did not 
 happen. Weighted probabilities can be computed if the weights are provided for 
-each ensemble member and time step.
+each ensemble member and time step. The absolute thresholds can also be
+provided directly for probabilities calculation.
 }
 \examples{
 data <- array(rnorm(2000), dim = c(ensemble = 25, sdate = 20, time = 4))
 res <- GetProbs(data = data, time_dim = 'sdate', memb_dim = 'ensemble', 
                indices_for_quantiles = 4:17)
+
+# abs_thresholds is provided
+abs_thr1 <- c(-0.2, 0.3)
+abs_thr2 <- array(c(-0.2, 0.3) + rnorm(40) * 0.1, dim = c(cat = 2, sdate = 20))
+res1 <- GetProbs(data = data, time_dim = 'sdate', memb_dim = 'ensemble',
+                prob_thresholds = NULL, abs_thresholds = abs_thr1)
+res2 <- GetProbs(data = data, time_dim = 'sdate', memb_dim = 'ensemble',
+                prob_thresholds = NULL, abs_thresholds = abs_thr2, bin_dim_abs = 'cat')
 
 }

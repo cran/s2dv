@@ -1,4 +1,5 @@
-#'Compute the correlation coefficient between an array of forecast and their corresponding observation
+#'Compute the correlation coefficient between an array of forecast and their
+#'corresponding observation
 #'
 #'Calculate the correlation coefficient (Pearson, Kendall or Spearman) for 
 #'an array of forecast and an array of observation. The correlations are 
@@ -118,11 +119,11 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
     stop("Parameter 'exp' and 'obs' must be a numeric array.")
   }
   if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must be at least two dimensions ",
-                "containing time_dim and dat_dim."))
+    stop("Parameter 'exp' and 'obs' must be at least two dimensions ",
+         "containing time_dim and dat_dim.")
   }
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## time_dim
@@ -158,8 +159,8 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
     }
     if (!is.numeric(limits) | any(limits %% 1 != 0) | any(limits < 0) | 
         length(limits) != 2 | any(limits > dim(exp)[comp_dim])) {
-      stop(paste0("Parameter 'limits' must be a vector of two positive ",
-                  "integers smaller than the length of paramter 'comp_dim'."))
+      stop("Parameter 'limits' must be a vector of two positive ",
+           "integers smaller than the length of paramter 'comp_dim'.")
     }
   }
   ## method
@@ -172,7 +173,8 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
       stop("Parameter 'memb_dim' must be a character string.")
     }
     if (!memb_dim %in% names(dim(exp)) & !memb_dim %in% names(dim(obs))) {
-      stop("Parameter 'memb_dim' is not found in 'exp' nor 'obs' dimension. Set it as NULL if there is no member dimension.")
+      stop("Parameter 'memb_dim' is not found in 'exp' nor 'obs' dimension. ",
+           "Set it as NULL if there is no member dimension.")
     }
     # Add [member = 1] 
     if (memb_dim %in% names(dim(exp)) & !memb_dim %in% names(dim(obs))) {
@@ -223,8 +225,8 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
     name_obs <- name_obs[-which(name_obs == memb_dim)]
   }
   if (!identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimension except 'dat_dim' and 'memb_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimension except 'dat_dim' and 'memb_dim'.")
   }
   if (dim(exp)[time_dim] < 3) {
     stop("The length of time_dim must be at least 3 to compute correlation.")
@@ -282,25 +284,30 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
 .Corr <- function(exp, obs, dat_dim = NULL, memb_dim = 'member',
 		  time_dim = 'sdate', method = 'pearson',
                   conf = TRUE, pval = TRUE, sign = FALSE, alpha = 0.05) {
+
+  if (is.null(dat_dim)) {
+    nexp <- 1
+    nobs <- 1
+  } else {
+    nexp <- as.numeric(dim(exp)[dat_dim])
+    nobs <- as.numeric(dim(obs)[dat_dim])
+  }
+
   if (is.null(memb_dim)) {
+    CORR <- array(dim = c(nexp = nexp, nobs = nobs))
+
     if (is.null(dat_dim)) {
       # exp: [sdate]
       # obs: [sdate]
-      nexp <- 1
-      nobs <- 1
-      CORR <- array(dim = c(nexp = nexp, nobs = nobs))
-      if (any(!is.na(exp)) && sum(!is.na(obs)) > 2) {
-        CORR <- cor(exp, obs, use = "pairwise.complete.obs", method = method)
+      if (!all(is.na(exp)) && sum(!is.na(obs)) > 2) {
+        CORR[, ] <- cor(exp, obs, use = "pairwise.complete.obs", method = method)
       }
     } else {
       # exp: [sdate, dat_exp]
       # obs: [sdate, dat_obs]
-      nexp <- as.numeric(dim(exp)[dat_dim])
-      nobs <- as.numeric(dim(obs)[dat_dim])
-      CORR <- array(dim = c(nexp = nexp, nobs = nobs))
       for (j in 1:nobs) {
         for (y in 1:nexp) {            
-          if (any(!is.na(exp[, y])) && sum(!is.na(obs[, j])) > 2) {
+          if (!all(is.na(exp[, y])) && sum(!is.na(obs[, j])) > 2) {
             CORR[y, j] <- cor(exp[, y], obs[, j],
                               use = "pairwise.complete.obs",
                               method = method)
@@ -328,17 +335,15 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
     exp_memb <- as.numeric(dim(exp)[memb_dim]) # memb_dim
     obs_memb <- as.numeric(dim(obs)[memb_dim])
 
+    CORR <- array(dim = c(nexp = nexp, nobs = nobs, exp_memb = exp_memb, obs_memb = obs_memb))
+
     if (is.null(dat_dim)) {
       # exp: [sdate, memb_exp]
       # obs: [sdate, memb_obs]
-      nexp <- 1
-      nobs <- 1
-      CORR <- array(dim = c(nexp = nexp, nobs = nobs, exp_memb = exp_memb, obs_memb = obs_memb))
-
       for (j in 1:obs_memb) {
         for (y in 1:exp_memb) {
               
-          if (any(!is.na(exp[,y])) && sum(!is.na(obs[, j])) > 2) {
+          if (!all(is.na(exp[, y])) && sum(!is.na(obs[, j])) > 2) {
             CORR[, , y, j] <- cor(exp[, y], obs[, j],
                                   use = "pairwise.complete.obs",
                                   method = method)
@@ -349,16 +354,11 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
     } else {
       # exp: [sdate, dat_exp, memb_exp]
       # obs: [sdate, dat_obs, memb_obs]
-      nexp <- as.numeric(dim(exp)[dat_dim])
-      nobs <- as.numeric(dim(obs)[dat_dim])
-      
-      CORR <- array(dim = c(nexp = nexp, nobs = nobs, exp_memb = exp_memb, obs_memb = obs_memb))
-
       for (j in 1:obs_memb) {
         for (y in 1:exp_memb) {
           CORR[, , y, j] <- sapply(1:nobs, function(i) {
                               sapply(1:nexp, function (x) {
-            if (any(!is.na(exp[, x, y])) && sum(!is.na(obs[, i, j])) > 2) {
+            if (!all(is.na(exp[, x, y])) && sum(!is.na(obs[, i, j])) > 2) {
               cor(exp[, x, y], obs[, i, j],
                   use = "pairwise.complete.obs",
                   method = method)
@@ -390,7 +390,9 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
   if (pval || conf || sign) {
     if (method == "kendall" | method == "spearman") {
       if (!is.null(dat_dim) | !is.null(memb_dim)) {
-        tmp <- apply(obs, c(1:length(dim(obs)))[-1], rank)  # for memb_dim = NULL, 2; for memb_dim, c(2, 3)
+        tmp <- apply(obs,
+                     c(seq_along(dim(obs)))[-1],
+                     rank) # for memb_dim = NULL, 2; for memb_dim, c(2, 3)
         names(dim(tmp))[1] <- time_dim
         eno <- Eno(tmp, time_dim)
       } else {
@@ -409,7 +411,8 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
         eno_expand[i, ] <- eno
       }
     } else {  #member
-      eno_expand <- array(dim = c(nexp = nexp, nobs = nobs, exp_memb = exp_memb, obs_memb = obs_memb))
+      eno_expand <- array(dim = c(nexp = nexp, nobs = nobs,
+                                  exp_memb = exp_memb, obs_memb = obs_memb))
       for (i in 1:nexp) {
         for (j in 1:exp_memb) {
           eno_expand[i, , j, ] <- eno
@@ -438,14 +441,33 @@ Corr <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL,
 
 ###################################  
   # Remove nexp and nobs if dat_dim = NULL
-  if (is.null(dat_dim) & !is.null(memb_dim)) {
-    dim(CORR) <- dim(CORR)[3:length(dim(CORR))]
-    if (pval) {
-      dim(p.val) <- dim(p.val)[3:length(dim(p.val))]
-    }
-    if (conf) {
-      dim(conflow) <- dim(conflow)[3:length(dim(conflow))]
-      dim(confhigh) <- dim(confhigh)[3:length(dim(confhigh))]
+  if (is.null(dat_dim)) {
+#  if (is.null(dat_dim) & !is.null(memb_dim)) {
+
+    if (length(dim(CORR)) == 2) {
+      dim(CORR) <- NULL
+      if (pval) {
+        dim(p.val) <- NULL
+      }
+      if (conf) {
+        dim(conflow) <- NULL
+        dim(confhigh) <- NULL
+      }
+      if (sign) {
+        dim(signif) <- NULL
+      }
+    } else {
+      dim(CORR) <- dim(CORR)[3:length(dim(CORR))]
+      if (pval) {
+        dim(p.val) <- dim(p.val)[3:length(dim(p.val))]
+      }
+      if (conf) {
+        dim(conflow) <- dim(conflow)[3:length(dim(conflow))]
+        dim(confhigh) <- dim(confhigh)[3:length(dim(confhigh))]
+      }
+      if (sign) {
+        dim(signif) <- dim(signif)[3:length(dim(signif))]
+      }
     }
   }
 

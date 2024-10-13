@@ -70,19 +70,19 @@ StatSeasAtlHurr <- function(atlano, tropano, hrvar = "HR", ncores = NULL) {
     dim(tropano) <- c(length(tropano))
     names(dim(tropano)) <- 'dim1'
   }
-  if(any(is.null(names(dim(atlano))))| any(nchar(names(dim(atlano))) == 0) |
-     any(is.null(names(dim(tropano))))| any(nchar(names(dim(tropano))) == 0)) {
+  if (any(is.null(names(dim(atlano)))) | any(nchar(names(dim(atlano))) == 0) |
+      any(is.null(names(dim(tropano)))) | any(nchar(names(dim(tropano))) == 0)) {
     stop("Parameter 'atlano' and 'tropano' must have dimension names.")
   }
-  if(!all(names(dim(atlano)) %in% names(dim(tropano))) | 
-     !all(names(dim(tropano)) %in% names(dim(atlano)))) {
+  if (!all(names(dim(atlano)) %in% names(dim(tropano))) | 
+      !all(names(dim(tropano)) %in% names(dim(atlano)))) {
     stop("Parameter 'atlano' and 'tropano' must have same dimension names.")
   }
   name_1 <- sort(names(dim(atlano)))
   name_2 <- sort(names(dim(tropano)))
   if (!all(dim(atlano)[name_1] == dim(tropano)[name_2])) {
-    stop(paste0("Parameter 'atlano' and 'tropano' must have the same length of ",
-                "all the dimensions."))
+    stop("Parameter 'atlano' and 'tropano' must have the same length of ",
+         "all the dimensions.")
   }
   ## hrvar
   if (hrvar != "HR" & hrvar != "TC" & hrvar != "PDI") {

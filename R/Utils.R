@@ -5,10 +5,11 @@
 
 ## Function to tell if a regexpr() match is a complete match to a specified name
 .IsFullMatch <- function(x, name) {
-  ifelse(x > 0 && attributes(x)$match.length == nchar(name), TRUE, FALSE)
+  x > 0 && attributes(x)$match.length == nchar(name)
 }
 
-.ConfigReplaceVariablesInString <- function(string, replace_values, allow_undefined_key_vars = FALSE) {
+.ConfigReplaceVariablesInString <- function(string, replace_values, 
+                                            allow_undefined_key_vars = FALSE) {
   # This function replaces all the occurrences of a variable in a string by 
   # their corresponding string stored in the replace_values.
   if (length(strsplit(string, "\\$")[[1]]) > 1) {
@@ -17,14 +18,18 @@
     i <- 0
     for (part in parts) {
       if (i %% 2 == 0) {
-        output <- paste(output, part, sep = "")
+        output <- paste0(output, part)
       } else {
         if (part %in% names(replace_values)) {
-          output <- paste(output, .ConfigReplaceVariablesInString(replace_values[[part]], replace_values, allow_undefined_key_vars), sep = "")
+          output <- paste0(output,
+                           .ConfigReplaceVariablesInString(replace_values[[part]], 
+                                                           replace_values, 
+                                                           allow_undefined_key_vars))
         } else if (allow_undefined_key_vars) {
           output <- paste0(output, "$", part, "$")
         } else {
-          stop(paste('Error: The variable $', part, '$ was not defined in the configuration file.', sep = ''))
+          stop('Error: The variable $', part, 
+               '$ was not defined in the configuration file.', sep = '')
         }
       }
       i <- i + 1
@@ -37,10 +42,12 @@
 
 .KnownLonNames <- function() {
   known_lon_names <- c('lon', 'longitude', 'x', 'i', 'nav_lon')
+  return(known_lon_names)
 }
 
 .KnownLatNames <- function() {
   known_lat_names <- c('lat', 'latitude', 'y', 'j', 'nav_lat')
+  return(known_lat_names)
 }
 
 .t2nlatlon <- function(t) {
@@ -70,7 +77,8 @@
     } else {
       nlons <- nlons + 2
       if (nlons > 9999) {
-        stop("Error: pick another gaussian grid truncation. It doesn't fulfill the standards to apply FFT.")
+        stop("Error: pick another gaussian grid truncation. ",
+             "It doesn't fulfill the standards to apply FFT.")
       }
     }
   }
@@ -95,8 +103,8 @@
     position <- 1
     dims <- rev(dims)
     indices <- rev(indices)
-    for (i in 1:length(indices)) {
-      position <- position + (indices[i] - 1) * prod(dims[-c(1:i)])
+    for (i in seq_along(indices)) {
+      position <- position + (indices[i] - 1) * prod(dims[-(1:i)])
     }
     position
   }
@@ -112,7 +120,7 @@
   output <- work_piece[['output']]
   # The names of all data files in the directory of the repository that match 
   # the pattern are obtained.
-  if (length(grep("^http", filename)) > 0) {
+  if (any(grep("^http", filename))) {
     is_url <- TRUE
     files <- filename
     ## TODO: Check that the user is not using shell globbing exps.
@@ -129,13 +137,11 @@
     found_file <- filename
     mask <- work_piece[['mask']]
 
-    if (!silent) {
-      if (explore_dims) {
-        .message(paste("Exploring dimensions...", filename))
-      }
-      ##} else {
-      ##  cat(paste("* Reading & processing data...", filename, '\n'))
-      ##}
+    if (!silent && explore_dims) {
+      .message(paste("Exploring dimensions...", filename))
+    ##} else {
+    ##  cat(paste("* Reading & processing data...", filename, '\n'))
+    ##}
     }
 
     # We will fill in 'expected_dims' with the names of the expected dimensions of
@@ -145,7 +151,7 @@
     # But first we open the file and work out whether the requested variable is 2d
     fnc <- nc_open(filein)
     if (!(namevar %in% names(fnc$var))) {
-      stop(paste("Error: The variable", namevar, "is not defined in the file", filename))
+      stop("Error: The variable", namevar, "is not defined in the file", filename)
     }
     var_long_name <- fnc$var[[namevar]]$longname
     units <- fnc$var[[namevar]]$units
@@ -175,9 +181,12 @@
         stop("Error: CDO libraries not available")
       }
 
-     cdo_version <- strsplit(suppressWarnings(system2("cdo", args = '-V', stderr = TRUE))[[1]], ' ')[[1]][5]
+     cdo_version <- 
+       strsplit(suppressWarnings(
+        system2("cdo", args = '-V', stderr = TRUE))[[1]], ' ')[[1]][5]
 
-      cdo_version <- as.numeric_version(unlist(strsplit(cdo_version, "[A-Za-z]", fixed = FALSE))[[1]])
+      cdo_version <- 
+        as.numeric_version(unlist(strsplit(cdo_version, "[A-Za-z]", fixed = FALSE))[[1]])
 
     }
     # If the variable to load is 2-d, we need to determine whether:
@@ -200,19 +209,20 @@
         }
         grids_first_lines <- grids_positions + 2
         grids_last_lines <- c((grids_positions - 2)[-1], length(file_info))
-        grids_info <- as.list(1:length(grids_positions))
-        grids_info <- lapply(grids_info, function (x) file_info[grids_first_lines[x]:grids_last_lines[x]])
+        grids_info <- as.list(seq_along(grids_positions))
+        grids_info <- lapply(grids_info, 
+                             function (x) file_info[grids_first_lines[x]:grids_last_lines[x]])
         grids_info <- lapply(grids_info, function (x) gsub("  *", " ", x))
         grids_info <- lapply(grids_info, function (x) gsub("^ | $", "", x))
         grids_info <- lapply(grids_info, function (x) unlist(strsplit(x, " | = ")))
         grids_types <- unlist(lapply(grids_info, function (x) x[grep('gridtype', x) + 1]))
         grids_matches <- unlist(lapply(grids_info, function (x) {
-          nlons <- if (length(grep('xsize', x)) > 0) {
+          nlons <- if (any(grep('xsize', x))) {
                      as.numeric(x[grep('xsize', x) + 1])
                    } else {
                      NA
                    }
-          nlats <- if (length(grep('ysize', x)) > 0) {
+          nlats <- if (any(grep('ysize', x))) {
                     as.numeric(x[grep('ysize', x) + 1])
                   } else {
                     NA
@@ -239,7 +249,9 @@
                                  grids_info[which(grids_matches)][[1]])))) {
             grid_type <- grids_types[which(grids_matches)][1]
           } else {
-            stop("Error: Load() can't disambiguate: More than one lonlat/gaussian grids with the same size as the requested variable defined in ", filename)
+            stop("Error: Load() can't disambiguate: ",
+                 "More than one lonlat/gaussian grids with the same size as ",
+                 "the requested variable defined in ", filename)
           }
         } else if (sum(grids_matches) == 1) {
           grid_type <- grids_types[which(grids_matches)]
@@ -263,13 +275,13 @@
       # later on.
       if (!is.null(work_piece[['grid']])) {
         # Now we calculate the common grid type and its lons and lats
-        if (length(grep('^t\\d{1,+}grid$', work_piece[['grid']])) > 0) {
+        if (any(grep('^t\\d{1,+}grid$', work_piece[['grid']]))) {
           common_grid_type <- 'gaussian'
           common_grid_res <- as.numeric(strsplit(work_piece[['grid']], '[^0-9]{1,+}')[[1]][2])
           nlonlat <- .t2nlatlon(common_grid_res)
           common_grid_lats <- nlonlat[1]
           common_grid_lons <- nlonlat[2]
-        } else if (length(grep('^r\\d{1,+}x\\d{1,+}$', work_piece[['grid']])) > 0) {
+        } else if (any(grep('^r\\d{1,+}x\\d{1,+}$', work_piece[['grid']]))) {
           common_grid_type <- 'lonlat'
           common_grid_lons <- as.numeric(strsplit(work_piece[['grid']], '[^0-9]{1,+}')[[1]][2])
           common_grid_lats <- as.numeric(strsplit(work_piece[['grid']], '[^0-9]{1,+}')[[1]][3])
@@ -283,7 +295,7 @@
         common_grid_lats <- length(lat)
       }
       first_common_grid_lon <- 0
-      last_common_grid_lon <- 360 - 360/common_grid_lons
+      last_common_grid_lon <- 360 - 360 / common_grid_lons
       ## This is not true for gaussian grids or for some regular grids, but 
       ## is a safe estimation
       first_common_grid_lat <- -90
@@ -318,11 +330,20 @@
         }
         .warning(paste0("The dataset with index ", 
             tail(work_piece[['indices']], 1), " in '", 
-            work_piece[['dataset_type']], "' doesn't start at longitude 0 and will be re-interpolated in order to align its longitudes with the standard CDO grids definable with the names 't<RES>grid' or 'r<NX>x<NY>', which are by definition starting at the longitude 0.\n"))
+            work_piece[['dataset_type']], 
+            "' doesn't start at longitude 0 and will be re-interpolated in order ",
+            "to align its longitudes with the standard CDO grids definable with ",
+            "the names 't<RES>grid' or 'r<NX>x<NY>', which are by definition ",
+            "starting at the longitude 0.\n"))
         if (!is.null(mask)) {
           .warning(paste0("A mask was provided for the dataset with index ",    
               tail(work_piece[['indices']], 1), " in '",
-              work_piece[['dataset_type']], "'. This dataset has been re-interpolated to align its longitudes to start at 0. You must re-interpolate the corresponding mask to align its longitudes to start at 0 as well, if you haven't done so yet. Running cdo remapcon,", common_grid_name, " original_mask_file.nc new_mask_file.nc will fix it.\n"))
+              work_piece[['dataset_type']], 
+              "'. This dataset has been re-interpolated to align its longitudes to ",
+              "start at 0. You must re-interpolate the corresponding mask to align ",
+              "its longitudes to start at 0 as well, if you haven't done so yet. ",
+              "Running cdo remapcon,", common_grid_name, 
+              " original_mask_file.nc new_mask_file.nc will fix it.\n"))
         }
       }
       if (remap_needed && (grid_lons < common_grid_lons || grid_lats < common_grid_lats)) {
@@ -351,14 +372,14 @@
           lon_subsetting_requested <- TRUE
         }
       } else {
-        if ((lonmin - lonmax) > 360/common_grid_lons) {
+        if ((lonmin - lonmax) > 360 / common_grid_lons) {
           lon_subsetting_requested <- TRUE
         } else {
-          gap_width <- floor(lonmin / (360/common_grid_lons)) - 
-                       floor(lonmax / (360/common_grid_lons))
+          gap_width <- floor(lonmin / (360 / common_grid_lons)) - 
+                       floor(lonmax / (360 / common_grid_lons))
           if (gap_width > 0) { 
-            if (!(gap_width == 1 && (lonmin %% (360/common_grid_lons) == 0) && 
-                  (lonmax %% (360/common_grid_lons) == 0))) {
+            if (!(gap_width == 1 && (lonmin %% (360 / common_grid_lons) == 0) && 
+                  (lonmax %% (360 / common_grid_lons) == 0))) {
               lon_subsetting_requested <- TRUE
             }
           }
@@ -390,7 +411,7 @@
         system(paste0("cdo -L -s remap", work_piece[['remap']], ",", 
                       common_grid_name, 
                       " -selname,", namevar, " ", filecopy, " ", filein, 
-                      " 2>/dev/null", sep = ""))
+                      " 2>/dev/null"))
         file.remove(filecopy)
         work_piece[['dimnames']][['lon']] <- 'lon'
         work_piece[['dimnames']][['lat']] <- 'lat'
@@ -404,7 +425,7 @@
         ###mask_file <- tempfile(pattern = 'loadMask', fileext = '.nc')
         if (is.list(mask)) {
           if (!file.exists(mask[['path']])) {
-            stop(paste("Error: Couldn't find the mask file", mask[['path']]))
+            stop("Error: Couldn't find the mask file", mask[['path']])
           }
           mask_file <- mask[['path']]
           ###file.copy(work_piece[['mask']][['path']], mask_file)
@@ -413,26 +434,29 @@
           if ('nc_var_name' %in% names(mask)) {
             if (!(mask[['nc_var_name']] %in% 
                   vars_in_mask)) {
-              stop(paste("Error: couldn't find variable", mask[['nc_var_name']], 
-                         "in the mask file", mask[['path']]))
+              stop("Error: couldn't find variable", mask[['nc_var_name']], 
+                   "in the mask file", mask[['path']])
             }
           } else {
             if (length(vars_in_mask) != 1) {
-              stop(paste("Error: one and only one non-coordinate variable should be defined in the mask file", 
-                   mask[['path']], "if the component 'nc_var_name' is not specified. Currently found: ", 
-                   paste(vars_in_mask, collapse = ', '), "."))
+              stop("Error: one and only one non-coordinate variable should be ",
+                   "defined in the mask file", 
+                   mask[['path']], 
+                   "if the component 'nc_var_name' is not specified. ",
+                   "Currently found: ", 
+                   toString(vars_in_mask), ".")
             } else {
               mask[['nc_var_name']] <- vars_in_mask
             }
           }
           if (sum(fnc_mask$var[[mask[['nc_var_name']]]]$size > 1) != 2) {
-            stop(paste0("Error: the variable '", 
+            stop("Error: the variable '", 
                  mask[['nc_var_name']], 
                  "' must be defined only over the dimensions '", 
                  work_piece[['dimnames']][['lon']], "' and '", 
                  work_piece[['dimnames']][['lat']], 
                  "' in the mask file ", 
-                 mask[['path']]))
+                 mask[['path']])
           }
           mask <- ncvar_get(fnc_mask, mask[['nc_var_name']], collapse_degen = TRUE)
           nc_close(fnc_mask)
@@ -454,16 +478,28 @@
         ### Now ready to check that the mask is right
         ##if (!(lonlat_subsetting_requested && remap_needed)) {
         ###  if ((dim(mask)[2] != length(lon)) || (dim(mask)[1] != length(lat))) {
-        ###    stop(paste("Error: the mask of the dataset with index ", tail(work_piece[['indices']], 1), " in '", work_piece[['dataset_type']], "' is wrong. It must be on the common grid if the selected output type is 'lonlat', 'lon' or 'lat', or 'areave' and 'grid' has been specified. It must be on the grid of the corresponding dataset if the selected output type is 'areave' and no 'grid' has been specified. For more information check ?Load and see help on parameters 'grid', 'maskmod' and 'maskobs'.", sep = ""))
+        ###    stop(paste("Error: the mask of the dataset with index ", 
+        ###         tail(work_piece[['indices']], 1), " in '", 
+        ###         work_piece[['dataset_type']], "' is wrong. ", 
+        ###         "It must be on the common grid if the selected output type is 'lonlat', ",
+        ###         "'lon' or 'lat', or 'areave' and 'grid' has been specified. It must be on ",
+        ###         "the grid of the corresponding dataset if the selected output type is ",
+        ###         "'areave' and no 'grid' has been specified. For more information ",
+        ###         "check ?Load and see help on parameters 'grid', 'maskmod' and ",
+        ###         "'maskobs'.", sep = ""))
         ###  }
-          ###if (!(identical(mask_lon, lon) && identical(mask_lat, lat))) {
-          ###  stop(paste0("Error: the longitudes and latitudes in the masks must be identical to the ones in the corresponding data files if output = 'areave' or, if the selected output is 'lon', 'lat' or 'lonlat', the longitudes in the mask file must start by 0 and the latitudes must be ordered from highest to lowest. See\n  ", 
-          ###     work_piece[['mask']][['path']], " and ", filein))
-          ###}
+        ###if (!(identical(mask_lon, lon) && identical(mask_lat, lat))) {
+        ###  stop(paste0("Error: the longitudes and latitudes in the masks must be ",
+        ###       "identical to the ones in the corresponding data files if output = 'areave' ",
+        ###       " or, if the selected output is 'lon', 'lat' or 'lonlat', the longitudes in ",
+        ###       "the mask file must start by 0 and the latitudes must be ordered from ",
+        ###       "highest to lowest. See\n  ", 
+        ###     work_piece[['mask']][['path']], " and ", filein))
+        ###}
         }
       }
 
-      lon_indices <- 1:length(lon)
+      lon_indices <- seq_along(lon)
       if (!(lonlat_subsetting_requested && remap_needed)) {
         lon[which(lon < 0)] <- lon[which(lon < 0)] + 360
       }
@@ -478,11 +514,17 @@
       ## always the latitudes are reordered.
       ## TODO: This could be avoided in future.
       if (lat[1] < lat[length(lat)]) {
-        lat_indices <- lat_indices[length(lat_indices):1]
+        lat_indices <- lat_indices[rev(seq_along(lat_indices))]
       }
       if (!is.null(mask) && !(lonlat_subsetting_requested && remap_needed)) {
         if ((dim(mask)[1] != length(lon)) || (dim(mask)[2] != length(lat))) {
-          stop(paste("Error: the mask of the dataset with index ", tail(work_piece[['indices']], 1), " in '", work_piece[['dataset_type']], "' is wrong. It must be on the common grid if the selected output type is 'lonlat', 'lon' or 'lat', or 'areave' and 'grid' has been specified. It must be on the grid of the corresponding dataset if the selected output type is 'areave' and no 'grid' has been specified. For more information check ?Load and see help on parameters 'grid', 'maskmod' and 'maskobs'.", sep = ""))
+          stop("Error: the mask of the dataset with index ", tail(work_piece[['indices']], 1), 
+               " in '", work_piece[['dataset_type']], "' is wrong. It must be on the ",
+               "common grid if the selected output type is 'lonlat', 'lon' or 'lat', ",
+               "or 'areave' and 'grid' has been specified. It must be on the grid of ",
+               "the corresponding dataset if the selected output type is 'areave' and ",
+               "no 'grid' has been specified. For more information check ?Load and see ",
+               "help on parameters 'grid', 'maskmod' and 'maskobs'.")
         }
         mask <- mask[lon_indices, lat_indices]
       }
@@ -495,15 +537,17 @@
           ## if the requested number of points goes beyond the left or right
           ## sides of the map, we need to take the entire map so that the 
           ## interpolation works properly
-          lon_indices <- 1:length(lon)
+          lon_indices <- seq_along(lon)
         } else {
           extra_points <- min(maximum_extra_points, head(lon_indices, 1) - 1)
           if (extra_points > 0) {
-            lon_indices <- c((head(lon_indices, 1) - extra_points):(head(lon_indices, 1) - 1), lon_indices)
+            lon_indices <- 
+              c((head(lon_indices, 1) - extra_points):(head(lon_indices, 1) - 1), lon_indices)
           }
           extra_points <- min(maximum_extra_points, length(lon) - tail(lon_indices, 1))
           if (extra_points > 0) {
-            lon_indices <- c(lon_indices, (tail(lon_indices, 1) + 1):(tail(lon_indices, 1) + extra_points))
+            lon_indices <- c(lon_indices, 
+                             (tail(lon_indices, 1) + 1):(tail(lon_indices, 1) + extra_points))
           }
         }
         min_lat_ind <- min(lat_indices)
@@ -543,7 +587,8 @@
       work_piece[['dimnames']][['member']] <- 'lev'
     }
     if (work_piece[['dimnames']][['member']] %in% var_dimnames) {
-      nmemb <- fnc$var[[namevar]][['dim']][[match(work_piece[['dimnames']][['member']], var_dimnames)]]$len
+      nmemb <- fnc$var[[namevar]][['dim']][[match(work_piece[['dimnames']][['member']], 
+                                                  var_dimnames)]]$len
       expected_dims <- c(expected_dims, work_piece[['dimnames']][['member']])
     } else {
       nmemb <- 1
@@ -554,9 +599,9 @@
         if (!is.null(old_members_dimname)) {
           expected_dims[which(expected_dims == 'lev')] <- old_members_dimname
         }
-        stop(paste("Error: the expected dimension(s)", 
-                   paste(expected_dims[which(is.na(dim_matches))], collapse = ', '), 
-                   "were not found in", filename))
+        stop("Error: the expected dimension(s)", 
+             toString(expected_dims[which(is.na(dim_matches))]), 
+             "were not found in", filename)
       }
       time_dimname <- var_dimnames[-dim_matches]
     } else {
@@ -571,10 +616,13 @@
         if (!is.null(old_members_dimname)) {
           expected_dims[which(expected_dims == 'lev')] <- old_members_dimname
         }
-        stop(paste("Error: the variable", namevar, 
-                   "is defined over more dimensions than the expected (", 
-                   paste(c(expected_dims, 'time'), collapse = ', '), 
-                   "). It could also be that the members, longitude or latitude dimensions are named incorrectly. In that case, either rename the dimensions in the file or adjust Load() to recognize the actual name with the parameter 'dimnames'. See file", filename))
+        stop("Error: the variable ", namevar, 
+             " is defined over more dimensions than the expected (", 
+             toString(c(expected_dims, 'time')), 
+             "). It could also be that the members, longitude or latitude ",
+             "dimensions are named incorrectly. In that case, either rename ",
+             "the dimensions in the file or adjust Load() to recognize the actual ",
+             "name with the parameter 'dimnames'. See file ", filename)
       }
     } else {
       nltime <- 1
@@ -588,7 +636,7 @@
       # to regrid it and work out the number of longitudes and latitudes.
       # We don't need more.
       members <- 1
-      ltimes_list <- list(c(1))
+      ltimes_list <- list(1)
     } else {
       # The data is arranged in the array 'tmp' with the dimensions in a 
       # common order:
@@ -648,7 +696,7 @@
         }
         final_dims <- c(length(subset_indices[[1]]), length(subset_indices[[2]]), 1, 1)
       } else {
-        start <- end <- c()
+        start <- end <- NULL
         subset_indices <- list()
         ncdf_dims <- list()
         final_dims <- c(1, 1, 1, 1)
@@ -663,16 +711,17 @@
         final_dims[3] <- length(members)
       }
       if (time_dimname %in% expected_dims) {
-        if (any(!is.na(ltimes))) {
+        if (!all(is.na(ltimes))) {
           start <- c(start, head(ltimes[which(!is.na(ltimes))], 1))
           end <- c(end, tail(ltimes[which(!is.na(ltimes))], 1))
-          subset_indices <- c(subset_indices, list(ltimes - head(ltimes[which(!is.na(ltimes))], 1) + 1))
+          subset_indices <- c(subset_indices, 
+                              list(ltimes - head(ltimes[which(!is.na(ltimes))], 1) + 1))
         } else {
           start <- c(start, NA)
           end <- c(end, NA)
           subset_indices <- c(subset_indices, list(ltimes))
         }
-        dim_time <- ncdim_def(time_dimname, "", 1:length(ltimes), unlim = TRUE)
+        dim_time <- ncdim_def(time_dimname, "", seq_along(ltimes), unlim = TRUE)
         ncdf_dims <- c(ncdf_dims, list(dim_time))
         final_dims[4] <- length(ltimes)
       }
@@ -684,7 +733,7 @@
       if (prod(final_dims) > 0) {
         tmp <- take(ncvar_get(fnc, namevar, start, count, 
                     collapse_degen = FALSE), 
-                    1:length(subset_indices), subset_indices)
+                    seq_along(subset_indices), subset_indices)
         # The data is regridded if it corresponds to an atmospheric variable. When
         # the chosen output type is 'areave' the data is not regridded to not 
         # waste computing time unless the user specified a common grid.
@@ -725,7 +774,7 @@
                                                      paste0(lonmin, ",", lonmax, ",")
                                                    }, latmin, ",", latmax,
                    " -remap", work_piece[['remap']], ",", common_grid_name, 
-                   " ", filein2, " ", filein, " 2>/dev/null", sep = ""))
+                   " ", filein2, " ", filein, " 2>/dev/null"))
             file.remove(filein2)
             fnc2 <- nc_open(filein)
             sub_lon <- ncvar_get(fnc2, 'lon')
@@ -734,42 +783,54 @@
             ## In principle cdo should put in order the longitudes
             ## and slice them properly unless data is across greenwich
             sub_lon[which(sub_lon < 0)] <- sub_lon[which(sub_lon < 0)] + 360
-            sub_lon_indices <- 1:length(sub_lon)
+            sub_lon_indices <- seq_along(sub_lon)
             if (lonmax < lonmin) {
               sub_lon_indices <- sub_lon_indices[which((sub_lon <= lonmax) | (sub_lon >= lonmin))]
             }
-            sub_lat_indices <- 1:length(sub_lat)
+            sub_lat_indices <- seq_along(sub_lat)
             ## In principle cdo should put in order the latitudes
             if (sub_lat[1] < sub_lat[length(sub_lat)]) {
-              sub_lat_indices <- length(sub_lat):1
+              sub_lat_indices <- rev(seq_along(sub_lat))
             }
             final_dims[c(1, 2)] <- c(length(sub_lon_indices), length(sub_lat_indices))
             subset_indices[[dim_matches[1]]] <- sub_lon_indices
             subset_indices[[dim_matches[2]]] <- sub_lat_indices
 
             tmp <- take(ncvar_get(fnc2, namevar, collapse_degen = FALSE), 
-                        1:length(subset_indices), subset_indices)
+                        seq_along(subset_indices), subset_indices)
 
             if (!is.null(mask)) {
               ## We create a very simple 2d netcdf file that is then interpolated to the common
               ## grid to know what are the lons and lats of our slice of data
               mask_file <- tempfile(pattern = 'loadMask', fileext = '.nc')
               mask_file_remap <- tempfile(pattern = 'loadMask', fileext = '.nc')
-              dim_longitudes <- ncdim_def(work_piece[['dimnames']][['lon']], "degrees_east", c(0, 360))
-              dim_latitudes <- ncdim_def(work_piece[['dimnames']][['lat']], "degrees_north", c(-90, 90))
+              dim_longitudes <- ncdim_def(work_piece[['dimnames']][['lon']], 
+                                          "degrees_east", c(0, 360))
+              dim_latitudes <- ncdim_def(work_piece[['dimnames']][['lat']], 
+                                         "degrees_north", c(-90, 90))
               ncdf_var <- ncvar_def('LSM', "", list(dim_longitudes, dim_latitudes), NA, 'double')
               fnc_mask <- nc_create(mask_file, list(ncdf_var))
               ncvar_put(fnc_mask, ncdf_var, array(rep(0, 4), dim = c(2, 2)))
               nc_close(fnc_mask)
-              system(paste0("cdo -L -s remap", work_piece[['remap']], ",", common_grid_name, 
-                     " ", mask_file, " ", mask_file_remap, " 2>/dev/null", sep = ""))
+              system(paste0("cdo -L -s remap", work_piece[['remap']], ",", 
+                            common_grid_name,
+                     " ", mask_file, " ", mask_file_remap, " 2>/dev/null"))
               fnc_mask <- nc_open(mask_file_remap)
               mask_lons <- ncvar_get(fnc_mask, 'lon')
               mask_lats <- ncvar_get(fnc_mask, 'lat')
               nc_close(fnc_mask)
               file.remove(mask_file, mask_file_remap)
               if ((dim(mask)[1] != common_grid_lons) || (dim(mask)[2] != common_grid_lats)) {
-                stop(paste("Error: the mask of the dataset with index ", tail(work_piece[['indices']], 1), " in '", work_piece[['dataset_type']], "' is wrong. It must be on the common grid if the selected output type is 'lonlat', 'lon' or 'lat', or 'areave' and 'grid' has been specified. It must be on the grid of the corresponding dataset if the selected output type is 'areave' and no 'grid' has been specified. For more information check ?Load and see help on parameters 'grid', 'maskmod' and 'maskobs'.", sep = ""))
+                stop("Error: the mask of the dataset with index ", 
+                     tail(work_piece[['indices']], 1), " in '", 
+                     work_piece[['dataset_type']], 
+                     "' is wrong. It must be on the common grid if the ",
+                     "selected output type is 'lonlat', 'lon' or 'lat', ",
+                     "or 'areave' and 'grid' has been specified. It must ",
+                     "be on the grid of the corresponding dataset if the ",
+                     "selected output type is 'areave' and no 'grid' has been ",
+                     "specified. For more information check ?Load and see help ",
+                     "on parameters 'grid', 'maskmod' and 'maskobs'.")
               }
               mask_lons[which(mask_lons < 0)] <- mask_lons[which(mask_lons < 0)] + 360
               if (lonmax >= lonmin) {
@@ -779,7 +840,7 @@
               }
               mask_lat_indices <- which((mask_lats >= latmin) & (mask_lats <= latmax))
               if (sub_lat[1] < sub_lat[length(sub_lat)]) {
-                mask_lat_indices <- mask_lat_indices[length(mask_lat_indices):1]
+                mask_lat_indices <- mask_lat_indices[rev(seq_along(mask_lat_indices))]
               }
               mask <- mask[mask_lon_indices, mask_lat_indices]
             }
@@ -800,10 +861,18 @@
             ###}
           }
         }
-        if (!all(dim_matches == sort(dim_matches))) {
-          if (!found_disordered_dims && rev(work_piece[['indices']])[2] == 1 && rev(work_piece[['indices']])[3] == 1) {
+        if (is.unsorted(dim_matches)) {
+          if (!found_disordered_dims && 
+              rev(work_piece[['indices']])[2] == 1 && 
+              rev(work_piece[['indices']])[3] == 1) {
             found_disordered_dims <- TRUE
-            .warning(paste0("The dimensions for the variable ", namevar, " in the files of the experiment with index ", tail(work_piece[['indices']], 1), " are not in the optimal order for loading with Load(). The optimal order would be '", paste(expected_dims, collapse = ', '), "'. One of the files of the dataset is stored in ", filename))
+            .warning(paste0("The dimensions for the variable ", namevar, 
+                            " in the files of the experiment with index ", 
+                            tail(work_piece[['indices']], 1), 
+                            " are not in the optimal order for loading with Load(). ",
+                            "The optimal order would be '", 
+                            toString(expected_dims), 
+                            "'. One of the files of the dataset is stored in ", filename))
           }
           tmp <- aperm(tmp, dim_matches)
         }
@@ -846,13 +915,15 @@
               }
   
               if (output == 'areave' || output == 'lon') {
-                weights <- InsertDim(cos(final_lats * pi / 180), 1, length(final_lons), name = 'lon')
+                weights <- InsertDim(cos(final_lats * pi / 180), 1, 
+                                     length(final_lons), name = 'lon')
                 weights[which(is.na(x))] <- NA
                 if (output == 'areave') {
                   weights <- weights / mean(weights, na.rm = TRUE)
                   mean(x * weights, na.rm = TRUE) 
                 } else {
-                  weights <- weights / InsertDim(MeanDims(weights, 2, na.rm = TRUE), 2, length(final_lats), name = 'lat')
+                  weights <- weights / InsertDim(MeanDims(weights, 2, na.rm = TRUE), 2, 
+                                                 length(final_lats), name = 'lat')
                   MeanDims(x * weights, 2, na.rm = TRUE)
                 }
               } else if (output == 'lat') {
@@ -920,7 +991,7 @@
     ###  foobar <- writeBin(work_piece[['progress_amount']], progress_connection)
     ###}
     if (!silent && !is.null(work_piece[['progress_amount']])) {
-      message(paste0(work_piece[['progress_amount']]), appendLF = FALSE)
+      message(work_piece[['progress_amount']], appendLF = FALSE)
     }
     found_file
   }
@@ -957,8 +1028,7 @@
     dataOut <- sampleData
     dataOut$mod <- sampleData$mod[, , selected_start_dates, selected_lead_times, , ]
     dataOut$obs <- sampleData$obs[, , selected_start_dates, selected_lead_times, , ]
-  }
-  else if (output == 'areave') {
+  } else if (output == 'areave') {
     sampleData <- s2dv::sampleTimeSeries
     if (is.null(leadtimemax)) {
       leadtimemax <- dim(sampleData$mod)[lead_times_position]
@@ -992,7 +1062,10 @@
   } else {
     id <- 'OBS'
   }
-  defaults <- c(paste0('$DEFAULT_', id, '_MAIN_PATH$'), paste0('$DEFAULT_', id, '_FILE_PATH$'), '$DEFAULT_NC_VAR_NAME$', '$DEFAULT_SUFFIX$', '$DEFAULT_VAR_MIN$', '$DEFAULT_VAR_MAX$')
+  defaults <- c(paste0('$DEFAULT_', id, '_MAIN_PATH$'), 
+                paste0('$DEFAULT_', id, '_FILE_PATH$'), 
+                '$DEFAULT_NC_VAR_NAME$', '$DEFAULT_SUFFIX$', 
+                '$DEFAULT_VAR_MIN$', '$DEFAULT_VAR_MAX$')
   info <- NULL
 
   for (entry in matching_entries) {
@@ -1042,7 +1115,7 @@
       x <- gsub('\\\\', '', x)
       x <- gsub('\\^', '', x)
       x <- gsub('\\$', '', x)
-      x <- unname(sapply(strsplit(x, '[',fixed = TRUE)[[1]], function(y) gsub('.*]', '.', y)))
+      x <- unname(sapply(strsplit(x, '[', fixed = TRUE)[[1]], function(y) gsub('.*]', '.', y)))
       do.call(paste0, as.list(x))
     } else {
       x
@@ -1069,9 +1142,11 @@
     right_known <- head(strsplit(file_name_with_globs, '*', fixed = TRUE)[[1]], 1)
     right_known_no_tags <- .ConfigReplaceVariablesInString(right_known, replace_values)
     path_with_globs_rx <- utils::glob2rx(paste0(path_with_globs, right_known_no_tags))
-    match <- regexpr(gsub('$', '', path_with_globs_rx, fixed = TRUE), paste0(actual_path, file_name))
+    match <- regexpr(gsub('$', '', path_with_globs_rx, fixed = TRUE), 
+                     paste0(actual_path, file_name))
     if (match != 1) {
-      stop("Incorrect parameters to replace glob expressions. The path with expressions does not match the actual path.")
+      stop("Incorrect parameters to replace glob expressions. ",
+           "The path with expressions does not match the actual path.")
     }
     if (attr(match, 'match.length') - nchar(right_known_no_tags) < nchar(actual_path)) {
       path_with_globs <- paste0(path_with_globs, right_known_no_tags, '*')
@@ -1079,32 +1154,41 @@
     } 
   }
   path_with_globs_rx <- utils::glob2rx(path_with_globs)
-  values_to_replace <- c()
-  tags_to_replace_starts <- c()
-  tags_to_replace_ends <- c()
+  values_to_replace <- NULL
+  tags_to_replace_starts <- NULL
+  tags_to_replace_ends <- NULL
   give_warning <- FALSE
   for (tag in tags_to_keep) {
     matches <- gregexpr(paste0('$', tag, '$'), path_with_globs_rx, fixed = TRUE)[[1]]
     lengths <- attr(matches, 'match.length')
     if (!(length(matches) == 1 && matches[1] == -1)) {
-      for (i in 1:length(matches)) {
+      for (i in seq_along(matches)) {
         left <- NULL
         if (matches[i] > 1) {
-          left <- .ConfigReplaceVariablesInString(substr(path_with_globs_rx, 1, matches[i] - 1), replace_values)
-          left_known <- strReverse(head(strsplit(strReverse(left), strReverse('.*'), fixed = TRUE)[[1]], 1))
+          left <- 
+            .ConfigReplaceVariablesInString(substr(path_with_globs_rx, 1, 
+                                                   matches[i] - 1), replace_values)
+          left_known <- 
+            strReverse(head(strsplit(strReverse(left), 
+                            strReverse('.*'), fixed = TRUE)[[1]], 1))
         }
         right <- NULL
         if ((matches[i] + lengths[i] - 1) < nchar(path_with_globs_rx)) {
-          right <- .ConfigReplaceVariablesInString(substr(path_with_globs_rx, matches[i] + lengths[i], nchar(path_with_globs_rx)), replace_values)
+          right <- 
+            .ConfigReplaceVariablesInString(substr(path_with_globs_rx, 
+                                                   matches[i] + lengths[i], 
+                                                   nchar(path_with_globs_rx)),
+                                                   replace_values)
           right_known <- head(strsplit(right, '.*', fixed = TRUE)[[1]], 1)
         }
-        final_match <- NULL
         match_limits <- NULL
         if (!is.null(left)) {
           left_match <- regexpr(paste0(left, replace_values[[tag]], right_known), actual_path)
           match_len <- attr(left_match, 'match.length')
-          left_match_limits <- c(left_match + match_len - 1 - nchar(clean(right_known)) - nchar(replace_values[[tag]]) + 1, 
-                                 left_match + match_len - 1 - nchar(clean(right_known)))
+          left_match_limits <- 
+            c(left_match + match_len - 1 - nchar(clean(right_known)) - 
+                nchar(replace_values[[tag]]) + 1,
+              left_match + match_len - 1 - nchar(clean(right_known)))
           if (!(left_match < 1)) {
             match_limits <- left_match_limits
           }
@@ -1113,8 +1197,10 @@
         if (!is.null(right)) {
           right_match <- regexpr(paste0(left_known, replace_values[[tag]], right), actual_path)
           match_len <- attr(right_match, 'match.length')
-          right_match_limits <- c(right_match + nchar(clean(left_known)),  
-                                  right_match + nchar(clean(left_known)) + nchar(replace_values[[tag]]) - 1)
+          right_match_limits <- 
+            c(right_match + nchar(clean(left_known)),
+              right_match + nchar(clean(left_known)) + 
+                nchar(replace_values[[tag]]) - 1)
           if (is.null(match_limits) && !(right_match < 1)) {
             match_limits <- right_match_limits
           }
@@ -1143,8 +1229,11 @@
     while (length(values_to_replace) > 0) {
       actual_path <- paste0(substr(actual_path, 1, head(tags_to_replace_starts, 1) - 1),
                            '$', head(values_to_replace, 1), '$',
-                           substr(actual_path, head(tags_to_replace_ends, 1) + 1, nchar(actual_path)))
-      extra_chars <- nchar(head(values_to_replace, 1)) + 2 - (head(tags_to_replace_ends, 1) - head(tags_to_replace_starts, 1) + 1)
+                           substr(actual_path, head(tags_to_replace_ends, 1) + 1, 
+                                  nchar(actual_path)))
+      extra_chars <- nchar(head(values_to_replace, 1)) + 2 - 
+                           (head(tags_to_replace_ends, 1) - 
+                              head(tags_to_replace_starts, 1) + 1)
       values_to_replace <- values_to_replace[-1]
       tags_to_replace_starts <- tags_to_replace_starts[-1]
       tags_to_replace_ends <- tags_to_replace_ends[-1]
@@ -1155,7 +1244,8 @@
 
   if (give_warning) {
     .warning(paste0("Too complex path pattern specified for ", dataset_name, 
-                    ". Double check carefully the '$Files' fetched for this dataset or specify a simpler path pattern."))
+                    ". Double check carefully the '$Files' fetched for this dataset ",
+                    "or specify a simpler path pattern."))
   }
 
   if (permissive) {
@@ -1169,11 +1259,11 @@
   tag <- paste0('\\$', tag, '\\$')
   path_with_globs_and_tag <- paste0('^', path_with_globs_and_tag, '$')
   parts <- strsplit(path_with_globs_and_tag, '*', fixed = TRUE)[[1]]
-  parts <- as.list(parts[grep(tag, parts)])
-  longest_couples <- c()
-  pos_longest_couples <- c()
+  parts <- as.list(grep(tag, parts, value = TRUE))
+  longest_couples <- NULL
+  pos_longest_couples <- NULL
   found_value <- NULL
-  for (i in 1:length(parts)) {
+  for (i in seq_along(parts)) {
     parts[[i]] <- strsplit(parts[[i]], tag)[[1]]
     if (length(parts[[i]]) == 1) {
       parts[[i]] <- c(parts[[i]], '')
@@ -1184,13 +1274,15 @@
     longest_couples <- c(longest_couples, max(len_couples))
   }
   chosen_part <- which.max(longest_couples)
-  parts[[chosen_part]] <- parts[[chosen_part]][pos_longest_couples[chosen_part]:(pos_longest_couples[chosen_part] + 1)]
+  parts[[chosen_part]] <- 
+    parts[[chosen_part]][pos_longest_couples[chosen_part]:(pos_longest_couples[chosen_part] + 1)]
   if (nchar(parts[[chosen_part]][1]) >= nchar(parts[[chosen_part]][2])) {
     if (nchar(parts[[chosen_part]][1]) > 0) {
       matches <- gregexpr(parts[[chosen_part]][1], actual_path)[[1]]
       if (length(matches) == 1) {
         match_left <- matches
-        actual_path <- substr(actual_path, match_left + attr(match_left, 'match.length'), nchar(actual_path))
+        actual_path <- 
+          substr(actual_path, match_left + attr(match_left, 'match.length'), nchar(actual_path))
       }
     }
     if (nchar(parts[[chosen_part]][2]) > 0) {
@@ -1212,7 +1304,9 @@
       matches <- gregexpr(parts[[chosen_part]][1], actual_path)[[1]]
       if (length(matches) == 1) {
         match_left <- matches
-        found_value <- substr(actual_path, match_left + attr(match_left, 'match.length'), nchar(actual_path))
+        found_value <- 
+          substr(actual_path, match_left + attr(match_left, 'match.length'), 
+                 nchar(actual_path))
       }
     }
   }
@@ -1292,7 +1386,9 @@
     }
     # Change filenames when necessary
     if (any(ext != ext[1])) {
-      .warning(paste0("some extensions of the filenames provided in 'fileout' are not ", ext[1],". The extensions are being converted to ", ext[1], "."))
+      .warning(paste0("some extensions of the filenames provided in 'fileout' ",
+                      "are not ", ext[1],
+                      ". The extensions are being converted to ", ext[1], "."))
       fileout <- sub("\\.[a-zA-Z0-9]*$", ext[1], fileout)
     }
   } else {
@@ -1359,9 +1455,9 @@
   }
   args[["tag"]] <- NULL
 
-  message(paste0(tag, paste(strwrap(
-    args, indent = indent, exdent = exdent
-    ), collapse = collapse)), appendLF = appendLF, domain = domain)
+  tmp <- paste0(tag, 
+                paste(strwrap(args, indent = indent, exdent = exdent), collapse = collapse))
+  message(tmp, appendLF = appendLF, domain = domain)
 }
 
 .warning <- function(...) {
@@ -1430,15 +1526,15 @@
   }
   args[["tag"]] <- NULL
 
-  warning(paste0(tag, paste(strwrap(
-    args, indent = indent, exdent = exdent
-    ), collapse = collapse)),  call. = call, immediate. = immediate, 
-    noBreaks. = noBreaks, domain = domain)
+  tmp <- paste0(tag, 
+                paste(strwrap(args, indent = indent, exdent = exdent), collapse = collapse))
+  warning(tmp, call. = call, immediate. = immediate, 
+          noBreaks. = noBreaks, domain = domain)
 }
 
 .IsColor <- function(x) {
   res <- try(col2rgb(x), silent = TRUE)
-  return(!"try-error" %in% class(res))
+  return(!is(res, "try-error"))
 }
 
 # This function switches to a specified figure at position (row, col) in a layout.
@@ -1502,7 +1598,7 @@
   if (is.numeric(x)) {
     x <- aperm(x, new_order)
   } else {
-    y <- array(1:length(x), dim = dim(x))
+    y <- array(seq_along(x), dim = dim(x))
     y <- aperm(y, new_order)
     x <- x[as.vector(y)]
   }
@@ -1521,8 +1617,8 @@
 # the same name are found in the two inputs, and they have a different
 # length, the maximum is taken.
 .MergeArrayDims <- function(dims1, dims2) {
-  new_dims1 <- c()
-  new_dims2 <- c()
+  new_dims1 <- NULL
+  new_dims2 <- NULL
   while (length(dims1) > 0) {
     if (names(dims1)[1] %in% names(dims2)) {
       pos <- which(names(dims2) == names(dims1)[1])
@@ -1533,7 +1629,7 @@
       new_dims1 <- c(new_dims1, dims_to_add, dims1[1])
       new_dims2 <- c(new_dims2, dims2[1:pos])
       dims1 <- dims1[-1]
-      dims2 <- dims2[-c(1:pos)]
+      dims2 <- dims2[-(1:pos)]
     } else {
       new_dims1 <- c(new_dims1, dims1[1])
       new_dims2 <- c(new_dims2, 1)
@@ -1569,7 +1665,7 @@
       new_dims <- .MergeArrayDims(dim(array1), dim(array2))
       dim(array1) <- new_dims[[1]]
       dim(array2) <- new_dims[[2]]
-      for (j in 1:length(dim(array1))) {
+      for (j in seq_along(dim(array1))) {
         if (names(dim(array1))[j] != along) {
           if (dim(array1)[j] != dim(array2)[j]) {
             if (which.max(c(dim(array1)[j], dim(array2)[j])) == 1) {
@@ -1641,7 +1737,7 @@
     data <- Season(data = data, time_dim = fmonth_dim,
                    monini = monini, moninf = 1, monsup = 12,
                    method = mean, na.rm = na.rm)
-    names(dim(data))[which(names(dim(data))==fmonth_dim)] <- fyear_dim
+    names(dim(data))[which(names(dim(data)) == fmonth_dim)] <- fyear_dim
     
     if (identical(indices_for_clim, FALSE)) { ## data is already anomalies
       
@@ -1657,33 +1753,42 @@
         last_years_for_clim <- n_sdates : (n_sdates - n_fyears + 1)
       } else { ## indices_for_clim specified as a numeric vector
         first_years_for_clim <- seq(from = indices_for_clim[1], by = -1, length.out = n_fyears)
-        last_years_for_clim <- seq(from = indices_for_clim[length(indices_for_clim)], by = -1, length.out = n_fyears) 
+        last_years_for_clim <- 
+          seq(from = indices_for_clim[length(indices_for_clim)], 
+              by = -1, length.out = n_fyears)
       }
       
       data <- s2dv::Reorder(data = data, order = c(fyear_dim, sdate_dim))
       anom <- array(data = NA, dim = dim(data))
       for (i in 1:n_fyears) {
-        clim <- mean(data[i,first_years_for_clim[i]:last_years_for_clim[i]], na.rm = na.rm)
-        anom[i,] <- data[i,] - clim
+        clim <- mean(data[i, first_years_for_clim[i]:last_years_for_clim[i]], na.rm = na.rm)
+        anom[i, ] <- data[i, ] - clim
       }
     }
     
-  } else if (type %in% c('obs','hist')) {
+  } else if (type %in% c('obs', 'hist')) {
     
-    data <- multiApply::Apply(data = data, target_dims = month_dim, fun = mean, na.rm = na.rm)$output1
+    data <- multiApply::Apply(data = data, target_dims = month_dim, 
+                              fun = mean, na.rm = na.rm)$output1
     
     if (identical(indices_for_clim, FALSE)) { ## data is already anomalies
       clim <- 0
-    } else if (is.null(indices_for_clim)) { ## climatology over the whole period
-      clim <- multiApply::Apply(data = data, target_dims = year_dim, fun = mean, na.rm = na.rm)$output1
-    } else { ## indices_for_clim specified as a numeric vector
-      clim <- multiApply::Apply(data = ClimProjDiags::Subset(x = data, along = year_dim, indices = indices_for_clim),
+    } else if (is.null(indices_for_clim)) { 
+      ## climatology over the whole period
+      clim <- multiApply::Apply(data = data, target_dims = year_dim, fun = mean, 
+                                na.rm = na.rm)$output1
+    } else { 
+      ## indices_for_clim specified as a numeric vector
+      clim <- multiApply::Apply(data = ClimProjDiags::Subset(x = data, along = year_dim,
+                                                             indices = indices_for_clim),
                                 target_dims = year_dim, fun = mean, na.rm = na.rm)$output1
     }
     
     anom <- data - clim
     
-  } else {stop('type must be dcpp, hist or obs')}
+  } else {
+    stop('type must be dcpp, hist or obs')
+  }
   
   return(anom)
 }
@@ -1698,7 +1803,8 @@ GradientCatsColorBar <- function(nmap, brks = NULL, cols = NULL, vertical = TRUE
                                  bar_limits, var_limits = NULL,
                                  triangle_ends = NULL, plot = TRUE,
                                  draw_separators = FALSE,
-                                 bar_titles = NULL, title_scale = 1, label_scale = 1, extra_margin = rep(0, 4),
+                                 bar_titles = NULL, title_scale = 1, 
+                                 label_scale = 1, extra_margin = rep(0, 4),
                                  ...) {
   # bar_limits
   if (!is.numeric(bar_limits) || length(bar_limits) != 2) {
@@ -1727,7 +1833,7 @@ GradientCatsColorBar <- function(nmap, brks = NULL, cols = NULL, vertical = TRUE
       chosen_sets <- 1:nmap
       chosen_sets <- chosen_sets + floor((length(col_sets) - length(chosen_sets)) / 2)
     } else {
-      chosen_sets <- array(1:length(col_sets), nmap)
+      chosen_sets <- array(seq_along(col_sets), nmap)
     }
     cols <- col_sets[chosen_sets]
   } else {
@@ -1742,7 +1848,7 @@ GradientCatsColorBar <- function(nmap, brks = NULL, cols = NULL, vertical = TRUE
            "maps in 'maps'.")
     }
   }
-  for (i in 1:length(cols)) {
+  for (i in seq_along(cols)) {
     if (length(cols[[i]]) != (length(brks) - 1)) {
       cols[[i]] <- grDevices::colorRampPalette(cols[[i]])(length(brks) - 1)
     }

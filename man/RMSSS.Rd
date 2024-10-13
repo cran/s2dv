@@ -14,6 +14,7 @@ RMSSS(
   pval = TRUE,
   sign = FALSE,
   alpha = 0.05,
+  N.eff = NA,
   sig_method = "one-sided Fisher",
   sig_method.type = NULL,
   ncores = NULL
@@ -59,6 +60,13 @@ FALSE.}
 
 \item{alpha}{A numeric of the significance level to be used in the 
 statistical significance test. The default value is 0.05.}
+
+\item{N.eff}{Effective sample size to be used in the statistical significance
+test with the Random Walk. It can be NA (and it will be computed with the 
+s2dv:::.Eno), FALSE (and it will use the length of 'obs' along 'time_dim', so the 
+autocorrelation is not taken into account), a numeric (which is used for 
+all cases), or an array with the same dimensions as 'obs' except 'time_dim'
+(for a particular N.eff to be used for each case). The default value is NA.}
 
 \item{sig_method}{A character string indicating the significance method. The
 options are "one-sided Fisher" (default) and "Random Walk".}

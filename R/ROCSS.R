@@ -91,14 +91,14 @@ ROCSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   if (!is.array(obs) | !is.numeric(obs)) {
     stop("Parameter 'obs' must be a numeric array.")
   }
-  if (any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   if (!is.null(ref)) {
     if (!is.array(ref) | !is.numeric(ref))
       stop("Parameter 'ref' must be a numeric array.")
-    if (any(is.null(names(dim(ref))))| any(nchar(names(dim(ref))) == 0)) {
+    if (any(is.null(names(dim(ref)))) | any(nchar(names(dim(ref))) == 0)) {
       stop("Parameter 'ref' must have dimension names.")
     }
   }
@@ -163,8 +163,8 @@ ROCSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   }
   if (!identical(length(name_exp), length(name_obs)) |
       !identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'memb_dim' and 'dat_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'memb_dim' and 'dat_dim'.")
   }
   if (!is.null(ref)) {
     name_ref <- sort(names(dim(ref)))
@@ -174,17 +174,17 @@ ROCSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
     if (!is.null(dat_dim)) {
       if (dat_dim %in% name_ref) {
         if (!identical(dim(exp)[dat_dim], dim(ref)[dat_dim])) {
-          stop(paste0("If parameter 'ref' has dataset dimension, it must be", 
-                      " equal to dataset dimension of 'exp'."))
+          stop("If parameter 'ref' has dataset dimension, it must be", 
+               " equal to dataset dimension of 'exp'.")
         }
         name_ref <- name_ref[-which(name_ref == dat_dim)]
       }
     }
     if (!identical(length(name_exp), length(name_ref)) |
         !identical(dim(exp)[name_exp], dim(ref)[name_ref])) {
-      stop(paste0("Parameter 'exp' and 'ref' must have the same length of ",
-                  "all dimensions except 'memb_dim' and 'dat_dim'",
-                  " if there is only one reference dataset."))
+      stop("Parameter 'exp' and 'ref' must have the same length of ",
+           "all dimensions except 'memb_dim' and 'dat_dim'",
+           " if there is only one reference dataset.")
     }
   }
   ## prob_thresholds
@@ -194,7 +194,7 @@ ROCSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   }
   ## indices_for_clim
   if (is.null(indices_for_clim)) {
-    indices_for_clim <- 1:dim(obs)[time_dim]
+    indices_for_clim <- seq_len(dim(obs)[time_dim])
   } else {
     if (!is.numeric(indices_for_clim) | !is.vector(indices_for_clim)) {
       stop("Parameter 'indices_for_clim' must be NULL or a numeric vector.")
@@ -324,10 +324,12 @@ ROCSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
         # Input dim for .GetProbs
         ## if exp: [sdate, memb]
         ## if obs: [sdate, (memb)]
-        exp_probs <- .GetProbs(data = ClimProjDiags::Subset(exp, dat_dim, exp_i, drop = 'selected'), 
+        exp_probs <- .GetProbs(data = ClimProjDiags::Subset(exp, dat_dim, exp_i,
+                                                            drop = 'selected'),
                                indices_for_quantiles = indices_for_clim, 
                                prob_thresholds = prob_thresholds, cross.val = cross.val)
-        obs_probs <- .GetProbs(data = ClimProjDiags::Subset(obs, dat_dim, obs_i, drop = 'selected'), 
+        obs_probs <- .GetProbs(data = ClimProjDiags::Subset(obs, dat_dim, obs_i,
+                                                            drop = 'selected'),
                                indices_for_quantiles = indices_for_clim, 
                                prob_thresholds = prob_thresholds, cross.val = cross.val)
         ## exp_probs and obs_probs: [bin, sdate]
@@ -337,19 +339,22 @@ ROCSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       }
 
       ## ROCS (exp)
-      rocs_exp[exp_i, obs_i, ] <- unlist(EnsRoca(ens = Reorder(exp_probs, c(time_dim, 'bin')),
-                                                 obs = Reorder(obs_probs, c(time_dim, 'bin')))[1:ncats])
+      rocs_exp[exp_i, obs_i, ] <- 
+        unlist(EnsRoca(ens = Reorder(exp_probs, c(time_dim, 'bin')),
+                                     obs = Reorder(obs_probs, c(time_dim, 'bin')))[1:ncats])
     
       if (!is.null(ref)) {
         if (is.null(cat_dim)) { # calculate probs
-          ref_probs <- .GetProbs(ClimProjDiags::Subset(ref, dat_dim, exp_i, drop = 'selected'),
+          ref_probs <- .GetProbs(ClimProjDiags::Subset(ref, dat_dim, exp_i,
+                                                       drop = 'selected'),
                                  indices_for_quantiles = indices_for_clim, 
                                  prob_thresholds = prob_thresholds, cross.val = cross.val)
         } else {
           ref_probs <- ref[, , exp_i]
         }
-        rocs_ref[exp_i, obs_i, ] <- unlist(EnsRoca(ens = Reorder(ref_probs, c(time_dim, 'bin')),
-                                                   obs = Reorder(obs_probs, c(time_dim, 'bin')))[1:ncats])
+        rocs_ref[exp_i, obs_i, ] <- 
+          unlist(EnsRoca(ens = Reorder(ref_probs, c(time_dim, 'bin')),
+                         obs = Reorder(obs_probs, c(time_dim, 'bin')))[1:ncats])
       }
     }
   }

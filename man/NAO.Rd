@@ -7,6 +7,7 @@
 NAO(
   exp = NULL,
   obs = NULL,
+  exp_cor = NULL,
   lat,
   lon,
   time_dim = "sdate",
@@ -20,7 +21,7 @@ NAO(
 }
 \arguments{
 \item{exp}{A named numeric array of North Atlantic SLP (20N-80N, 80W-40E) 
-forecast anomalies from \code{Ano()} or \code{Ano_CrossValid()} with 
+hindcast anomalies from \code{Ano()} or \code{Ano_CrossValid()} with 
 dimensions 'time_dim', 'memb_dim', 'ftime_dim', and 'space_dim' at least.
 If only NAO of observational data needs to be computed, this parameter can
 be left to NULL. The default value is NULL.}
@@ -29,6 +30,13 @@ be left to NULL. The default value is NULL.}
 observed anomalies from \code{Ano()} or \code{Ano_CrossValid()} with 
 dimensions 'time_dim', 'ftime_dim', and 'space_dim' at least.
 If only NAO of experimental data needs to be computed, this parameter can 
+be left to NULL. The default value is NULL.}
+
+\item{exp_cor}{A named numeric array of the Nort Atlantic SLP (20-80N, 80W-40E)
+forecast anomalies from \code{Ano()} or \code{Ano_CrossValid()} with 
+dimension 'time_dim' of length 1 (as in the case of an operational 
+forecast), 'memb_dim', 'ftime_dim', and 'space_dim' at least.
+If only NAO of reference period needs to be computed, this parameter can
 be left to NULL. The default value is NULL.}
 
 \item{lat}{A vector of the latitudes of 'exp' and 'obs'.}
@@ -55,26 +63,33 @@ value is 2:4, i.e., from 2nd to 4th forecast time steps.}
 
 \item{obsproj}{A logical value indicating whether to compute the NAO index by
 projecting the forecast anomalies onto the leading EOF of observational 
-reference (TRUE) or compute the NAO by first computing the leading 
-EOF of the forecast anomalies (in cross-validation mode, i.e. leaving the 
-year you are evaluating out), and then projecting forecast anomalies onto 
-this EOF (FALSE). The default value is TRUE.}
+reference (TRUE, default) or compute the NAO by first computing the leading
+EOF of the forecast anomalies (in cross-validation mode, i.e. leave the 
+evaluated year out), then projecting forecast anomalies onto this EOF
+(FALSE). If 'exp_cor' is provided, 'obs' will be used when obsproj is TRUE
+and 'exp' will be used when obsproj is FALSE, and no cross-validation is
+applied.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
 }
 \value{
-A list which contains:
+A list which contains some of the following items depending on the data inputs:
 \item{exp}{
- A numeric array of forecast NAO index in verification format with the same 
+ A numeric array of hindcast NAO index in verification format with the same 
  dimensions as 'exp' except space_dim and ftime_dim. If ftime_avg is NULL, 
  ftime_dim remains.
  }
 \item{obs}{
- A numeric array of observed NAO index in verification format with the same
+ A numeric array of observation NAO index in verification format with the same
  dimensions as 'obs' except space_dim and ftime_dim. If ftime_avg is NULL,
  ftime_dim remains.
 }
+\item{exp_cor}{
+ A numeric array of forecast NAO index in verification format with the same 
+ dimensions as 'exp_cor' except space_dim and ftime_dim. If ftime_avg is NULL, 
+ ftime_dim remains.
+ }
 }
 \description{
 Compute the North Atlantic Oscillation (NAO) index based on the leading EOF 
@@ -84,8 +99,9 @@ observed anomalies onto the observed EOF pattern or the forecast
 anomalies onto the EOF pattern of the other years of the forecast. 
 By default (ftime_avg = 2:4), NAO() computes the NAO index for 1-month 
 lead seasonal forecasts that can be plotted with PlotBoxWhisker(). It returns
-cross-validated PCs of the NAO index for forecast (exp) and observations 
-(obs) based on the leading EOF pattern.
+cross-validated PCs of the NAO index for hindcast (exp) and observations 
+(obs) based on the leading EOF pattern, or, if forecast (exp_cor) is provided,
+the NAO index for forecast and the corresponding data (exp and obs).
 }
 \examples{
 # Make up synthetic data
@@ -97,6 +113,8 @@ lat <- seq(20, 80, length.out = 6)
 lon <- seq(-80, 40, length.out = 9) 
 nao <- NAO(exp = exp, obs = obs, lat = lat, lon = lon)
 
+exp_cor <- array(rnorm(540), dim = c(member = 2, sdate = 1, ftime = 5, lat = 6, lon = 9))
+nao <- NAO(exp = exp, obs = obs, exp_cor = exp_cor, lat = lat, lon = lon, obsproj = TRUE)
 # plot the NAO index
  \dontrun{
 nao$exp <- Reorder(nao$exp, c(2, 1))

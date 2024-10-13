@@ -90,15 +90,15 @@ Consist_Trend <- function(exp, obs, dat_dim = 'dataset', time_dim = 'sdate', int
     stop("Parameter 'exp' and 'obs' must be a numeric array.")
   }
   if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must be at least two dimensions ",
-                "containing time_dim and dat_dim."))
+    stop("Parameter 'exp' and 'obs' must be at least two dimensions ",
+         "containing time_dim and dat_dim.")
   }
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
-  if(!all(names(dim(exp)) %in% names(dim(obs))) | 
-     !all(names(dim(obs)) %in% names(dim(exp)))) {
+  if (!all(names(dim(exp)) %in% names(dim(obs))) | 
+      !all(names(dim(obs)) %in% names(dim(exp)))) {
     stop("Parameter 'exp' and 'obs' must have the same dimension names.")
   }
   ## time_dim
@@ -118,13 +118,13 @@ Consist_Trend <- function(exp, obs, dat_dim = 'dataset', time_dim = 'sdate', int
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
-  for (i in 1:length(dat_dim)) {
+  for (i in seq_along(dat_dim)) {
     name_exp <- name_exp[-which(name_exp == dat_dim[i])]
     name_obs <- name_obs[-which(name_obs == dat_dim[i])]
   }
-  if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimension except 'dat_dim'."))
+  if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimension except 'dat_dim'.")
   }
   ## interval
   if (!is.numeric(interval) | interval <= 0 | length(interval) > 1) {
@@ -161,7 +161,7 @@ Consist_Trend <- function(exp, obs, dat_dim = 'dataset', time_dim = 'sdate', int
   # obs: [nobs, sdate]
   
   #  Find common points  
-  nan <- apply(exp, 2, mean, na.rm = FALSE) + apply(obs, 2, mean, na.rm = FALSE)  # [sdate]
+  nan <- colMeans(exp, na.rm = FALSE) + colMeans(obs, na.rm = FALSE)  # [sdate]
   exp[, is.na(nan)] <- NA
   obs[, is.na(nan)] <- NA  
 

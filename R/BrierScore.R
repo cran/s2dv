@@ -108,11 +108,11 @@ BrierScore <- function(exp, obs, thresholds = seq(0.1, 0.9, 0.1), time_dim = 'sd
     dim(obs) <- c(length(obs))
     names(dim(obs)) <- time_dim
   }
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
-  if (any(!obs %in% c(0, 1))) {
+  if (!all(obs %in% c(0, 1))) {
     stop("Parameter 'obs' must be binary events (0 or 1).")
   }
   ## thresholds
@@ -146,10 +146,8 @@ BrierScore <- function(exp, obs, thresholds = seq(0.1, 0.9, 0.1), time_dim = 'sd
     if (!memb_dim %in% names(dim(exp))) {
       stop("Parameter 'memb_dim' is not found in 'exp' dimension.")
     }
-    if (memb_dim %in% names(dim(obs))) {
-      if (dim(obs)[memb_dim] != 1) {
-        stop("The length of parameter 'memb_dim' in 'obs' must be 1.")
-      }
+    if (memb_dim %in% names(dim(obs)) && dim(obs)[memb_dim] != 1) {
+      stop("The length of parameter 'memb_dim' in 'obs' must be 1.")
     }
   }
   ## exp and obs (2)
@@ -158,7 +156,7 @@ BrierScore <- function(exp, obs, thresholds = seq(0.1, 0.9, 0.1), time_dim = 'sd
       stop("Parameter 'exp' must be within [0, 1] range.")
     }
   } else {
-    if (any(!exp %in% c(0, 1))) {
+    if (!all(exp %in% c(0, 1))) {
       stop("Parameter 'exp' must be 0 or 1 if it has memb_dim.")
     }
   }
@@ -174,13 +172,13 @@ BrierScore <- function(exp, obs, thresholds = seq(0.1, 0.9, 0.1), time_dim = 'sd
     name_exp <- name_exp[-which(name_exp == dat_dim)]
     name_obs <- name_obs[-which(name_obs == dat_dim)]
   }
-  if (any(!name_exp %in% name_obs) | any(!name_obs %in% name_exp)) {
-    stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                "of all the dimensions except 'dat_dim' and 'memb_dim'."))
+  if (!all(name_exp %in% name_obs) | !all(name_obs %in% name_exp)) {
+    stop("Parameter 'exp' and 'obs' must have the same names and lengths ",
+         "of all the dimensions except 'dat_dim' and 'memb_dim'.")
   }
   if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                "of all the dimensions except 'dat_dim' and 'memb_dim'."))
+    stop("Parameter 'exp' and 'obs' must have the same names and lengths ",
+         "of all the dimensions except 'dat_dim' and 'memb_dim'.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -281,7 +279,8 @@ BrierScore <- function(exp, obs, thresholds = seq(0.1, 0.9, 0.1), time_dim = 'sd
           ressum <- ressum + nk[i] * (okbar[i] - obar)^2
           for (j in 1:nk[i]) {
             term1 <- term1 + (exp[bins[[i]][[1]][j]] - fkbar[i])^2
-            term2 <- term2 + (exp[bins[[i]][[1]][j]] - fkbar[i]) * (obs[bins[[i]][[1]][j]] - okbar[i])
+            term2 <- term2 + (exp[bins[[i]][[1]][j]] -
+                              fkbar[i]) * (obs[bins[[i]][[1]][j]] - okbar[i])
           }
         }
       }
@@ -306,18 +305,15 @@ BrierScore <- function(exp, obs, thresholds = seq(0.1, 0.9, 0.1), time_dim = 'sd
       rel_bias_corrected <- rel - term_a
       gres_bias_corrected <- gres - term_a + term_b
       if (rel_bias_corrected < 0 || gres_bias_corrected < 0) {
-        rel_bias_corrected2 <- max(rel_bias_corrected, rel_bias_corrected - gres_bias_corrected, 0)
-        gres_bias_corrected2 <- max(gres_bias_corrected, gres_bias_corrected - rel_bias_corrected, 0)
+        rel_bias_corrected2 <- max(rel_bias_corrected, 
+                                   rel_bias_corrected - gres_bias_corrected, 0)
+        gres_bias_corrected2 <- max(gres_bias_corrected, 
+                                    gres_bias_corrected - rel_bias_corrected, 0)
         rel_bias_corrected <- rel_bias_corrected2
         gres_bias_corrected <- gres_bias_corrected2
       }
       unc_bias_corrected <- unc + term_b
       bss_bias_corrected <- (gres_bias_corrected - rel_bias_corrected) / unc_bias_corrected
-      
-      #if (round(bs, 8) == round(bs_check_gres, 8) & round(bs_check_gres, 8) == round((rel_bias_corrected - gres_bias_corrected + unc_bias_corrected), 8)) {
-      #  cat("No error found  \ n")
-      #  cat("BS = REL - GRES + UNC = REL_lessbias - GRES_lessbias + UNC_lessbias  \ n")
-      #}
        
       # Add name for nk, fkbar, okbar
       names(dim(nk)) <- 'bin'

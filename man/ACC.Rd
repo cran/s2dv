@@ -2,7 +2,8 @@
 % Please edit documentation in R/ACC.R
 \name{ACC}
 \alias{ACC}
-\title{Compute the spatial anomaly correlation coefficient between the forecast and corresponding observation}
+\title{Compute the spatial anomaly correlation coefficient between the forecast and 
+corresponding observation}
 \usage{
 ACC(
   exp,

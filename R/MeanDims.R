@@ -50,10 +50,8 @@ MeanDims <- function(data, dims, na.rm = FALSE, drop = TRUE) {
       stop("Parameter 'dims' exceeds the dimension length of parameter 'data'.")
     } 
   }
-  if (is.character(dims)) {
-    if (!all(dims %in% names(dim(data)))) {
-      stop("Parameter 'dims' do not match the dimension names of parameter 'data'.")
-    }
+  if (is.character(dims) && !all(dims %in% names(dim(data)))) {
+    stop("Parameter 'dims' do not match the dimension names of parameter 'data'.")
   }
   ## na.rm
   if (!is.logical(na.rm) | length(na.rm) > 1) {
@@ -80,7 +78,7 @@ MeanDims <- function(data, dims, na.rm = FALSE, drop = TRUE) {
     if (is.character(dims)) {
       dims <- which(names(dim_data) %in% dims)
     }
-    data <- aperm(data, c(dims, (1:length(dim_data))[-dims]))
+    data <- aperm(data, c(dims, (seq_along(dim_data))[-dims]))
     data <- colMeans(data, dims = length(dims), na.rm = na.rm)
 
     # If data is vector

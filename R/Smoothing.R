@@ -45,7 +45,7 @@ Smoothing <- function(data, time_dim = 'ftime', runmeanlen = 12, ncores = NULL) 
     dim(data) <- c(length(data))
     names(dim(data)) <- time_dim
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## time_dim
@@ -62,12 +62,12 @@ Smoothing <- function(data, time_dim = 'ftime', runmeanlen = 12, ncores = NULL) 
   }
   time_dim_length <- dim(data)[which(names(dim(data)) == time_dim)]
   if (runmeanlen >= time_dim_length & time_dim_length %% 2 == 0) {
-    stop(paste0("Parameter 'runmeanlen' must be within [1, ", time_dim_length - 1, 
-                "]."))
+    stop("Parameter 'runmeanlen' must be within [1, ", time_dim_length - 1, 
+         "].")
   }
   if (runmeanlen > time_dim_length & time_dim_length %% 2 != 0) {
-    stop(paste0("Parameter 'runmeanlen' must be within [1, ", time_dim_length,
-                "]."))
+    stop("Parameter 'runmeanlen' must be within [1, ", time_dim_length,
+         "].")
   }
   ## ncores
   if (!is.null(ncores)) {

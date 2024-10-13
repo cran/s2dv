@@ -75,7 +75,7 @@ EuroAtlanticTC <- function(ano, lat, lon, ntrunc = 30, time_dim = 'sdate',
   if (!is.numeric(ano)) {
     stop("Parameter 'ano' must be a numeric array.")
   }
-  if(any(is.null(names(dim(ano))))| any(nchar(names(dim(ano))) == 0)) {
+  if (any(is.null(names(dim(ano)))) | any(nchar(names(dim(ano))) == 0)) {
     stop("Parameter 'ano' must have dimension names.")
   }
   ## time_dim
@@ -89,20 +89,20 @@ EuroAtlanticTC <- function(ano, lat, lon, ntrunc = 30, time_dim = 'sdate',
   if (!is.character(space_dim) | length(space_dim) != 2) {
     stop("Parameter 'space_dim' must be a character vector of 2.")
   }
-  if (any(!space_dim %in% names(dim(ano)))) {
+  if (!all(space_dim %in% names(dim(ano)))) {
     stop("Parameter 'space_dim' is not found in 'ano' dimension.")
   }
   ## lat and lon
   if (!is.numeric(lat) | length(lat) != dim(ano)[space_dim[1]]) {
-    stop(paste0("Parameter 'lat' must be a numeric vector with the same ",
-                "length as the latitude dimension of 'ano'."))
+    stop("Parameter 'lat' must be a numeric vector with the same ",
+         "length as the latitude dimension of 'ano'.")
   }
   if (any(lat > 90 | lat < -90)) {
     stop("Parameter 'lat' must contain values within the range [-90, 90].")
   }
   if (!is.numeric(lon) | length(lon) != dim(ano)[space_dim[2]]) {
-    stop(paste0("Parameter 'lon' must be a numeric vector with the same ",
-                "length as the longitude dimension of 'ano'."))
+    stop("Parameter 'lon' must be a numeric vector with the same ",
+         "length as the longitude dimension of 'ano'.")
   }
   if (all(lon >= 0)) {
     if (any(lon > 360 | lon < 0)) {
@@ -178,7 +178,7 @@ EuroAtlanticTC <- function(ano, lat, lon, ntrunc = 30, time_dim = 'sdate',
   # Area weighting is needed to compute the fraction of variance explained by 
   # each mode
   space_ind <- sapply(space_dim, function(a) which(names(dim(ano)) == a))
-  wght <- array(cos(lat * pi/180), dim = dim(ano)[space_ind])
+  wght <- array(cos(lat * pi / 180), dim = dim(ano)[space_ind])
 
   # We want the covariance matrix to be weigthed by the grid
   # cell area so the anoaly field is weighted by its square

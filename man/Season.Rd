@@ -6,10 +6,10 @@
 \usage{
 Season(
   data,
-  time_dim = "ftime",
   monini,
   moninf,
   monsup,
+  time_dim = "ftime",
   method = mean,
   na.rm = TRUE,
   ncores = NULL
@@ -17,10 +17,6 @@ Season(
 }
 \arguments{
 \item{data}{A named numeric array with at least one dimension 'time_dim'.}
-
-\item{time_dim}{A character string indicating the name of dimension along
-which the seasonal mean or other calculations are computed. The default
-value is 'ftime'.}
 
 \item{monini}{An integer indicating what the first month of the time series is. 
 It can be from 1 to 12.}
@@ -30,6 +26,10 @@ calculation. It can be from 1 to 12.}
 
 \item{monsup}{An integer indicating the end month of the seasonal calculation. 
 It can be from 1 to 12.}
+
+\item{time_dim}{A character string indicating the name of dimension along
+which the seasonal mean or other calculations are computed. The default
+value is 'ftime'.}
 
 \item{method}{An R function to be applied for seasonal calculation. For
 example, 'sum' can be used for total precipitation. The default value is mean.}

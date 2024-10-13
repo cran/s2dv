@@ -69,8 +69,10 @@ ano_obs <- Ano(sampleData$obs, clim$clim_obs)
 # time step.
 ano_exp_1 <- ClimProjDiags::Subset(ano_exp, 'member', c(1, 2))
 ano_exp_2 <- ClimProjDiags::Subset(ano_exp, 'member', c(3))
-ano_exp_1 <- ClimProjDiags::Subset(ano_exp_1, c('dataset', 'ftime'), list(1, 1), drop = 'selected')
-ano_exp_2 <- ClimProjDiags::Subset(ano_exp_2, c('dataset', 'ftime'), list(1, 1), drop = 'selected')
+ano_exp_1 <- ClimProjDiags::Subset(ano_exp_1, c('dataset', 'ftime'),
+                                  list(1, 1), drop = 'selected')
+ano_exp_2 <- ClimProjDiags::Subset(ano_exp_2, c('dataset', 'ftime'),
+                                  list(1, 1), drop = 'selected')
 ano_obs <- ClimProjDiags::Subset(ano_obs, c('dataset', 'ftime'), list(1, 1), drop = 'selected')
 # Compute ensemble mean and provide as inputs to RatioRMS.
 rrms <- RatioRMS(MeanDims(ano_exp_1, 'member'), 

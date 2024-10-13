@@ -89,7 +89,7 @@ Trend <- function(data, time_dim = 'ftime', interval = 1, polydeg = 1, alpha = 0
     dim(data) <- c(length(data))
     names(dim(data)) <- time_dim
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## time_dim
@@ -163,7 +163,7 @@ Trend <- function(data, time_dim = 'ftime', interval = 1, polydeg = 1, alpha = 0
   mon <- seq(x) * interval
 
   # remove NAs for potential poly()
-  NApos <- 1:length(x)
+  NApos <- seq_along(x)
   NApos[which(is.na(x))] <- NA
   x2 <- x[!is.na(NApos)]
   mon2 <- mon[!is.na(NApos)]
@@ -179,13 +179,13 @@ Trend <- function(data, time_dim = 'ftime', interval = 1, polydeg = 1, alpha = 0
     }
 
     if (pval | sign) {
-      p.value <- as.array(stats::anova(lm.out)$'Pr(>F)'[1])
+      p.value <- as.array(stats::anova(lm.out)[['Pr(>F)']][1])
       if (pval) p.val <- p.value
       if (sign) signif <- !is.na(p.value) & p.value <= alpha 
     }
 
-    detrended <- c()
-    detrended[is.na(x) == FALSE] <- x[is.na(x) == FALSE] - lm.out$fitted.values
+    detrended <- NULL
+    detrended[!is.na(x)] <- x[!is.na(x)] - lm.out$fitted.values
 
   } else {
 

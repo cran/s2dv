@@ -48,6 +48,12 @@
 #'  the default of \code{RandomWalkTest()}.
 #'@param alpha A numeric of the significance level to be used in the statistical
 #'  significance test. The default value is 0.05.
+#'@param N.eff Effective sample size to be used in the statistical significance
+#'  test. It can be NA (and it will be computed with the s2dv:::.Eno), FALSE 
+#'  (and it will use the length of "obs" along "time_dim", so the 
+#'  autocorrelation is not taken into account), a numeric (which is used for 
+#'  all cases), or an array with the same dimensions as "obs" except "time_dim"
+#'  (for a particular N.eff to be used for each case). The default value is NA.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -80,7 +86,7 @@
 #'@export
 CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', dat_dim = NULL,
                   Fair = FALSE, clim.cross.val = TRUE, sig_method.type = 'two.sided.approx', 
-                  alpha = 0.05, ncores = NULL) {
+                  alpha = 0.05, N.eff = NA, ncores = NULL) {
   
   # Check inputs
   ## exp, obs, and ref (1)
@@ -90,14 +96,14 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   if (!is.array(obs) | !is.numeric(obs)) {
     stop("Parameter 'obs' must be a numeric array.")
   }
-  if (any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   if (!is.null(ref)) {
     if (!is.array(ref) | !is.numeric(ref))
       stop("Parameter 'ref' must be a numeric array.")
-    if (any(is.null(names(dim(ref))))| any(nchar(names(dim(ref))) == 0)) {
+    if (any(is.null(names(dim(ref)))) | any(nchar(names(dim(ref))) == 0)) {
       stop("Parameter 'ref' must have dimension names.")
     }
   }
@@ -149,8 +155,8 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   }
   if (!identical(length(name_exp), length(name_obs)) |
       !identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of all dimensions", 
-                " except 'memb_dim' and 'dat_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of all dimensions", 
+         " except 'memb_dim' and 'dat_dim'.")
   }
   if (!is.null(ref)) {
     name_ref <- sort(names(dim(ref)))
@@ -158,17 +164,17 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
     if (!is.null(dat_dim)) {
       if (dat_dim %in% name_ref) {
         if (!identical(dim(exp)[dat_dim], dim(ref)[dat_dim])) {
-          stop(paste0("If parameter 'ref' has dataset dimension it must be", 
-                      " equal to dataset dimension of 'exp'."))
+          stop("If parameter 'ref' has dataset dimension it must be", 
+               " equal to dataset dimension of 'exp'.")
         }
         name_ref <- name_ref[-which(name_ref == dat_dim)]
       }
     }
     if (!identical(length(name_exp), length(name_ref)) |
         !identical(dim(exp)[name_exp], dim(ref)[name_ref])) {
-      stop(paste0("Parameter 'exp' and 'ref' must have same length of ",
-                  "all dimensions except 'memb_dim' and 'dat_dim' if there is ",
-                  "only one reference dataset."))
+      stop("Parameter 'exp' and 'ref' must have same length of ",
+           "all dimensions except 'memb_dim' and 'dat_dim' if there is ",
+           "only one reference dataset.")
     }
   }
   ## Fair
@@ -186,13 +192,30 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   ## sig_method.type
   #NOTE: These are the types of RandomWalkTest()
   if (!sig_method.type %in% c('two.sided.approx', 'two.sided', 'greater', 'less')) {
-    stop("Parameter 'sig_method.type' must be 'two.sided.approx', 'two.sided', 'greater', or 'less'.")
+    stop("Parameter 'sig_method.type' must be 'two.sided.approx', 'two.sided', ",
+         "'greater', or 'less'.")
   }
-  if (sig_method.type == 'two.sided.approx') {
-    if (alpha != 0.05) {
-      .warning("DelSole and Tippett (2016) aproximation is valid for alpha ",
-              "= 0.05 only. Returning the significance at the 0.05 significance level.")
+  if (sig_method.type == 'two.sided.approx' && alpha != 0.05) {
+    .warning("DelSole and Tippett (2016) aproximation is valid for alpha ",
+             "= 0.05 only. Returning the significance at the 0.05 significance level.")
+  }
+  ## N.eff
+  if (is.array(N.eff)) {
+    if (!is.numeric(N.eff)) {
+      stop("Parameter 'N.eff' must be numeric.")
     }
+    if (!all(names(dim(N.eff)) %in% names(dim(obs))) |
+        any(dim(obs)[match(names(dim(N.eff)), names(dim(obs)))] != dim(N.eff))) {
+      stop("If parameter 'N.eff' is provided with an array, it must ",
+           "have the same dimensions as 'obs' except 'time_dim'.")
+    }
+  } else if (any((!is.na(N.eff) & !isFALSE(N.eff) & 
+                  !is.numeric(N.eff)) | length(N.eff) != 1)) {
+    stop("Parameter 'N.eff' must be NA, FALSE, a numeric, or an array with ",
+         "the same dimensions as 'obs' except 'time_dim'.")
+  }
+  if ((!is.na(N.eff) & !isFALSE(N.eff)) && sig_method.type == 'two.sided.approx') {
+    warning("'N.eff' will not be used if 'sig_method.type' is 'two.sided.approx'.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -219,26 +242,64 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
     target_dims = list(exp = c(time_dim, memb_dim, dat_dim),
                        obs = c(time_dim, dat_dim))
   }
-  output <- Apply(data,
-                  target_dims = target_dims,
-                  fun = .CRPSS,
-                  time_dim = time_dim, memb_dim = memb_dim, 
-                  dat_dim = dat_dim, 
-                  Fair = Fair, clim.cross.val = clim.cross.val,
-                  sig_method.type = sig_method.type, alpha = alpha,
-                  ncores = ncores)
+  
+  if (is.array(N.eff)) {
+    data$N.eff <- N.eff
+    target_dims[length(target_dims)+1] <- list(NULL)
+    if (!is.null(ref)){
+      output <- Apply(data,
+                    target_dims = target_dims,
+                    fun = .CRPSS,
+                    time_dim = time_dim, memb_dim = memb_dim, 
+                    dat_dim = dat_dim, 
+                    Fair = Fair, clim.cross.val = clim.cross.val,
+                    sig_method.type = sig_method.type, alpha = alpha,
+                    ncores = ncores)
+    } else { # ref=NULL
+      output <- Apply(data,
+                      target_dims = target_dims,
+                      fun = .CRPSS,
+                      ref = ref, 
+                      time_dim = time_dim, memb_dim = memb_dim, 
+                      dat_dim = dat_dim, 
+                      Fair = Fair, clim.cross.val = clim.cross.val,
+                      sig_method.type = sig_method.type, alpha = alpha,
+                      ncores = ncores)
+    }
+  } else { # N.eff not an array
+    if (!is.null(ref)){
+      output <- Apply(data,
+                    target_dims = target_dims,
+                    fun = .CRPSS,
+                    time_dim = time_dim, memb_dim = memb_dim, 
+                    dat_dim = dat_dim, 
+                    Fair = Fair, clim.cross.val = clim.cross.val,
+                    sig_method.type = sig_method.type, alpha = alpha,
+                    N.eff = N.eff, ncores = ncores)
+    } else { # ref=NULL
+      output <- Apply(data,
+                      target_dims = target_dims,
+                      fun = .CRPSS,
+                      ref = ref, 
+                      time_dim = time_dim, memb_dim = memb_dim, 
+                      dat_dim = dat_dim, 
+                      Fair = Fair, clim.cross.val = clim.cross.val,
+                      sig_method.type = sig_method.type, alpha = alpha,
+                      N.eff = N.eff, ncores = ncores)
+    }
+  }
   
   return(output)
 }
 
 .CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
                    dat_dim = NULL, Fair = FALSE, clim.cross.val = TRUE, 
-                   sig_method.type = 'two.sided.approx', alpha = 0.05) {
+                   sig_method.type = 'two.sided.approx', alpha = 0.05, N.eff = NA) {
   
   # exp: [sdate, memb, (dat)]
   # obs: [sdate, (dat)]
   # ref: [sdate, memb, (dat)] or NULL
-
+  
   if (is.null(dat_dim)) {
     nexp <- 1
     nobs <- 1
@@ -264,7 +325,8 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       
       if (isFALSE(clim.cross.val)) { ## Without cross-validation
         ref <- array(data = rep(obs, each = obs_time_len), dim = c(obs_time_len, obs_time_len))
-      } else if (isTRUE(clim.cross.val)) { ## With cross-validation (excluding the value of that year to create ref for that year)
+      } else if (isTRUE(clim.cross.val)) {
+        # With cross-validation (excluding the value of that year to create ref for that year)
         ref <- array(data = NA, dim = c(obs_time_len, obs_time_len - 1))
         for (i in 1:obs_time_len) {
           ref[i, ] <- obs[-i]
@@ -283,8 +345,10 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       for (i_obs in 1:nobs) {
         
         if (isFALSE(clim.cross.val)) { ## Without cross-validation
-          ref <- array(data = rep(obs[, i_obs], each = obs_time_len), dim = c(obs_time_len, obs_time_len))
-        } else if (isTRUE(clim.cross.val)) { ## With cross-validation (excluding the value of that year to create ref for that year)
+          ref <- array(data = rep(obs[, i_obs], each = obs_time_len), 
+                       dim = c(obs_time_len, obs_time_len))
+        } else if (isTRUE(clim.cross.val)) {
+          # With cross-validation (excluding the value of that year to create ref for that year)
           ref <- array(data = NA, dim = c(obs_time_len, obs_time_len - 1))
           for (i in 1:obs_time_len) {
             ref[i, ] <- obs[-i, i_obs]
@@ -292,8 +356,10 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
         }
         
         names(dim(ref)) <- c(time_dim, memb_dim)
-        crps_ref[, i_obs] <- .CRPS(exp = ref, obs = ClimProjDiags::Subset(obs, dat_dim, i_obs, drop = 'selected'), 
-                                   time_dim = time_dim, memb_dim = memb_dim, dat_dim = NULL, Fair = Fair)
+        crps_ref[, i_obs] <- 
+          .CRPS(exp = ref, 
+                obs = ClimProjDiags::Subset(obs, dat_dim, i_obs, drop = 'selected'),
+                time_dim = time_dim, memb_dim = memb_dim, dat_dim = NULL, Fair = Fair)
       }
       # crps_ref should be [sdate, nobs]
     }
@@ -301,7 +367,7 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
   } else { # ref is not NULL
     if (!is.null(dat_dim) && (!dat_dim %in% names(dim(ref)))) {
       remove_dat_dim <- TRUE
-      ref <- InsertDim(data = ref, posdim = length(dim(ref)) + 1 , lendim = 1, name = dat_dim)
+      ref <- InsertDim(data = ref, posdim = length(dim(ref)) + 1, lendim = 1, name = dat_dim)
     } else {
       remove_dat_dim <- FALSE
     }
@@ -318,7 +384,8 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
 
   #----- CRPSS
   if (!is.null(dat_dim)) {
-    # If ref != NULL & ref has dat_dim, crps_ref = [sdate, nexp, nobs]; else, crps_ref = [sdate, nobs]
+    # If ref != NULL & ref has dat_dim, crps_ref = [sdate, nexp, nobs]; 
+    # else, crps_ref = [sdate, nobs]
 
     crps_exp_mean <- MeanDims(crps_exp, time_dim, na.rm = FALSE)
     crps_ref_mean <- MeanDims(crps_ref, time_dim, na.rm = FALSE)
@@ -329,28 +396,38 @@ CRPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member',
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           crpss[i, j] <- 1 - crps_exp_mean[i, j] / crps_ref_mean[j]
+          if (is.na(N.eff)) {
+            N.eff <- .Eno(x = obs[, j], na.action = na.pass) ## effective degrees of freedom
+          }
           sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[j],
                                         test.type = sig_method.type, alpha = alpha,
-                                        sign = T, pval = F)$sign
+                                        sign = T, pval = F, N.eff = N.eff)$sign
         }
       }
     } else {
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           crpss[i, j] <- 1 - crps_exp_mean[i, j] / crps_ref_mean[i, j]
-          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j], skill_B = crps_ref_mean[i, j],
+          if (is.na(N.eff)) {
+            N.eff <- .Eno(x = obs[, j], na.action = na.pass) ## effective degrees of freedom
+          }
+          sign[i, j] <- .RandomWalkTest(skill_A = crps_exp_mean[i, j],
+                                        skill_B = crps_ref_mean[i, j],
                                         test.type = sig_method.type, alpha = alpha,
-                                        sign = T, pval = F)$sign
+                                        sign = T, pval = F, N.eff = N.eff)$sign
         }
       }
     }
 
-  } else {
+  } else { # dat_dim = NULL
     crpss <- 1 - mean(crps_exp) / mean(crps_ref)
     # Significance
+    if (is.na(N.eff)) {
+      N.eff <- .Eno(x = obs, na.action = na.pass) ## effective degrees of freedom
+    }
     sign <- .RandomWalkTest(skill_A = crps_exp, skill_B = crps_ref,
                             test.type = sig_method.type, alpha = alpha,
-                            sign = T, pval = F)$sign
+                            sign = T, pval = F, N.eff = N.eff)$sign
   }
   
   return(list(crpss = crpss, sign = sign))

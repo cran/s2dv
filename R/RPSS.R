@@ -79,6 +79,12 @@
 #'  the default of \code{RandomWalkTest()}.
 #'@param alpha A numeric of the significance level to be used in the statistical
 #'  significance test. The default value is 0.05.
+#'@param N.eff Effective sample size to be used in the statistical significance
+#'  test. It can be NA (and it will be computed with the s2dv:::.Eno), FALSE 
+#'  (and it will use the length of 'obs' along 'time_dim', so the 
+#'  autocorrelation is not taken into account), a numeric (which is used for 
+#'  all cases), or an array with the same dimensions as 'obs' except 'time_dim'
+#'  (for a particular N.eff to be used for each case). The default value is NA.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -121,15 +127,15 @@
 #'obs_probs <- GetProbs(obs, memb_dim = NULL)
 #'ref_probs <- GetProbs(ref, memb_dim = 'member')
 #'res <- RPSS(exp = exp_probs, obs = obs_probs, ref = ref_probs, memb_dim = NULL, 
-#'            cat_dim = 'bin')
+#'            N.eff = FALSE, cat_dim = 'bin')
 #'
 #'@import multiApply
 #'@export
 RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', cat_dim = NULL,
                  dat_dim = NULL, prob_thresholds = c(1/3, 2/3), indices_for_clim = NULL,
                  Fair = FALSE, weights_exp = NULL, weights_ref = NULL, 
-                 cross.val = FALSE, na.rm = FALSE,
-                 sig_method.type = 'two.sided.approx', alpha = 0.05, ncores = NULL) {
+                 cross.val = FALSE, na.rm = FALSE, sig_method.type = 'two.sided.approx', 
+                 alpha = 0.05, N.eff = NA, ncores = NULL) {
  
   # Check inputs
   ## exp, obs, and ref (1)
@@ -139,14 +145,14 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
   if (!is.array(obs) | !is.numeric(obs)) {
     stop("Parameter 'obs' must be a numeric array.")
   }
-  if (any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   if (!is.null(ref)) {
     if (!is.array(ref) | !is.numeric(ref))
       stop("Parameter 'ref' must be a numeric array.")
-    if (any(is.null(names(dim(ref))))| any(nchar(names(dim(ref))) == 0)) {
+    if (any(is.null(names(dim(ref)))) | any(nchar(names(dim(ref))) == 0)) {
       stop("Parameter 'ref' must have dimension names.")
     }
   }
@@ -211,8 +217,8 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
   }
   if (!identical(length(name_exp), length(name_obs)) |
       !identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'memb_dim' and 'dat_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'memb_dim' and 'dat_dim'.")
   }
   if (!is.null(ref)) {
     name_ref <- sort(names(dim(ref)))
@@ -222,17 +228,17 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
     if (!is.null(dat_dim)) {
       if (dat_dim %in% name_ref) {
         if (!identical(dim(exp)[dat_dim], dim(ref)[dat_dim])) {
-          stop(paste0("If parameter 'ref' has dataset dimension, it must be", 
-                      " equal to dataset dimension of 'exp'."))
+          stop("If parameter 'ref' has dataset dimension, it must be", 
+               " equal to dataset dimension of 'exp'.")
         }
         name_ref <- name_ref[-which(name_ref == dat_dim)]
       }
     }
     if (!identical(length(name_exp), length(name_ref)) |
         !identical(dim(exp)[name_exp], dim(ref)[name_ref])) {
-      stop(paste0("Parameter 'exp' and 'ref' must have the same length of ",
-                  "all dimensions except 'memb_dim' and 'dat_dim' if there is ",
-                  "only one reference dataset."))
+      stop("Parameter 'exp' and 'ref' must have the same length of ",
+           "all dimensions except 'memb_dim' and 'dat_dim' if there is ",
+           "only one reference dataset.")
     }
   }
   ## prob_thresholds
@@ -242,7 +248,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
   }
   ## indices_for_clim
   if (is.null(indices_for_clim)) {
-    indices_for_clim <- 1:dim(obs)[time_dim]
+    indices_for_clim <- seq_len(dim(obs)[time_dim])
   } else {
     if (!is.numeric(indices_for_clim) | !is.vector(indices_for_clim)) {
       stop("Parameter 'indices_for_clim' must be NULL or a numeric vector.")
@@ -266,22 +272,29 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
       stop("Parameter 'weights_exp' must be a named numeric array.")
 
     if (is.null(dat_dim)) {
-      if (length(dim(weights_exp)) != 2 | any(!names(dim(weights_exp)) %in% c(memb_dim, time_dim)))
-        stop("Parameter 'weights_exp' must have two dimensions with the names of 'memb_dim' and 'time_dim'.")
+      if (length(dim(weights_exp)) != 2 | 
+          !all(names(dim(weights_exp)) %in% c(memb_dim, time_dim))) {
+        stop("Parameter 'weights_exp' must have two dimensions with the names of ",
+             "'memb_dim' and 'time_dim'.")
+      }
       if (dim(weights_exp)[memb_dim] != dim(exp)[memb_dim] |
           dim(weights_exp)[time_dim] != dim(exp)[time_dim]) {
-        stop("Parameter 'weights_exp' must have the same dimension lengths as 'memb_dim' and 'time_dim' in 'exp'.")
+        stop("Parameter 'weights_exp' must have the same dimension lengths as ",
+             "'memb_dim' and 'time_dim' in 'exp'.")
       }
       weights_exp <- Reorder(weights_exp, c(time_dim, memb_dim))
 
     } else {
-      if (length(dim(weights_exp)) != 3 | any(!names(dim(weights_exp)) %in% c(memb_dim, time_dim, dat_dim)))
-        stop("Parameter 'weights_exp' must have three dimensions with the names of 'memb_dim', 'time_dim' and 'dat_dim'.")
+      if (length(dim(weights_exp)) != 3 | 
+          !all(names(dim(weights_exp)) %in% c(memb_dim, time_dim, dat_dim))) {
+        stop("Parameter 'weights_exp' must have three dimensions with the names of ",
+             "'memb_dim', 'time_dim' and 'dat_dim'.")
+      }
       if (dim(weights_exp)[memb_dim] != dim(exp)[memb_dim] |
           dim(weights_exp)[time_dim] != dim(exp)[time_dim] |
           dim(weights_exp)[dat_dim] != dim(exp)[dat_dim]) {
-        stop(paste0("Parameter 'weights_exp' must have the same dimension lengths ", 
-                    "as 'memb_dim', 'time_dim' and 'dat_dim' in 'exp'."))
+        stop("Parameter 'weights_exp' must have the same dimension lengths ", 
+             "as 'memb_dim', 'time_dim' and 'dat_dim' in 'exp'.")
       }
       weights_exp <- Reorder(weights_exp, c(time_dim, memb_dim, dat_dim))
     }  
@@ -296,22 +309,29 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
       stop("Parameter 'weights_ref' must be a named numeric array.")
 
     if (is.null(dat_dim) | ((!is.null(dat_dim)) && (!dat_dim %in% names(dim(ref))))) {
-      if (length(dim(weights_ref)) != 2 | any(!names(dim(weights_ref)) %in% c(memb_dim, time_dim)))
-        stop("Parameter 'weights_ref' must have two dimensions with the names of 'memb_dim' and 'time_dim'.")
+      if (length(dim(weights_ref)) != 2 | 
+          !all(names(dim(weights_ref)) %in% c(memb_dim, time_dim))) {
+        stop("Parameter 'weights_ref' must have two dimensions with the names of ",
+             "'memb_dim' and 'time_dim'.")
+      }
       if (dim(weights_ref)[memb_dim] != dim(exp)[memb_dim] |
           dim(weights_ref)[time_dim] != dim(exp)[time_dim]) {
-        stop("Parameter 'weights_ref' must have the same dimension lengths as 'memb_dim' and 'time_dim' in 'ref'.")
+        stop("Parameter 'weights_ref' must have the same dimension lengths as ",
+             "'memb_dim' and 'time_dim' in 'ref'.")
       }
       weights_ref <- Reorder(weights_ref, c(time_dim, memb_dim))
 
     } else {
-      if (length(dim(weights_ref)) != 3 | any(!names(dim(weights_ref)) %in% c(memb_dim, time_dim, dat_dim)))
-        stop("Parameter 'weights_ref' must have three dimensions with the names of 'memb_dim', 'time_dim' and 'dat_dim'.")
+      if (length(dim(weights_ref)) != 3 | 
+          !all(names(dim(weights_ref)) %in% c(memb_dim, time_dim, dat_dim))) {
+        stop("Parameter 'weights_ref' must have three dimensions with the names of ",
+             "'memb_dim', 'time_dim' and 'dat_dim'.")
+      }
       if (dim(weights_ref)[memb_dim] != dim(ref)[memb_dim] |
           dim(weights_ref)[time_dim] != dim(ref)[time_dim] |
           dim(weights_ref)[dat_dim] != dim(ref)[dat_dim]) {
-        stop(paste0("Parameter 'weights_ref' must have the same dimension lengths ", 
-                    "as 'memb_dim', 'time_dim' and 'dat_dim' in 'ref'."))
+        stop("Parameter 'weights_ref' must have the same dimension lengths ", 
+             "as 'memb_dim', 'time_dim' and 'dat_dim' in 'ref'.")
       }
       weights_ref <- Reorder(weights_ref, c(time_dim, memb_dim, dat_dim))
     }
@@ -331,13 +351,33 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
   ## sig_method.type
   #NOTE: These are the types of RandomWalkTest()
   if (!sig_method.type %in% c('two.sided.approx', 'two.sided', 'greater', 'less')) {
-    stop("Parameter 'sig_method.type' must be 'two.sided.approx', 'two.sided', 'greater', or 'less'.")
+    stop("Parameter 'sig_method.type' must be 'two.sided.approx', 'two.sided', ",
+         "'greater', or 'less'.")
   }
-  if (sig_method.type == 'two.sided.approx') {
-    if (alpha != 0.05) {
-      .warning("DelSole and Tippett (2016) aproximation is valid for alpha ",
-              "= 0.05 only. Returning the significance at the 0.05 significance level.")
+  if (sig_method.type == 'two.sided.approx' && alpha != 0.05) {
+    .warning("DelSole and Tippett (2016) aproximation is valid for alpha ",
+             "= 0.05 only. Returning the significance at the 0.05 significance level.")
+  }
+  ## N.eff
+  if (is.array(N.eff)) {
+    if (!is.numeric(N.eff)) stop("Parameter 'N.eff' must be numeric.")
+    if (!all(names(dim(N.eff)) %in% names(dim(obs))) |
+        any(dim(obs)[match(names(dim(N.eff)), names(dim(obs)))] != dim(N.eff))) {
+      stop("If parameter 'N.eff' is provided with an array, it must ",
+           "have the same dimensions as 'obs' except 'time_dim'.")
     }
+  } else if (any((!is.na(N.eff) & !isFALSE(N.eff) & 
+                  !is.numeric(N.eff)) | length(N.eff) != 1)) {
+    stop("Parameter 'N.eff' must be NA, FALSE, a numeric, or an array with ",
+         "the same dimensions as 'obs' except 'time_dim'.")
+  }
+  if ((!is.na(N.eff) & !isFALSE(N.eff)) && sig_method.type == 'two.sided.approx') {
+    .warning("'N.eff' will not be used if 'sig_method.type' is 'two.sided.approx'.")
+  }
+  if (identical(N.eff, NA) & !is.null(cat_dim)) {
+    stop("'N.eff' cannot be NA if probabilities are already provided ",
+         "(cat_dim != NULL). Please compute 'N.eff' with s2dv::Eno and ",
+         "provide the result to this function.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -382,19 +422,68 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
     target_dims = list(exp = target_dims_exp, 
                        obs = target_dims_obs)
   }
-
-  output <- Apply(data,
-                  target_dims = target_dims,
-                  fun = .RPSS,
-                  time_dim = time_dim, memb_dim = memb_dim, 
-                  cat_dim = cat_dim, dat_dim = dat_dim, 
-                  prob_thresholds = prob_thresholds,
-                  indices_for_clim = indices_for_clim, Fair = Fair,
-                  weights_exp = weights_exp,
-                  weights_ref = weights_ref,
-                  cross.val = cross.val, 
-                  na.rm = na.rm, sig_method.type = sig_method.type, alpha = alpha,
-                  ncores = ncores)
+  
+  if (is.array(N.eff)) {
+    data$N.eff <- N.eff
+    target_dims[length(target_dims)+1] <- list(NULL)
+    if (!is.null(ref)){
+      output <- Apply(data,
+                      target_dims = target_dims,
+                      fun = .RPSS,
+                      time_dim = time_dim, memb_dim = memb_dim, 
+                      cat_dim = cat_dim, dat_dim = dat_dim, 
+                      prob_thresholds = prob_thresholds,
+                      indices_for_clim = indices_for_clim, Fair = Fair,
+                      weights_exp = weights_exp,
+                      weights_ref = weights_ref,
+                      cross.val = cross.val, 
+                      na.rm = na.rm, sig_method.type = sig_method.type, alpha = alpha,
+                      ncores = ncores)
+    } else { # ref=NULL
+      output <- Apply(data,
+                      target_dims = target_dims,
+                      fun = .RPSS,
+                      ref = ref,
+                      time_dim = time_dim, memb_dim = memb_dim, 
+                      cat_dim = cat_dim, dat_dim = dat_dim, 
+                      prob_thresholds = prob_thresholds,
+                      indices_for_clim = indices_for_clim, Fair = Fair,
+                      weights_exp = weights_exp,
+                      weights_ref = weights_ref,
+                      cross.val = cross.val, 
+                      na.rm = na.rm, sig_method.type = sig_method.type, alpha = alpha,
+                      ncores = ncores)
+    }
+  } else { # N.eff not an array
+    if (!is.null(ref)){
+    output <- Apply(data,
+                    target_dims = target_dims,
+                    fun = .RPSS,
+                    time_dim = time_dim, memb_dim = memb_dim, 
+                    cat_dim = cat_dim, dat_dim = dat_dim, 
+                    prob_thresholds = prob_thresholds,
+                    indices_for_clim = indices_for_clim, Fair = Fair,
+                    weights_exp = weights_exp,
+                    weights_ref = weights_ref,
+                    cross.val = cross.val, 
+                    na.rm = na.rm, sig_method.type = sig_method.type, alpha = alpha,
+                    N.eff = N.eff, ncores = ncores)
+    } else { # ref=NULL
+      output <- Apply(data,
+                      target_dims = target_dims,
+                      fun = .RPSS,
+                      ref = ref,
+                      time_dim = time_dim, memb_dim = memb_dim, 
+                      cat_dim = cat_dim, dat_dim = dat_dim, 
+                      prob_thresholds = prob_thresholds,
+                      indices_for_clim = indices_for_clim, Fair = Fair,
+                      weights_exp = weights_exp,
+                      weights_ref = weights_ref,
+                      cross.val = cross.val, 
+                      na.rm = na.rm, sig_method.type = sig_method.type, alpha = alpha,
+                      N.eff = N.eff, ncores = ncores)
+    }
+  }
   
   return(output)
 
@@ -403,7 +492,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
 .RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', cat_dim = NULL,
                   dat_dim = NULL, prob_thresholds = c(1/3, 2/3), indices_for_clim = NULL,
                   Fair = FALSE, weights_exp = NULL, weights_ref = NULL, cross.val = FALSE,
-                  na.rm = FALSE, sig_method.type = 'two.sided.approx', alpha = 0.05) {
+                  na.rm = FALSE, sig_method.type = 'two.sided.approx', alpha = 0.05, N.eff = NA) {
   #--- if memb_dim: 
   # exp: [sdate, memb, (dat)]
   # obs: [sdate, (memb), (dat)]
@@ -460,7 +549,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
     for (i in 1:nexp) {
       for (j in 1:nobs) {
         for (k in 1:nref) {
-          if (nref != 1 & k!=i) { # if nref is 1 or equal to nexp, calculate rps
+          if (nref != 1 & k != i) { # if nref is 1 or equal to nexp, calculate rps
             next
           }
           exp_data <- exp[, , i, drop = F]
@@ -474,14 +563,16 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
           good_indices_for_clim <- dum[!is.na(dum)]
 
           if (f_NAs <= sum(good_values) / length(good_values)) {
-            rps_exp[good_values,i,j] <- .RPS(exp = exp[good_values, , i], obs = obs[good_values, , j], 
+            rps_exp[good_values, i, j] <- .RPS(exp = exp[good_values, , i], 
+                                             obs = obs[good_values, , j], 
                                              time_dim = time_dim, memb_dim = memb_dim, 
                                              cat_dim = cat_dim, dat_dim = NULL, 
                                              prob_thresholds = prob_thresholds,
                                              indices_for_clim = good_indices_for_clim, 
                                              Fair = Fair, weights = weights_exp[good_values, , i],
                                              cross.val = cross.val, na.rm = na.rm)
-             rps_ref[good_values,i,j] <- .RPS(exp = ref[good_values, , k], obs = obs[good_values, , j], 
+             rps_ref[good_values, i, j] <- .RPS(exp = ref[good_values, , k], 
+                                              obs = obs[good_values, , j], 
                                               time_dim = time_dim, memb_dim = memb_dim,
                                               cat_dim = cat_dim, dat_dim = NULL, 
                                               prob_thresholds = prob_thresholds, 
@@ -526,8 +617,10 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
 	    # Subset indices_for_clim
             dum <- match(indices_for_clim, which(good_values))
             good_indices_for_clim <- dum[!is.na(dum)]
-            obs_probs <- .GetProbs(data = obs_data, indices_for_quantiles = good_indices_for_clim, 
-                                 prob_thresholds = prob_thresholds, weights = NULL, cross.val = cross.val)
+            obs_probs <- .GetProbs(data = obs_data, 
+                                   indices_for_quantiles = good_indices_for_clim, 
+                                   prob_thresholds = prob_thresholds, 
+                                   weights = NULL, cross.val = cross.val)
           } else {
             obs_probs <- t(obs_data)
           }
@@ -544,7 +637,8 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
           rps_ref[good_values, i, j] <- colSums((probs_clim_cumsum - probs_obs_cumsum)^2)
         }
     	# if (Fair) { # FairRPS
-        #   ## adjustment <- rowSums(-1 * (1/R - 1/R.new) * ens.cum * (R - ens.cum)/R/(R - 1)) [formula taken from SpecsVerification::EnsRps]
+        #   ## adjustment <- rowSums(-1 * (1/R - 1/R.new) * ens.cum * (R - ens.cum)/R/(R - 1)) 
+        #   ## [formula taken from SpecsVerification::EnsRps]
         #   R <- dim(exp)[2]  #memb
         #   R_new <- Inf
         #   adjustment <- (-1) / (R - 1) * probs_clim_cumsum * (1 - probs_clim_cumsum)
@@ -570,7 +664,7 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
     rpss <- array(dim = c(nexp = nexp, nobs = nobs))
     sign <- array(dim = c(nexp = nexp, nobs = nobs))
 
-    if (any(!is.na(rps_exp_mean))) {
+    if (!all(is.na(rps_exp_mean))) {
       for (i in 1:nexp) {
         for (j in 1:nobs) {
           rpss[i, j] <- 1 - rps_exp_mean[i, j] / rps_ref_mean[i, j]
@@ -578,9 +672,13 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
           if (!any(ind_nonNA)) {
             sign[i, j] <- NA
           } else {
-            sign[i, j] <- .RandomWalkTest(skill_A = rps_exp[ind_nonNA, i, j], skill_B = rps_ref[ind_nonNA, i, j],
+            if (is.na(N.eff)) {
+              N.eff <- .Eno(x = obs[, , j], na.action = na.pass) ## effective degrees of freedom
+            }
+            sign[i, j] <- .RandomWalkTest(skill_A = rps_exp[ind_nonNA, i, j],
+                                          skill_B = rps_ref[ind_nonNA, i, j],
                                           test.type = sig_method.type, alpha = alpha,
-                                          sign = T, pval = F)$sign
+                                          sign = T, pval = F, N.eff = N.eff)$sign
           }
         }
       }
@@ -598,9 +696,13 @@ RPSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = 'member', 
     } else {
       # rps_exp and rps_ref: [sdate]
       rpss <- 1 - mean(rps_exp, na.rm = TRUE) / mean(rps_ref, na.rm = TRUE)
-      sign <- .RandomWalkTest(skill_A = rps_exp[ind_nonNA], skill_B = rps_ref[ind_nonNA], 
+      if (is.na(N.eff)) {
+        N.eff <- .Eno(x = obs, na.action = na.pass) ## effective degrees of freedom
+      }
+      sign <- .RandomWalkTest(skill_A = rps_exp[ind_nonNA],
+                              skill_B = rps_ref[ind_nonNA], 
                               test.type = sig_method.type, alpha = alpha,
-                              sign = T, pval = F)$sign
+                              sign = T, pval = F, N.eff = N.eff)$sign
     }
   }
 

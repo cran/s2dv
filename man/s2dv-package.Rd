@@ -20,11 +20,12 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: An-Chi Ho \email{an.ho@bsc.es}
+\strong{Maintainer}: Ariadna Batalla \email{ariadna.batalla@bsc.es} [contributor]
 
 Authors:
 \itemize{
   \item BSC-CNS [copyright holder]
+  \item An-Chi Ho \email{an.ho@bsc.es}
   \item Nuria Perez-Zanon \email{nuria.perez@bsc.es}
 }
 
@@ -37,6 +38,8 @@ Other contributors:
   \item Andrea Manrique \email{andrea.manrique@bsc.es} [contributor]
   \item Deborah Verfaillie \email{deborah.verfaillie@bsc.es} [contributor]
   \item Eva Rifà \email{eva.rifarovira@bsc.es} [contributor]
+  \item Victòria Agudetse \email{victoria.agudetse@bsc.es} [contributor]
+  \item Nadia Milders \email{nadia.milders@bsc.es} [contributor]
 }
 
 }

@@ -123,7 +123,7 @@ sampleData$lat[] <- c(20, 80)
 ano <- Ano_CrossValid(sampleData$mod, sampleData$obs)
 ano_exp <- array(ano$exp, dim = dim(ano$exp)[-2])
 ano_obs <- array(ano$obs, dim = dim(ano$obs)[-2])
-nao <- NAO(ano_exp, ano_obs, sampleData$lat, sampleData$lon)
+nao <- NAO(exp = ano_exp, obs = ano_obs, lat = sampleData$lat, lon = sampleData$lon)
 # Finally plot the nao index
  \dontrun{
 nao$exp <- Reorder(nao$exp, c(2, 1))

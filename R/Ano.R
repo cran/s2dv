@@ -42,7 +42,7 @@
     dim(data) <- c(length(data))
     names(dim(data)) <- 'tmp_name'
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## clim
@@ -56,7 +56,7 @@
     dim(clim) <- c(length(clim))
     names(dim(clim)) <- 'tmp_name'
   }
-  if (any(is.null(names(dim(clim))))| any(nchar(names(dim(clim))) == 0)) {
+  if (any(is.null(names(dim(clim)))) | any(nchar(names(dim(clim))) == 0)) {
     stop("Parameter 'clim' must have dimension names.")
   }
   ## data and clim
@@ -87,14 +87,14 @@
   } 
   if (!parallel_compute) {
     target_dims_ind <- match(names(dim(clim)), names(dim(data)))
-    if (any(target_dims_ind != sort(target_dims_ind))) {
+    if (is.unsorted(target_dims_ind)) {
       clim <- Reorder(clim, match(sort(target_dims_ind), target_dims_ind))
     }
     if (length(dim(data)) == length(dim(clim))) {
       res <- data - clim
     } else {
       target_dims_ind <- match(names(dim(clim)), names(dim(data)))
-      margin_dims_ind <- c(1:length(dim(data)))[-target_dims_ind]
+      margin_dims_ind <- seq_along(dim(data))[-target_dims_ind]
       res <- apply(data, margin_dims_ind, .Ano, clim)
       res <- array(res, dim = dim(data)[c(target_dims_ind, margin_dims_ind)])
     }

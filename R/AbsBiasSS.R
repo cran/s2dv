@@ -82,14 +82,14 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
   if (!is.array(obs) | !is.numeric(obs)) {
     stop("Parameter 'obs' must be a numeric array.")
   }
-  if (any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   if (!is.null(ref)) {
     if (!is.array(ref) | !is.numeric(ref))
       stop("Parameter 'ref' must be a numeric array.")
-    if (any(is.null(names(dim(ref))))| any(nchar(names(dim(ref))) == 0)) {
+    if (any(is.null(names(dim(ref)))) | any(nchar(names(dim(ref))) == 0)) {
       stop("Parameter 'ref' must have dimension names.")
     }
   }
@@ -142,8 +142,8 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
   }
   if (!identical(length(name_exp), length(name_obs)) |
       !identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'memb_dim' and 'dat_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'memb_dim' and 'dat_dim'.")
   }
   if (!is.null(ref)) {
     name_ref <- sort(names(dim(ref)))
@@ -153,17 +153,17 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
     if (!is.null(dat_dim)) {
       if (dat_dim %in% name_ref) {
         if (!identical(dim(exp)[dat_dim], dim(ref)[dat_dim])) {
-          stop(paste0("If parameter 'ref' has dataset dimension, it must be", 
-                      " equal to dataset dimension of 'exp'."))
+          stop("If parameter 'ref' has dataset dimension, it must be", 
+               " equal to dataset dimension of 'exp'.")
         }
         name_ref <- name_ref[-which(name_ref == dat_dim)]
       }
     }
     if (!identical(length(name_exp), length(name_ref)) |
         !identical(dim(exp)[name_exp], dim(ref)[name_ref])) {
-      stop(paste0("Parameter 'exp' and 'ref' must have the same length of ",
-                  "all dimensions except 'memb_dim' and 'dat_dim' if there is ",
-                  "only one reference dataset."))
+      stop("Parameter 'exp' and 'ref' must have the same length of ",
+           "all dimensions except 'memb_dim' and 'dat_dim' if there is ",
+           "only one reference dataset.")
     }
   }
   ## na.rm
@@ -177,13 +177,12 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
   ## sig_method.type
   #NOTE: These are the types of RandomWalkTest()
   if (!sig_method.type %in% c('two.sided.approx', 'two.sided', 'greater', 'less')) {
-    stop("Parameter 'sig_method.type' must be 'two.sided.approx', 'two.sided', 'greater', or 'less'.")
+    stop("Parameter 'sig_method.type' must be 'two.sided.approx', 'two.sided', ",
+         "'greater', or 'less'.")
   }
-  if (sig_method.type == 'two.sided.approx') {
-    if (alpha != 0.05) {
-      .warning("DelSole and Tippett (2016) aproximation is valid for alpha ",
-              "= 0.05 only. Returning the significance at the 0.05 significance level.")
-    } 
+  if (sig_method.type == 'two.sided.approx' && alpha != 0.05) {
+    .warning("DelSole and Tippett (2016) aproximation is valid for alpha ",
+             "= 0.05 only. Returning the significance at the 0.05 significance level.")
   }
 
   ## ncores
@@ -283,12 +282,14 @@ AbsBiasSS <- function(exp, obs, ref = NULL, time_dim = 'sdate', memb_dim = NULL,
       }
       
       ## Bias of the exp
-      bias_exp <- .Bias(exp = exp_data, obs = obs_data, na.rm = na.rm, absolute = TRUE, time_mean = FALSE)
+      bias_exp <- .Bias(exp = exp_data, obs = obs_data, na.rm = na.rm, 
+                        absolute = TRUE, time_mean = FALSE)
       ## Bias of the ref
       if (is.null(ref)) { ## Climatological forecast
         ref_data <- rep(mean(obs_data, na.rm = na.rm), length(obs_data))
       }
-      bias_ref <- .Bias(exp = ref_data, obs = obs_data, na.rm = na.rm, absolute = TRUE, time_mean = FALSE)
+      bias_ref <- .Bias(exp = ref_data, obs = obs_data, na.rm = na.rm, 
+                        absolute = TRUE, time_mean = FALSE)
       ## Skill score and significance
       biasSS[i, j] <- 1 - mean(bias_exp) / mean(bias_ref)
       sign[i, j] <- .RandomWalkTest(skill_A = bias_exp, skill_B = bias_ref, 

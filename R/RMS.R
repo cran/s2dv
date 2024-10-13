@@ -94,12 +94,12 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
       obs <- array(obs, dim = c(length(obs)))
       names(dim(obs)) <- c(time_dim)
     } else {
-      stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
-                  "dimensions time_dim and dat_dim, or vector of same length."))
+      stop("Parameter 'exp' and 'obs' must be array with as least two ",
+           "dimensions time_dim and dat_dim, or vector of same length.")
     }
   } else if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
-                "dimensions time_dim and dat_dim, or vector of same length."))
+    stop("Parameter 'exp' and 'obs' must be array with as least two ",
+         "dimensions time_dim and dat_dim, or vector of same length.")
   }
   if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
       any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
@@ -147,8 +147,8 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
     }
     if (!is.numeric(limits) | any(limits %% 1 != 0) | any(limits < 0) | 
         length(limits) != 2 | any(limits > dim(exp)[comp_dim])) {
-      stop(paste0("Parameter 'limits' must be a vector of two positive ",
-                  "integers smaller than the length of paramter 'comp_dim'."))
+      stop("Parameter 'limits' must be a vector of two positive ",
+           "integers smaller than the length of paramter 'comp_dim'.")
     }
   }
   ## conf
@@ -186,8 +186,8 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
     stop("Parameter 'exp' and 'obs' must have the same dimension names.")
   }
   if (!identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'dat_dim' and 'memb_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'dat_dim' and 'memb_dim'.")
   }
   if (dim(exp)[time_dim] < 2) {
     stop("The length of time_dim must be at least 2 to compute RMS.")
@@ -264,7 +264,9 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
 
   # dif
   for (i in 1:nobs) {
-    dif[, , i] <- sapply(1:nexp, function(x) {exp[, x] - obs[, i]})
+    dif[, , i] <- sapply(1:nexp, function(x) {
+                                   exp[, x] - obs[, i]
+                                   })
   }
 
   rms <- colMeans(dif^2, na.rm = TRUE)^0.5  # [nexp, nobs]
@@ -280,18 +282,19 @@ RMS <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
     }
     # conf.lower
     chi <- sapply(1:nobs, function(i) {
-                             qchisq(confhigh, eno[, i] - 1)
+                            qchisq(confhigh, eno[, i] - 1)
                            })
     conf.lower <- (eno * rms ** 2 / chi) ** 0.5
 
     # conf.upper
     chi <- sapply(1:nobs, function(i) {
-                             qchisq(conflow, eno[, i] - 1)
+                            qchisq(conflow, eno[, i] - 1)
                            })
     conf.upper <- (eno * rms ** 2 / chi) ** 0.5
   }
 
-#NOTE: Not sure if the calculation is correct. p_val is reasonable compared to the chi-square chart though.
+#NOTE: Not sure if the calculation is correct. p_val is reasonable compared to
+#      the chi-square chart though.
 #  if (pval | sign) {
 #    chi <- array(dim = c(nexp = nexp, nobs = nobs))
 #    for (i in 1:nobs) {

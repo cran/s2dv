@@ -100,7 +100,7 @@ EOF <- function(ano, lat, lon, time_dim = 'sdate', space_dim = c('lat', 'lon'),
   if (!is.numeric(ano)) {
     stop("Parameter 'ano' must be a numeric array.")
   }
-  if(any(is.null(names(dim(ano))))| any(nchar(names(dim(ano))) == 0)) {
+  if (any(is.null(names(dim(ano)))) | any(nchar(names(dim(ano))) == 0)) {
     stop("Parameter 'ano' must have dimension names.")
   }
   ## time_dim
@@ -114,21 +114,21 @@ EOF <- function(ano, lat, lon, time_dim = 'sdate', space_dim = c('lat', 'lon'),
   if (!is.character(space_dim) | length(space_dim) != 2) {
     stop("Parameter 'space_dim' must be a character vector of 2.")
   }
-  if (any(!space_dim %in% names(dim(ano)))) {
+  if (!all(space_dim %in% names(dim(ano)))) {
     stop("Parameter 'space_dim' is not found in 'ano' dimension.")
   }
   ## lat
   if (!is.numeric(lat) | length(lat) != dim(ano)[space_dim[1]]) {
-    stop(paste0("Parameter 'lat' must be a numeric vector with the same ",
-                "length as the latitude dimension of 'ano'."))
+    stop("Parameter 'lat' must be a numeric vector with the same ",
+         "length as the latitude dimension of 'ano'.")
   }
   if (any(lat > 90 | lat < -90)) {
     stop("Parameter 'lat' must contain values within the range [-90, 90].")
   }
   ## lon
   if (!is.numeric(lon) | length(lon) != dim(ano)[space_dim[2]]) {
-    stop(paste0("Parameter 'lon' must be a numeric vector with the same ",
-                "length as the longitude dimension of 'ano'."))
+    stop("Parameter 'lon' must be a numeric vector with the same ",
+         "length as the longitude dimension of 'ano'.")
   }
   if (any(lon > 360 | lon < -360)) {
     .warning("Some 'lon' is out of the range [-360, 360].")
@@ -158,7 +158,7 @@ EOF <- function(ano, lat, lon, time_dim = 'sdate', space_dim = c('lat', 'lon'),
   # Area weighting. Weights for EOF; needed to compute the
   # fraction of variance explained by each EOFs
   space_ind <- sapply(space_dim, function(a) which(names(dim(ano)) == a))
-  wght <- array(cos(lat * pi/180), dim = dim(ano)[space_ind])
+  wght <- array(cos(lat * pi / 180), dim = dim(ano)[space_ind])
   
   # We want the covariance matrix to be weigthed by the grid
   # cell area so the anomaly field is weighted by its square
@@ -221,9 +221,9 @@ EOF <- function(ano, lat, lon, time_dim = 'sdate', space_dim = c('lat', 'lon'),
   ano <- ano * InsertDim(wght, 1, nt)
 
   # The use of the correlation matrix is done under the option corr.
-  if (corr == TRUE) {
+  if (corr) {
     stdv <- apply(ano, c(2, 3), sd, na.rm = T)
-    ano <- ano/InsertDim(stdv, 1, nt)
+    ano <- ano / InsertDim(stdv, 1, nt)
   }
   
   # Time/space matrix for SVD
@@ -273,7 +273,7 @@ EOF <- function(ano, lat, lon, time_dim = 'sdate', space_dim = c('lat', 'lon'),
   # Computation of the % of variance associated with each mode
   W <- pca$d[1:neofs]
   tot.var <- sum(pca$d^2)
-  var.eof <- 100 * pca$d[1:neofs]^2/tot.var
+  var.eof <- 100 * pca$d[1:neofs]^2 / tot.var
 
   for (e in 1:neofs) {
     # Set all masked grid points to NA in the EOFs

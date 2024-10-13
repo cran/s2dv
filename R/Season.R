@@ -5,15 +5,15 @@
 #'accounted.
 #'
 #'@param data A named numeric array with at least one dimension 'time_dim'. 
-#'@param time_dim A character string indicating the name of dimension along  
-#'  which the seasonal mean or other calculations are computed. The default
-#'  value is 'ftime'.
 #'@param monini An integer indicating what the first month of the time series is. 
 #'  It can be from 1 to 12.
 #'@param moninf An integer indicating the starting month of the seasonal
 #'  calculation. It can be from 1 to 12.
 #'@param monsup An integer indicating the end month of the seasonal calculation. 
 #'  It can be from 1 to 12.
+#'@param time_dim A character string indicating the name of dimension along  
+#'  which the seasonal mean or other calculations are computed. The default
+#'  value is 'ftime'.
 #'@param method An R function to be applied for seasonal calculation. For
 #'  example, 'sum' can be used for total precipitation. The default value is mean.
 #'@param na.rm A logical value indicating whether to remove NA values along 
@@ -38,7 +38,7 @@
 #'res <- Season(data = dat2, monini = 3, moninf = 1, monsup = 2, na.rm = FALSE)
 #'@import multiApply
 #'@export
-Season <- function(data, time_dim = 'ftime', monini, moninf, monsup, 
+Season <- function(data, monini, moninf, monsup, time_dim = 'ftime', 
                    method = mean, na.rm = TRUE, ncores = NULL) {
 
   # Check inputs 
@@ -53,7 +53,7 @@ Season <- function(data, time_dim = 'ftime', monini, moninf, monsup,
     dim(data) <- c(length(data))
     names(dim(data)) <- time_dim
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## time_dim
@@ -144,7 +144,7 @@ Season <- function(data, time_dim = 'ftime', monini, moninf, monsup,
         names(dim(res)) <- time_dim
       } else {
         time_dim_ind <- match(time_dim, names(dim(data)))
-        res <- apply(data, c(1:length(dim(data)))[-time_dim_ind], .Season,
+        res <- apply(data, c(seq_along(dim(data)))[-time_dim_ind], .Season,
                      monini = monini, moninf = moninf, monsup = monsup,
                      method = method, na.rm = na.rm)
         if (is.null(dim(res))) {
@@ -176,18 +176,24 @@ Season <- function(data, time_dim = 'ftime', monini, moninf, monsup,
     pos <- moninf : monsup
     # Extended index for all period:
     if (length(x) > pos[length(pos)]) {
-        pos2 <- lapply(pos, function(y) {seq(y, length(x), 12)})
+        pos2 <- lapply(pos, function(y) {
+                              seq(y, length(x), 12)
+                              })
     } else {
         pos2 <- pos
     }
     # Correct if the final season is not complete:
     maxyear <- min(unlist(lapply(pos2, length)))
-    pos2 <- lapply(pos2, function(y) {y[1 : maxyear]})
+    pos2 <- lapply(pos2, function(y) {
+                           y[1 : maxyear]
+                           })
     # Convert to array:
     pos2 <- unlist(pos2)
-    dim(pos2) <- c(year = maxyear, month = length(pos2)/maxyear)
+    dim(pos2) <- c(year = maxyear, month = length(pos2) / maxyear)
 
-    timeseries <- apply(pos2, 1, function(y) {method(x[y], na.rm = na.rm)})
+    timeseries <- apply(pos2, 1, function(y) {
+                                   method(x[y], na.rm = na.rm)
+                                   })
     timeseries <- as.array(timeseries)
 
     return(timeseries)

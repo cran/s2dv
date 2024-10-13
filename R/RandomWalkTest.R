@@ -28,6 +28,11 @@
 #'  significance test. The default value is TRUE.
 #'@param sign A logical value indicating whether to return the statistical
 #'  significance of the test based on 'alpha'. The default value is FALSE.
+#'@param N.eff Effective sample size to be used in the statistical significance
+#'  test. It can be FALSE (and the length of the time series will be used), a 
+#'  numeric (which is used for all cases), or an array with the same dimensions
+#'  as "skill_A" except "time_dim" (for a particular N.eff to be used for each 
+#'  case). The default value is FALSE.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -87,14 +92,14 @@
 #'@export
 RandomWalkTest <- function(skill_A, skill_B, time_dim = 'sdate',  
                            test.type = 'two.sided.approx', alpha = 0.05, pval = TRUE,
-                           sign = FALSE, ncores = NULL) {
+                           sign = FALSE, N.eff = FALSE, ncores = NULL) {
   
   # Check inputs
   ## skill_A and skill_B
   if (is.null(skill_A) | is.null(skill_B)) {
     stop("Parameters 'skill_A' and 'skill_B' cannot be NULL.")
   }
-  if(!is.numeric(skill_A) | !is.numeric(skill_B)) {
+  if (!is.numeric(skill_A) | !is.numeric(skill_B)) {
     stop("Parameters 'skill_A' and 'skill_B' must be a numerical array.")
   }
   if (!identical(dim(skill_A), dim(skill_B))) {
@@ -112,7 +117,7 @@ RandomWalkTest <- function(skill_A, skill_B, time_dim = 'sdate',
     stop("Parameter 'alpha' must be a number between 0 and 1.")
   }
   ## test.type
-  if (!test.type %in% c('two.sided.approx','two.sided','greater','less')) {
+  if (!test.type %in% c('two.sided.approx', 'two.sided', 'greater', 'less')) {
     stop("Parameter 'test.type' must be 'two.sided.approx', 'two.sided', 'greater', or 'less'.")
   }
   if (test.type == 'two.sided.approx') {
@@ -126,6 +131,21 @@ RandomWalkTest <- function(skill_A, skill_B, time_dim = 'sdate',
     }
     sign <- TRUE
   }
+  ## N.eff
+  if (is.array(N.eff)) {
+    if (!is.numeric(N.eff)) stop("Parameter 'N.eff' must be numeric.")
+    if (!all(names(dim(N.eff)) %in% names(dim(skill_A))) |
+        any(dim(skill_A)[match(names(dim(N.eff)), names(dim(skill_A)))] != dim(N.eff))) {
+      stop('If parameter "N.eff" is provided with an array, it must ',
+           'have the same dimensions as "skill_A" except "time_dim".')
+    }
+  } else if (any((!isFALSE(N.eff) & !is.numeric(N.eff)) | length(N.eff) != 1)) {
+    stop('Parameter "N.eff" must be FALSE, a numeric, or an array with ',
+         'the same dimensions as "skill_A" except "time_dim".')
+  }
+  if (!isFALSE(N.eff) & test.type=='two.sided.approx'){
+    warning('"N.eff" will not be used if "test.type" is "two.sided.approx".')
+  }
   ## ncores
   if (!is.null(ncores)) {
     if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 | length(ncores) > 1) {
@@ -134,23 +154,34 @@ RandomWalkTest <- function(skill_A, skill_B, time_dim = 'sdate',
   }
   
   ## Compute the Random Walk Test
-  res <- Apply(data = list(skill_A = skill_A,
-                           skill_B = skill_B),
-               target_dims = list(skill_A = time_dim,
-                                  skill_B = time_dim),
-               fun = .RandomWalkTest,
-               test.type = test.type,
-               alpha = alpha, pval = pval, sign = sign,
-               ncores = ncores)
+  if (is.array(N.eff)) {
+    res <- Apply(data = list(skill_A = skill_A,
+                             skill_B = skill_B,
+                             N.eff = N.eff),
+                 target_dims = list(skill_A = time_dim,
+                                    skill_B = time_dim,
+                                    N.eff = NULL),
+                 fun = .RandomWalkTest,
+                 test.type = test.type,
+                 alpha = alpha, pval = pval, sign = sign,
+                 ncores = ncores)
+  } else {
+    res <- Apply(data = list(skill_A = skill_A,
+                             skill_B = skill_B),
+                 target_dims = list(skill_A = time_dim,
+                                    skill_B = time_dim),
+                 fun = .RandomWalkTest,
+                 test.type = test.type,
+                 alpha = alpha, pval = pval, sign = sign,
+                 N.eff = N.eff, ncores = ncores)
+  }
  
   return(res)
 }
 
 .RandomWalkTest <- function(skill_A, skill_B, test.type = 'two.sided.approx', 
-                            alpha = 0.05, pval = TRUE, sign = FALSE) {
+                            alpha = 0.05, pval = TRUE, N.eff = FALSE, sign = FALSE) {
   #skill_A and skill_B: [sdate]
-
-  N.eff <- length(skill_A)
   
   A_better <- sum(skill_B > skill_A)
   B_better <- sum(skill_B < skill_A)
@@ -159,14 +190,16 @@ RandomWalkTest <- function(skill_A, skill_B, time_dim = 'sdate',
   output$score <- A_better - B_better
   
   if (test.type == 'two.sided.approx') {
-    output$sign <- ifelse(test = abs(output$score) > (2 * sqrt(N.eff)), yes = TRUE, no = FALSE)
+    output$sign <- abs(output$score) > (2 * sqrt(length(skill_A)))
 
   } else {
     
-    if (!is.na(output$score)) {
-      p.val <- binom.test(x = A_better, n = floor(N.eff), p = 0.5, conf.level = 1 - alpha, 
+    if (isFALSE(N.eff)){N.eff <- length(skill_A)}
+    
+    if (!is.na(output$score) & N.eff >= A_better) {
+      p.val <- binom.test(x = A_better, n = floor(N.eff), p = 0.5, 
+                          conf.level = 1 - alpha, 
                           alternative = test.type)$p.value
-
     } else {
       p.val <- NA
     }
@@ -175,7 +208,7 @@ RandomWalkTest <- function(skill_A, skill_B, time_dim = 'sdate',
       output$p.val <- p.val
     } 
     if (sign) {
-      output$sign <- ifelse(!is.na(p.val) & p.val <= alpha, TRUE, FALSE)
+      output$sign <- !is.na(p.val) & p.val <= alpha
     }
     
   }

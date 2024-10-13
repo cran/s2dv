@@ -27,6 +27,8 @@
 #'  bias. The default value is FALSE.
 #'@param time_mean A logical value indicating whether to compute the temporal 
 #'  mean of the bias. The default value is TRUE.
+#'@param alpha A numeric or NULL (default) to indicate the significance level 
+#'  using Welch's t-test. Only available when absolute is FALSE.
 #'@param ncores An integer indicating the number of cores to use for parallel 
 #'  computation. The default value is NULL.
 #'
@@ -34,7 +36,10 @@
 #'A numerical array of bias with dimensions c(nexp, nobs, the rest dimensions of
 #''exp' except 'time_dim' (if time_mean = T) and 'memb_dim'). nexp is the number
 #'of experiment (i.e., 'dat_dim' in exp), and nobs is the number of observation 
-#'(i.e., 'dat_dim' in obs). If dat_dim is NULL, nexp and nobs are omitted.
+#'(i.e., 'dat_dim' in obs). If dat_dim is NULL, nexp and nobs are omitted. If 
+#'alpha is specified, and absolute is FALSE, the result is a list with two 
+#'elements: the bias as described above and the significance as a logical array
+#'with the same dimensions.
 #'
 #'@references 
 #'Wilks, 2011; https://doi.org/10.1016/B978-0-12-385022-5.00008-7
@@ -43,12 +48,15 @@
 #'exp <- array(rnorm(1000), dim = c(dat = 1, lat = 3, lon = 5, member = 10, sdate = 50))
 #'obs <- array(rnorm(1000), dim = c(dat = 1, lat = 3, lon = 5, sdate = 50))
 #'bias <- Bias(exp = exp, obs = obs, memb_dim = 'member')
+#'bias2 <- Bias(exp = exp, obs = obs, memb_dim = 'member', alpha = 0.01)
+#'abs_bias <- Bias(exp = exp, obs = obs, memb_dim = 'member', absolute = TRUE, alpha = NULL)
 #'
 #'@import multiApply
 #'@importFrom ClimProjDiags Subset
 #'@export
-Bias <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL, na.rm = FALSE, 
-                 absolute = FALSE, time_mean = TRUE, ncores = NULL) {
+Bias <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL,
+                 na.rm = FALSE,  absolute = FALSE, time_mean = TRUE,
+                 alpha = 0.05, ncores = NULL) {
   
   # Check inputs
   ## exp and obs (1)
@@ -56,8 +64,8 @@ Bias <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL, 
     stop("Parameter 'exp' must be a numeric array.")
   if (!is.array(obs) | !is.numeric(obs))
     stop("Parameter 'obs' must be a numeric array.")
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## time_dim
@@ -105,8 +113,8 @@ Bias <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL, 
   }
   if (!identical(length(name_exp), length(name_obs)) |
       !identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'memb_dim' and 'dat_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'memb_dim' and 'dat_dim'.")
   }
   ## na.rm
   if (!is.logical(na.rm) | length(na.rm) > 1) {
@@ -119,6 +127,17 @@ Bias <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL, 
   ## time_mean
   if (!is.logical(time_mean) | length(time_mean) > 1) {
     stop("Parameter 'time_mean' must be one logical value.")
+  }
+  ## alpha
+  if (!is.null(alpha)) {
+    if (any(!is.numeric(alpha) | alpha <= 0 | alpha >= 1 | length(alpha) > 1)) {
+      stop("Parameter 'alpha' must be null or a numeric value.")
+    }
+    if (absolute) {
+      alpha <- NULL
+      .warning("Parameter 'absolute' is TRUE, so 'alpha' has been set to",
+               "false and significance will not be returned.")
+    }
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -144,16 +163,19 @@ Bias <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL, 
                 na.rm = na.rm,
                 absolute = absolute,
                 time_mean = time_mean,
-                ncores = ncores)$output1
-  
+                alpha = alpha,
+                ncores = ncores)
+
+  if (is.null(alpha)) {
+    bias <- bias$output1
+  }
   return(bias)
 }
 
 
 .Bias <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, na.rm = FALSE, 
-                  absolute = FALSE, time_mean = TRUE) {
+                  absolute = FALSE, time_mean = TRUE, alpha = NULL) {
   # exp and obs: [sdate, (dat)]
-
   if (is.null(dat_dim)) {
     bias <- exp - obs
     
@@ -164,15 +186,33 @@ Bias <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL, 
     if (isTRUE(time_mean)) {
       bias <- mean(bias, na.rm = na.rm)
     }
-
+    
+    if (!is.null(alpha)) {
+      if (!absolute) {
+        if (all(is.na(bias))) {
+          sign <- NA
+        } else {
+          pval <- t.test(x = obs, y = exp, alternative = "two.sided")$p.value
+          sign <- pval <= alpha
+        }
+      }
+    }
   } else {
     nexp <- as.numeric(dim(exp)[dat_dim])
     nobs <- as.numeric(dim(obs)[dat_dim])
     bias <- array(dim = c(dim(exp)[time_dim], nexp = nexp, nobs = nobs))
-
+    pval <- array(dim = c(nexp = nexp, nobs = nobs))
+    sign <- array(dim = c(nexp = nexp, nobs = nobs))
     for (i in 1:nexp) {
       for (j in 1:nobs) {
         bias[, i, j] <-  exp[, i] - obs[, j]
+        if (!is.null(alpha)) {
+          if (!absolute) {
+            pval[i, j] <- t.test(x = obs[, j], y = exp[, i],
+                                 alternative = "two.sided")$p.value
+            sign[i, j] <- pval[i, j] <= alpha
+          }
+        }
       }
     }
 
@@ -182,8 +222,14 @@ Bias <- function(exp, obs, time_dim = 'sdate', memb_dim = NULL, dat_dim = NULL, 
 
     if (isTRUE(time_mean)) {
       bias <- MeanDims(bias, time_dim, na.rm = na.rm)
+      if (!is.null(sign)) {
+        sign[which(is.na(bias))] <- NA
+      }
     }
+  } 
+  if (!is.null(alpha) && !absolute) {
+    return(list(bias = bias, sign = sign))
+  } else {
+    return(bias)
   }
-
-  return(bias)
 }

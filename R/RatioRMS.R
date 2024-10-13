@@ -55,8 +55,10 @@
 #'# time step.
 #'ano_exp_1 <- ClimProjDiags::Subset(ano_exp, 'member', c(1, 2))
 #'ano_exp_2 <- ClimProjDiags::Subset(ano_exp, 'member', c(3))
-#'ano_exp_1 <- ClimProjDiags::Subset(ano_exp_1, c('dataset', 'ftime'), list(1, 1), drop = 'selected')
-#'ano_exp_2 <- ClimProjDiags::Subset(ano_exp_2, c('dataset', 'ftime'), list(1, 1), drop = 'selected')
+#'ano_exp_1 <- ClimProjDiags::Subset(ano_exp_1, c('dataset', 'ftime'),
+#'                                   list(1, 1), drop = 'selected')
+#'ano_exp_2 <- ClimProjDiags::Subset(ano_exp_2, c('dataset', 'ftime'),
+#'                                   list(1, 1), drop = 'selected')
 #'ano_obs <- ClimProjDiags::Subset(ano_obs, c('dataset', 'ftime'), list(1, 1), drop = 'selected')
 #'# Compute ensemble mean and provide as inputs to RatioRMS.
 #'rrms <- RatioRMS(MeanDims(ano_exp_1, 'member'), 
@@ -92,14 +94,14 @@ RatioRMS <- function(exp1, exp2, obs, time_dim = 'sdate', pval = TRUE, ncores = 
     dim(obs) <- c(length(obs))
     names(dim(obs)) <- time_dim
   }
-  if(any(is.null(names(dim(exp1))))| any(nchar(names(dim(exp1))) == 0) |
-     any(is.null(names(dim(exp2))))| any(nchar(names(dim(exp2))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp1)))) | any(nchar(names(dim(exp1))) == 0) |
+      any(is.null(names(dim(exp2)))) | any(nchar(names(dim(exp2))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp1', 'exp2', and 'obs' must have dimension names.")
   }
-  if(!all(names(dim(exp1)) %in% names(dim(exp2))) | 
-     !all(names(dim(exp2)) %in% names(dim(obs))) | 
-     !all(names(dim(obs)) %in% names(dim(exp1)))) {
+  if (!all(names(dim(exp1)) %in% names(dim(exp2))) | 
+      !all(names(dim(exp2)) %in% names(dim(obs))) | 
+      !all(names(dim(obs)) %in% names(dim(exp1)))) {
     stop("Parameter 'exp1', 'exp2', and 'obs' must have same dimension names.")
   }
   name_1 <- sort(names(dim(exp1)))
@@ -107,8 +109,8 @@ RatioRMS <- function(exp1, exp2, obs, time_dim = 'sdate', pval = TRUE, ncores = 
   name_3 <- sort(names(dim(obs)))
   if (!all(dim(exp1)[name_1] == dim(exp2)[name_2]) |
       !all(dim(exp1)[name_1] == dim(obs)[name_3])) {
-    stop(paste0("Parameter 'exp1', 'exp2', and 'obs' must have the same length of ",
-                "all the dimensions."))
+    stop("Parameter 'exp1', 'exp2', and 'obs' must have the same length of ",
+         "all the dimensions.")
   }
   ## time_dim
   if (!is.character(time_dim) | length(time_dim) > 1) {
@@ -161,7 +163,8 @@ RatioRMS <- function(exp1, exp2, obs, time_dim = 'sdate', pval = TRUE, ncores = 
   dif2 <- exp2 - obs
   rms1 <- MeanDims(dif1^2, time_dim, na.rm = TRUE)^0.5
   rms2 <- MeanDims(dif2^2, time_dim, na.rm = TRUE)^0.5
-  rms2[which(abs(rms2) <= (max(abs(rms2), na.rm = TRUE) / 1000))] <- max(abs(rms2), na.rm = TRUE) / 1000
+  rms2[which(abs(rms2) <= (max(abs(rms2), na.rm = TRUE) / 1000))] <- 
+    max(abs(rms2), na.rm = TRUE) / 1000
   ratiorms <- rms1 / rms2
 
   if (pval) {
@@ -171,12 +174,12 @@ RatioRMS <- function(exp1, exp2, obs, time_dim = 'sdate', pval = TRUE, ncores = 
     F[which(F < 1)] <- 1 / F[which(F < 1)]
     
     if (is.null(dim(ratiorms))) {
-      p.val <- c()
+      p.val <- NULL
     } else {
       p.val <- array(dim = dim(ratiorms))
     }
     avail_ind <- which(!is.na(eno1) & !is.na(eno2) & eno1 > 2 & eno2 > 2)
-    p.val[avail_ind] <- (1 - pf(F,eno1[avail_ind] - 1, eno2[avail_ind] - 1)) * 2
+    p.val[avail_ind] <- (1 - pf(F, eno1[avail_ind] - 1, eno2[avail_ind] - 1)) * 2
     ratiorms[-avail_ind] <- NA
   }
 

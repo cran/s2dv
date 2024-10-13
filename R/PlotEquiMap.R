@@ -531,7 +531,8 @@ PlotEquiMap <- function(var, lon, lat, varu = NULL, varv = NULL,
   }
 
   if (!all(is.na(var))) {
-    var_limits <- c(min(var, na.rm = TRUE), max(var, na.rm = TRUE))
+    var_limits <- c(min(var[!is.infinite(var)], na.rm = TRUE),
+                    max(var[!is.infinite(var)], na.rm = TRUE))
   } else {
     .warning("All the data are NAs. The map will be filled with colNA.")
     if (!is.null(brks) && length(brks) > 1) {

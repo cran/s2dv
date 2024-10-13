@@ -71,7 +71,7 @@ ProbBins <- function(data, thr, fcyr = 'all', time_dim = 'sdate', memb_dim = 'me
 #    dim(data) <- c(length(data))
 #    names(dim(data)) <- time_dim
 #  }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## thr
@@ -80,10 +80,8 @@ ProbBins <- function(data, thr, fcyr = 'all', time_dim = 'sdate', memb_dim = 'me
   }
   if (!is.numeric(thr) | !is.vector(thr)) {
     stop("Parameter 'thr' must be a numeric vector.")
-  } else if (quantile) {
-    if (!all(thr <= 1 & thr >= 0)) {
-      stop("Parameter 'thr' must be within the range [0, 1] if 'quantile' is TRUE.")
-    }
+  } else if (quantile && !all(thr <= 1 & thr >= 0)) {
+    stop("Parameter 'thr' must be within the range [0, 1] if 'quantile' is TRUE.")
   }
   ## time_dim
   if (!is.character(time_dim) | length(time_dim) > 1) {
@@ -104,19 +102,21 @@ ProbBins <- function(data, thr, fcyr = 'all', time_dim = 'sdate', memb_dim = 'me
     if (!is.numeric(fcyr) | !is.vector(fcyr)) {
       stop("Parameter 'fcyr' must be a numeric vector or 'all'.")
     } else if (any(fcyr %% 1 != 0) | min(fcyr) < 1 | max(fcyr) > dim(data)[time_dim]) {
-      stop(paste0("Parameter 'fcyr' must be the indices of 'time_dim' within ",
-                  "the range [1, ", dim(data)[time_dim], "]."))
+      stop("Parameter 'fcyr' must be the indices of 'time_dim' within ",
+           "the range [1, ", dim(data)[time_dim], "].")
     }
   } else {
-    fcyr <- 1:dim(data)[time_dim]
+    fcyr <- seq_len(dim(data)[time_dim])
   }
   ## quantile 
   if (!is.logical(quantile) | length(quantile) > 1) {
     stop("Parameter 'quantile' must be one logical value.")
   }
   ## compPeriod
-  if (length(compPeriod) != 1 | any(!compPeriod %in% c('Full period', 'Without fcyr', 'Cross-validation'))) {
-    stop("Parameter 'compPeriod' must be either 'Full period', 'Without fcyr', or 'Cross-validation'.")
+  if (length(compPeriod) != 1 | 
+      !all(compPeriod %in% c('Full period', 'Without fcyr', 'Cross-validation'))) {
+    stop("Parameter 'compPeriod' must be either 'Full period', 'Without fcyr', ",
+         "or 'Cross-validation'.")
   }
   ## ncores
   if (!is.null(ncores)) {
@@ -140,7 +140,8 @@ ProbBins <- function(data, thr, fcyr = 'all', time_dim = 'sdate', memb_dim = 'me
  return(res)
 }
 
-.ProbBins <- function(data, thr = thr, fcyr = 'all', quantile, compPeriod = "Full period") {
+.ProbBins <- function(data, thr, fcyr = 'all', quantile = TRUE, 
+                      compPeriod = "Full period") {
 
   # data: [sdate, member]
 
@@ -201,7 +202,7 @@ counts <- function (dat, nbthr) {
   thr <- dat[1:nbthr]
   data <-  dat[nbthr + 1:(length(dat) - nbthr)]
   prob <- array(NA, dim = c(nbthr + 1, length(dat) - nbthr))
-  prob[1, ] <- 1*(data <= thr[1])
+  prob[1, ] <- 1 * (data <= thr[1])
   if (nbthr != 1) {
     for (ithr in 2:(nbthr)) {
       prob[ithr, ] <- 1 * ((data > thr[ithr - 1]) & (data <= thr[ithr]))

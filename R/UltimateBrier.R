@@ -98,8 +98,8 @@ UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', time_di
   if (!is.numeric(exp) | !is.numeric(obs)) {
     stop("Parameter 'exp' and 'obs' must be a vector or a numeric array.")
   }
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## dat_dim
@@ -140,12 +140,12 @@ UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', time_di
   name_exp <- name_exp[-which(name_exp == dat_dim)]
   name_obs <- name_obs[-which(name_obs == dat_dim)]
   if (any(name_exp != name_obs)) {
-    stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                "of all the dimensions except 'dat_dim' and 'memb_dim'."))
+    stop("Parameter 'exp' and 'obs' must have the same names and lengths ",
+         "of all the dimensions except 'dat_dim' and 'memb_dim'.")
   }
   if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have the same names and lengths ",
-                "of all the dimensions except 'dat_dim' and 'memb_dim'."))
+    stop("Parameter 'exp' and 'obs' must have the same names and lengths ",
+         "of all the dimensions except 'dat_dim' and 'memb_dim'.")
   }
   ## quantile
   if (!is.logical(quantile) | length(quantile) > 1) {
@@ -155,17 +155,17 @@ UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', time_di
   if (!is.numeric(thr) | !is.vector(thr)) {
     stop("Parameter 'thr' must be a numeric vector.")
   }
-  if (quantile) {
-    if (!all(thr < 1 & thr > 0)) {
-      stop("Parameter 'thr' must be between 0 and 1 when quantile is TRUE.")
-    }
+  if (quantile && !all(thr < 1 & thr > 0)) {
+    stop("Parameter 'thr' must be between 0 and 1 when quantile is TRUE.")
   }
   if (!quantile & (type %in% c('FairEnsembleBSS', 'FairEnsembleBS'))) {
     stop("Parameter 'quantile' must be TRUE if 'type' is 'FairEnsembleBSS' or 'FairEnsembleBS'.")
   }
   ## type
-  if (!(type %in% c("BS", "BSS", "FairEnsembleBS", "FairEnsembleBSS", "FairStartDatesBS", "FairStartDatesBSS"))) {
-    stop("Parameter 'type' must be one of 'BS', 'BSS', 'FairEnsembleBS', 'FairEnsembleBSS', 'FairStartDatesBS' or 'FairStartDatesBSS'.")
+  if (!(type %in% c("BS", "BSS", "FairEnsembleBS", "FairEnsembleBSS",
+                    "FairStartDatesBS", "FairStartDatesBSS"))) {
+    stop("Parameter 'type' must be one of 'BS', 'BSS', 'FairEnsembleBS', ",
+         "'FairEnsembleBSS', 'FairStartDatesBS' or 'FairStartDatesBSS'.")
   }
   ## decomposition
   if (!is.logical(decomposition) | length(decomposition) > 1) {
@@ -243,15 +243,16 @@ UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', time_di
     res <- array(dim = c(nexp = as.numeric(dim(exp)[2]), 
                          nobs = as.numeric(dim(obs)[2]), 
                          bin = length(thr) + 1))
-    for (n_exp in 1:dim(exp)[2]) {
-      for (n_obs in 1:dim(obs)[2]) {
+    for (n_exp in seq_len(dim(exp)[2])) {
+      for (n_obs in seq_len(dim(obs)[2])) {
         ens_ref <- matrix(obs[, n_obs, 1], size_ens_ref, size_ens_ref, byrow = TRUE)
-        for (n_thr in 1:length(c(thr, 1))) {
+        for (n_thr in seq_along(c(thr, 1))) {
           #NOTE: FairBreirSs is deprecated now. Should change to SkillScore (according to 
           #      SpecsVerification's documentation)
-          res[n_exp, n_obs, n_thr] <- SpecsVerification::FairBrierSs(exp[, n_exp, ] > c(thr, 1)[n_thr],
-                                        ens_ref > c(thr, 1)[n_thr],
-                                        obs[, n_obs, 1] > c(thr, 1)[n_thr])['skillscore']
+          res[n_exp, n_obs, n_thr] <- 
+            SpecsVerification::FairBrierSs(exp[, n_exp, ] > c(thr, 1)[n_thr],
+                                           ens_ref > c(thr, 1)[n_thr],
+                                           obs[, n_obs, 1] > c(thr, 1)[n_thr])['skillscore']
         }
       }
     }
@@ -261,7 +262,8 @@ UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', time_di
 
   } else if (type == 'FairEnsembleBS') {
     #NOTE: The calculation in s2dverification::UltimateBrier is wrong. In the final stage,
-    #      the function calculates like "take(result, 3, 1) - take(result, 3, 2) + take(result, 3, 3)",
+    #      the function calculates like 
+    #      "take(result, 3, 1) - take(result, 3, 2) + take(result, 3, 3)",
     #      but the 3rd dim of result is 'bins' instead of decomposition. 'FairEnsembleBS' does
     #      not have decomposition.
     #      The calculation is fixed here.
@@ -272,9 +274,9 @@ UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', time_di
     res <- array(dim = c(nexp = as.numeric(dim(exp)[2]), 
                          nobs = as.numeric(dim(obs)[2]), 
                          bin = length(thr) + 1))
-    for (n_exp in 1:dim(exp)[2]) {
-      for (n_obs in 1:dim(obs)[2]) {
-        for (n_thr in 1:length(c(thr, 1))) {
+    for (n_exp in seq_len(dim(exp)[2])) {
+      for (n_obs in seq_len(dim(obs)[2])) {
+        for (n_thr in seq_along(c(thr, 1))) {
           fb <- SpecsVerification::FairBrier(ens = exp[, n_exp, ] > c(thr, 1)[n_thr], 
                                              obs = obs[, n_obs, 1] > c(thr, 1)[n_thr])
           res[n_exp, n_obs, n_thr] <- mean(fb, na.rm = T)
@@ -295,8 +297,8 @@ UltimateBrier <- function(exp, obs, dat_dim = NULL, memb_dim = 'member', time_di
     comp <- array(dim = c(nexp = as.numeric(dim(exp)[2]),
                           nobs = as.numeric(dim(obs)[2]),
                           comp = 3))
-    for (n_exp in 1:dim(exp)[2]) {
-      for (n_obs in 1:dim(obs)[2]) {
+    for (n_exp in seq_len(dim(exp)[2])) {
+      for (n_obs in seq_len(dim(obs)[2])) {
         #NOTE: Parameter 'bins' is default.
         comp[n_exp, n_obs, ] <- SpecsVerification::BrierDecomp(p = exp[, n_exp], 
                                                                y = obs[, n_obs])[1, ]

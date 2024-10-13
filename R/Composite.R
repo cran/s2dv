@@ -100,7 +100,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
   if (length(dim(data)) < 3) {
     stop("Parameter 'data' must have at least three dimensions.")
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## occ
@@ -118,8 +118,8 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
     stop("Parameter 'time_dim' is not found in 'data' dimension.")
   }
   if (dim(data)[time_dim] != length(occ)) {
-     stop(paste0("The length of time_dim dimension in parameter 'data' is not ",
-                 "equal to length of parameter 'occ'."))
+     stop("The length of time_dim dimension in parameter 'data' is not ",
+          "equal to length of parameter 'occ'.")
   }
   ## space_dim
   if (!is.character(space_dim) | length(space_dim) != 2) {
@@ -185,7 +185,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
                   ncores = ncores)
 
   if (!is.null(fileout)) {
-    save(output, file = paste(fileout, '.sav', sep = ''))
+    save(output, file = paste0(fileout, '.sav'))
   }
 
   return(output)
@@ -203,7 +203,7 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
   dof <- array(dim = dim(data)[1:2])
   pval <- array(dim = c(dim(data)[1:2], composite = K))
 
-  if (eno == TRUE) { 
+  if (eno) { 
     n_tot <- Eno(data, time_dim = time_dim, ncores = ncores_input)
   } else {
     n_tot <- length(occ)
@@ -214,14 +214,14 @@ Composite <- function(data, occ, time_dim = 'time', space_dim = c('lon', 'lat'),
 
   for (k in 1:K) {
 
-    if (length(which(occ == k)) >= 1) {
+    if (any(occ == k)) {
       indices <- which(occ == k) + lag
       toberemoved <-  which(0 > indices | indices > dim(data)[3])
 
     if (length(toberemoved) > 0) {
         indices <- indices[-toberemoved]
     }
-    if (eno == TRUE) {
+    if (eno) {
         data_tmp <- data[, , indices]
         names(dim(data_tmp)) <- names(dim(data))
         n_k <- Eno(data_tmp, time_dim = time_dim, ncores = ncores_input)

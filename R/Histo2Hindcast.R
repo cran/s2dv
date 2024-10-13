@@ -67,22 +67,22 @@ Histo2Hindcast <- function(data, sdatesin, sdatesout, nleadtimesout,
     stop("Parameter 'sdatesin' cannot be NULL.")
   }
   if (!is.character(sdatesin) || length(sdatesin) > 1) {
-    stop(paste0("Parameter 'sdatesin' must be a character string in the format",
-                " 'YYYYMMDD' or 'YYYYMM'."))
+    stop("Parameter 'sdatesin' must be a character string in the format",
+         " 'YYYYMMDD' or 'YYYYMM'.")
   } else if (!nchar(sdatesin) %in% c(6, 8) | is.na(as.numeric(sdatesin))) {
-    stop(paste0("Parameter 'sdatesin' must be a character string in the format",
-                " 'YYYYMMDD' or 'YYYYMM'."))
+    stop("Parameter 'sdatesin' must be a character string in the format",
+         " 'YYYYMMDD' or 'YYYYMM'.")
   }
   # sdatesout
   if (is.null(sdatesout)) {
     stop("Parameter 'sdatesout' cannot be NULL.")
   }
   if (!is.character(sdatesout) | !is.vector(sdatesout)) {
-    stop(paste0("Parameter 'sdatesout' must be a vector of character in the ",
-                "format 'YYYYMMDD' or 'YYYYMM'."))
+    stop("Parameter 'sdatesout' must be a vector of character in the ",
+         "format 'YYYYMMDD' or 'YYYYMM'.")
   } else if (!all(nchar(sdatesout) %in% c(6, 8)) | anyNA(as.numeric(sdatesin))) {
-    stop(paste0("Parameter 'sdatesout' must be a vector of character in the ",
-                "format 'YYYYMMDD' or 'YYYYMM'."))
+    stop("Parameter 'sdatesout' must be a vector of character in the ",
+         "format 'YYYYMMDD' or 'YYYYMM'.")
   }
   # nleadtimesout
   if (is.null(nleadtimesout)) {
@@ -122,13 +122,18 @@ Histo2Hindcast <- function(data, sdatesin, sdatesout, nleadtimesout,
   yrout <- as.numeric(substr(sdatesout, 1, 4))
   mthin <- as.numeric(substr(sdatesin, 5, 6))
   if (mthin > 12) {
-    stop(paste0("Parameter 'sdatesin' must be in the format 'YYYYMMDD' or ",
-                "'YYYYMM'. Found the month is over 12."))
+    stop("Parameter 'sdatesin' must be in the format 'YYYYMMDD' or ",
+         "'YYYYMM'. Found the month is over 12.")
   }
   mthout <- as.numeric(substr(sdatesout, 5, 6))
   if (any(mthout > 12)) {
-    stop(paste0("Parameter 'sdatesout' must be a vector of character in the ",
-                "format 'YYYYMMDD' or 'YYYYMM'. Found certain month is over 12."))
+    stop("Parameter 'sdatesout' must be a vector of character in the ",
+         "format 'YYYYMMDD' or 'YYYYMM'. Found certain month is over 12.")
+  }
+  if (any((yrout - yrin) * 12 + (mthout - mthin) < 0)) {
+    warning("Some of the start dates requested in 'sdatesout' are ",
+            "earlier than the original start date 'sdatesin'. These ",
+            "sdates will be filled with NA values")
   }
 
   res <- Apply(data, 
@@ -144,18 +149,20 @@ Histo2Hindcast <- function(data, sdatesin, sdatesout, nleadtimesout,
 
 }
 
-.Histo2Hindcast <- function(data, yrin = yrin, yrout = yrout, mthin = mthin, mthout = mthout, nleadtimesout) {
+.Histo2Hindcast <- function(data, yrin, yrout, mthin, mthout, nleadtimesout) {
   # data: [sdate = 1, ftime]
 
   res <- array(dim = c(sdate = length(yrout), ftime = nleadtimesout))
 
   diff_mth <- (yrout - yrin) * 12 + (mthout - mthin)
-  for (i in 1:length(diff_mth)) {
-    if (diff_mth[i] < dim(data)[2]) {
-      ftime_ind <- max(1 + diff_mth[i], 1):min(nleadtimesout + diff_mth[i], dim(data)[2])
-      res[i, 1:length(ftime_ind)] <- data[1, ftime_ind]
+  for (i in seq_along(diff_mth)) {
+    ftime_ind <- max(1 + diff_mth[i], 1):min(nleadtimesout + diff_mth[i], dim(data)[2])
+    if (diff_mth[i] < 0) {
+      # Fill with NA values if the requested date is earlier than available data
+      res[i, seq_along(ftime_ind)] <- rep(NA, length(seq_along(ftime_ind)))
+    } else if (diff_mth[i] < dim(data)[2]) {
+      res[i, seq_along(ftime_ind)] <- data[1, ftime_ind]
     }
   }
-  
   return(res)
 }

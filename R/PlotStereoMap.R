@@ -170,8 +170,10 @@
 #'data <- matrix(rnorm(100 * 50), 100, 50)
 #'x <- seq(from = 0, to = 360, length.out = 100)
 #'y <- seq(from = -90, to = 90, length.out = 50)
+#'  \dontrun{
 #'PlotStereoMap(data, x, y, latlims = c(60, 90), brks = 50,
 #'              toptitle = "This is the title")
+#' }
 #'@import mapproj
 #'@importFrom grDevices dev.cur dev.new dev.off gray
 #'@importFrom stats median

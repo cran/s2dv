@@ -25,7 +25,9 @@
 #'
 #'@import multiApply stats
 #'@export
-RatioPredictableComponents <- function(exp, obs, time_dim = 'year', memb_dim = 'member', na.rm = FALSE, ncores = NULL) {
+RatioPredictableComponents <- function(exp, obs, time_dim = 'year', 
+                                       memb_dim = 'member', na.rm = FALSE, 
+                                       ncores = NULL) {
 
   ## Checkings
   if (is.null(exp)) {
@@ -61,7 +63,7 @@ RatioPredictableComponents <- function(exp, obs, time_dim = 'year', memb_dim = '
   if (!is.logical(na.rm)) {
     stop("Parameter 'na.rm' must be TRUE or FALSE.")
   }
-  if (!is.null(ncores)){
+  if (!is.null(ncores)) {
     if (!is.numeric(ncores) | ncores %% 1 != 0 |  ncores <= 0 | length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
@@ -82,8 +84,8 @@ RatioPredictableComponents <- function(exp, obs, time_dim = 'year', memb_dim = '
   # obs: [time]
 
   ## Ensemble mean and spread
-  ens_mean <- apply(exp, 1, mean, na.rm = na.rm)
-  ens_spread <- apply(exp, 2, "-", ens_mean)
+  ens_mean <- rowMeans(exp, na.rm = na.rm)
+  #ens_spread <- apply(exp, 2, "-", ens_mean)
 
   ## Ensemble mean variance -> signal
   var_signal <- var(ens_mean, na.rm = na.rm)

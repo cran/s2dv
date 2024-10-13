@@ -13,6 +13,7 @@ Bias(
   na.rm = FALSE,
   absolute = FALSE,
   time_mean = TRUE,
+  alpha = 0.05,
   ncores = NULL
 )
 }
@@ -44,6 +45,9 @@ bias. The default value is FALSE.}
 \item{time_mean}{A logical value indicating whether to compute the temporal 
 mean of the bias. The default value is TRUE.}
 
+\item{alpha}{A numeric or NULL (default) to indicate the significance level 
+using Welch's t-test. Only available when absolute is FALSE.}
+
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}
 }
@@ -51,7 +55,10 @@ computation. The default value is NULL.}
 A numerical array of bias with dimensions c(nexp, nobs, the rest dimensions of
 'exp' except 'time_dim' (if time_mean = T) and 'memb_dim'). nexp is the number
 of experiment (i.e., 'dat_dim' in exp), and nobs is the number of observation 
-(i.e., 'dat_dim' in obs). If dat_dim is NULL, nexp and nobs are omitted.
+(i.e., 'dat_dim' in obs). If dat_dim is NULL, nexp and nobs are omitted. If 
+alpha is specified, and absolute is FALSE, the result is a list with two 
+elements: the bias as described above and the significance as a logical array
+with the same dimensions.
 }
 \description{
 The Mean Bias or Mean Error (Wilks, 2011) is defined as the mean difference 
@@ -66,6 +73,8 @@ pair of exp and obs data.
 exp <- array(rnorm(1000), dim = c(dat = 1, lat = 3, lon = 5, member = 10, sdate = 50))
 obs <- array(rnorm(1000), dim = c(dat = 1, lat = 3, lon = 5, sdate = 50))
 bias <- Bias(exp = exp, obs = obs, memb_dim = 'member')
+bias2 <- Bias(exp = exp, obs = obs, memb_dim = 'member', alpha = 0.01)
+abs_bias <- Bias(exp = exp, obs = obs, memb_dim = 'member', absolute = TRUE, alpha = NULL)
 
 }
 \references{

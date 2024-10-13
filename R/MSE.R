@@ -10,7 +10,8 @@
 #'all leadtimes.\cr
 #'The confidence interval is computed by the chi2 distribution.\cr
 #'
-#'@param exp A named numeric array of experimental data, with at least #'  'time_dim' dimension. It can also be a vector with the same length as 'obs'.
+#'@param exp A named numeric array of experimental data, with at least 
+#' 'time_dim' dimension. It can also be a vector with the same length as 'obs'.
 #'@param obs A named numeric array of observational data, same dimensions as  
 #'  parameter 'exp' except along 'dat_dim' and 'memb_dim'. It can also be a 
 #'  vector with the same length as 'exp'.
@@ -91,15 +92,15 @@ MSE <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, memb_dim = NULL,
       obs <- array(obs, dim = c(length(obs)))
       names(dim(obs)) <- c(time_dim)
     } else {
-      stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
-                  "dimensions time_dim and dat_dim, or vector of same length."))
+      stop("Parameter 'exp' and 'obs' must be array with as least two ",
+           "dimensions time_dim and dat_dim, or vector of same length.")
     }
   } else if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must be array with as least two ",
-                "dimensions time_dim and dat_dim, or vector of same length."))
+    stop("Parameter 'exp' and 'obs' must be array with as least two ",
+         "dimensions time_dim and dat_dim, or vector of same length.")
   }
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## time_dim
@@ -144,8 +145,8 @@ MSE <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, memb_dim = NULL,
     }
     if (!is.numeric(limits) | any(limits %% 1 != 0) | any(limits < 0) | 
         length(limits) != 2 | any(limits > dim(exp)[comp_dim])) {
-      stop(paste0("Parameter 'limits' must be a vector of two positive ",
-                  "integers smaller than the length of paramter 'comp_dim'."))
+      stop("Parameter 'limits' must be a vector of two positive ",
+           "integers smaller than the length of paramter 'comp_dim'.")
     }
   }
   ## conf
@@ -182,8 +183,8 @@ MSE <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, memb_dim = NULL,
     stop("Parameter 'exp' and 'obs' must have the same dimension names.")
   }
   if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'dat_dim' and 'memb_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'dat_dim' and 'memb_dim'.")
   }
   if (dim(exp)[time_dim] < 2) {
     stop("The length of time_dim must be at least 2 to compute MSE.")
@@ -261,7 +262,9 @@ MSE <- function(exp, obs, time_dim = 'sdate', dat_dim = NULL, memb_dim = NULL,
   
   # dif
   for (i in 1:nobs) {
-    dif[, , i] <- sapply(1:nexp, function(x) {exp[, x] - obs[, i]})
+    dif[, , i] <- sapply(1:nexp, function(x) {
+                                   exp[, x] - obs[, i]
+                                   })
   }
   
   mse <- colMeans(dif^2, na.rm = TRUE) # array(dim = c(nexp, nobs))

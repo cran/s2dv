@@ -16,6 +16,7 @@ RPS(
   Fair = FALSE,
   weights = NULL,
   cross.val = FALSE,
+  return_mean = TRUE,
   na.rm = FALSE,
   ncores = NULL
 )
@@ -67,6 +68,10 @@ the weighted and unweighted methodologies is desired.}
 \item{cross.val}{A logical indicating whether to compute the thresholds
 between probabilistic categories in cross-validation. The default value is
 FALSE.}
+
+\item{return_mean}{A logical indicating whether to return the temporal mean
+of the RPS or not. If TRUE, the temporal mean is calculated along time_dim,
+if FALSE the time dimension is not aggregated. The default is TRUE.}
 
 \item{na.rm}{A logical or numeric value between 0 and 1. If it is numeric, it 
 means the lower limit for the fraction of the non-NA values. 1 is equal to 

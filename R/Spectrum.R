@@ -59,7 +59,7 @@ Spectrum <- function(data, time_dim = 'ftime', alpha = 0.05, ncores = NULL) {
     dim(data) <- c(length(data))
     names(dim(data)) <- time_dim
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## time_dim
@@ -97,7 +97,7 @@ Spectrum <- function(data, time_dim = 'ftime', alpha = 0.05, ncores = NULL) {
 .Spectrum <- function(data, alpha = 0.05) {
   # data: [time]
 
-  data <- data[is.na(data) == FALSE]
+  data <- data[!is.na(data)]
   ndat <- length(data)
 
   if (ndat >= 3) {
@@ -118,7 +118,7 @@ Spectrum <- function(data, time_dim = 'ftime', alpha = 0.05, ncores = NULL) {
       toto2 <- spectrum(toto, plot = FALSE)
       store[jt, ] <- toto2$spec
     }
-    for (jx in 1:length(tmp$spec)) {
+    for (jx in seq_along(tmp$spec)) {
       output[jx, 3] <- quantile(store[, jx], 1 - alpha)
     }
   } else {

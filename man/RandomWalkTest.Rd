@@ -12,6 +12,7 @@ RandomWalkTest(
   alpha = 0.05,
   pval = TRUE,
   sign = FALSE,
+  N.eff = FALSE,
   ncores = NULL
 )
 }
@@ -46,6 +47,12 @@ significance test. The default value is TRUE.}
 
 \item{sign}{A logical value indicating whether to return the statistical
 significance of the test based on 'alpha'. The default value is FALSE.}
+
+\item{N.eff}{Effective sample size to be used in the statistical significance
+test. It can be FALSE (and the length of the time series will be used), a 
+numeric (which is used for all cases), or an array with the same dimensions
+as "skill_A" except "time_dim" (for a particular N.eff to be used for each 
+case). The default value is FALSE.}
 
 \item{ncores}{An integer indicating the number of cores to use for parallel 
 computation. The default value is NULL.}

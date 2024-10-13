@@ -3,7 +3,8 @@
 #'This function computes per-pair climatologies for the experimental 
 #'and observational data using one of the following methods:
 #'\enumerate{
-#'  \item{per-pair method (Garcia-Serrano and Doblas-Reyes, CD, 2012 https://doi.org/10.1007/s00382-012-1413-1)}
+#'  \item{per-pair method (Garcia-Serrano and Doblas-Reyes, CD, 2012 
+#'        https://doi.org/10.1007/s00382-012-1413-1)}
 #'  \item{Kharin method (Kharin et al, GRL, 2012 https://doi.org/10.1029/2012GL052647)}
 #'  \item{Fuckar method (Fuckar et al, GRL, 2014 https://doi.org/10.1002/2014GL060815)}
 #'}
@@ -86,11 +87,11 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
     stop("Parameter 'exp' and 'obs' must be a numeric array.")
   }
   if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must be at least two dimensions ",
-                "containing time_dim and dat_dim."))
+    stop("Parameter 'exp' and 'obs' must be at least two dimensions ",
+         "containing time_dim and dat_dim.")
   }
-  if (any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-      any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## time_dim
@@ -110,7 +111,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
       stop("Parameter 'dat_dim' is not found in 'exp' dimensions.")
     }
     # If dat_dim is not in obs, add it in
-    if (any(!dat_dim %in% names(dim(obs)))) {
+    if (!all(dat_dim %in% names(dim(obs)))) {
       reset_obs_dim <- TRUE
       ori_obs_dim <- dim(obs)
       dim(obs) <- c(dim(obs), rep(1, length(dat_dim[which(!dat_dim %in% names(dim(obs)))])))
@@ -166,14 +167,14 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
   if (!is.null(dat_dim)) {
-    for (i in 1:length(dat_dim)) {
+    for (i in seq_along(dat_dim)) {
       name_exp <- name_exp[-which(name_exp == dat_dim[i])]
       name_obs <- name_obs[-which(name_obs == dat_dim[i])]
     }
   }
-  if(!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have the same dimensions ",
-                "except 'dat_dim'."))
+  if (!all(dim(exp)[name_exp] == dim(obs)[name_obs])) {
+    stop("Parameter 'exp' and 'obs' must have the same dimensions ",
+         "except 'dat_dim'.")
   }
 
   ###############################
@@ -191,7 +192,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
   # Per-pair: Remove all sdate if not complete along dat_dim
   if (!is.null(dat_dim)) {
     pos <- rep(0, length(dat_dim))
-    for (i in 1:length(dat_dim)) {  #[dat, sdate]
+    for (i in seq_along(dat_dim)) {  #[dat, sdate]
       ## dat_dim: [dataset, member]
       pos[i] <- which(names(dim(obs)) == dat_dim[i])
     }
@@ -199,7 +200,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
                    MeanDims(obs, pos, na.rm = FALSE)
     outrows_obs <- outrows_exp
 
-    for (i in 1:length(pos)) {
+    for (i in seq_along(pos)) {
       outrows_exp <- InsertDim(outrows_exp, pos[i], dim(exp)[pos[i]])
       outrows_obs <- InsertDim(outrows_obs, pos[i], dim(obs)[pos[i]])
     }
@@ -283,7 +284,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
           clim_obs <- mean(clim_obs, na.rm = TRUE)
         } else {
           dim_name <- names(dim(clim_exp))
-          pos <- c(1:length(dim(clim_exp)))[-which(dim_name == memb_dim)]
+          pos <- c(seq_along(dim(clim_exp)))[-which(dim_name == memb_dim)]
           clim_exp <- apply(clim_exp, pos, mean, na.rm = TRUE) 
           clim_obs <- apply(clim_obs, pos, mean, na.rm = TRUE) 
           if (is.null(dim(clim_exp))) {
@@ -322,6 +323,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
     tmp_exp <- Trend(data = exp, time_dim = time_dim, interval = 1, 
                      polydeg = 1, conf = FALSE, ncores = ncores_input)$trend
     # tmp_exp: [stats, dat_dim]
+    ##NOTE: Cannot use rowMeans here because tmp_obs may have only one dim
     tmp_obs_mean <- apply(tmp_obs, 1, mean)  #average out dat_dim (dat and member)
     #tmp_obs_mean: [stats = 2]
     if (!is.null(dat_dim)) {
@@ -337,7 +339,7 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
     }
     trend_exp <- list()
     trend_obs <- list()
-    for (jdate in 1:dim(exp)[time_dim]) {
+    for (jdate in seq_len(dim(exp)[time_dim])) {
       trend_exp[[jdate]] <- intercept_exp + jdate * slope_exp
       trend_obs[[jdate]] <- intercept_obs + jdate * slope_obs
     }
@@ -351,18 +353,18 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
     }
 
     # average out dat_dim, get a number
-    if (is.null(dim(clim_obs))) {
+#    if (is.null(dim(clim_obs))) {
       clim_obs_mean <- mean(clim_obs)
-    } else {
-      clim_obs_mean <- mean(apply(clim_obs, 1, mean))
-    }
+#    } else {
+#      clim_obs_mean <- mean(rowMeans(clim_obs))
+#    }
     clim_obs_mean <- array(clim_obs_mean, dim = dim(exp)) #enlarge it for the next line
     clim_exp <- trend_exp - trend_obs + clim_obs_mean
 
     ## member mean
     if (!memb) {
-      pos_exp <- c(1:length(dim(clim_exp)))[-which(names(dim(clim_exp)) == memb_dim)]
-      pos_obs <- c(1:length(dim(clim_obs)))[-which(names(dim(clim_obs)) == memb_dim)]
+      pos_exp <- c(seq_along(dim(clim_exp)))[-which(names(dim(clim_exp)) == memb_dim)]
+      pos_obs <- c(seq_along(dim(clim_obs)))[-which(names(dim(clim_obs)) == memb_dim)]
       tmp_dim_exp <- dim(clim_exp)
       tmp_dim_obs <- dim(clim_obs)
       clim_exp <- apply(clim_exp, pos_exp, mean, na.rm = TRUE)
@@ -418,26 +420,31 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
                           na.action = na.omit, 
                           pval = FALSE, conf = FALSE, ncores = ncores_input)$regression
     #tmp_: [stats = 2, dat_dim, ftime]
-    tmp_obs_mean <- apply(tmp_obs, c(1, length(dim(tmp_obs))), mean)  #average out dat_dim (dat and member)
+    #average out dat_dim (dat and member)
+    tmp_obs_mean <- apply(tmp_obs, c(1, length(dim(tmp_obs))), mean)
     #tmp_obs_mean: [stats = 2, ftime]
-    ini_obs_mean <- apply(ini_obs, c(1, length(dim(ini_obs))), mean)  #average out dat_dim
+    #average out dat_dim
+    ini_obs_mean <- apply(ini_obs, c(1, length(dim(ini_obs))), mean)
     #ini_obs_mean: [sdate, ftime]
 
     # Find intercept and slope
     intercept_exp <- Subset(tmp_exp, 1, 1, drop = 'selected')  #[dat_dim, ftime]
     slope_exp <- Subset(tmp_exp, 1, 2, drop = 'selected')  #[dat_dim, ftime]
-    intercept_obs <- array(tmp_obs_mean[1, ], dim = c(dim_ftime, dim_dat)) #[ftime, dat_dim] exp
+    intercept_obs <- array(tmp_obs_mean[1, ], 
+                           dim = c(dim_ftime, dim_dat)) #[ftime, dat_dim] exp
     if (!is.null(dat_dim)) {
-      intercept_obs <- Reorder(intercept_obs, c(2:length(dim(intercept_obs)), 1)) #[dat_dim, ftime] exp
+      intercept_obs <- Reorder(intercept_obs, 
+                               c(2:length(dim(intercept_obs)), 1)) #[dat_dim, ftime] exp
     } 
     slope_obs <- array(tmp_obs_mean[2, ], dim = c(dim_ftime, dim_dat)) #[ftime, dat_dim] exp
     if (!is.null(dat_dim)) {
-      slope_obs <- Reorder(slope_obs, c(2:length(dim(slope_obs)), 1)) #[dat_dim, ftime] exp
+      slope_obs <- Reorder(slope_obs, 
+                           c(2:length(dim(slope_obs)), 1)) #[dat_dim, ftime] exp
     }
 
     trend_exp <- list()
     trend_obs <- list()
-    for (jdate in 1:dim(exp)[time_dim]) {
+    for (jdate in seq_len(dim(exp)[time_dim])) {
       tmp <- Subset(ini_exp, time_dim, jdate, drop = 'selected')  #[dat_dim, ftime]
       trend_exp[[jdate]] <- intercept_exp + tmp * slope_exp  #[dat_dim, ftime]
 
@@ -470,8 +477,8 @@ Clim <- function(exp, obs, time_dim = 'sdate', dat_dim = c('dataset', 'member'),
 
     ## member mean
     if (!memb) {
-      pos_exp <- c(1:length(dim(clim_exp)))[-which(names(dim(clim_exp)) == memb_dim)]
-      pos_obs <- c(1:length(dim(clim_obs)))[-which(names(dim(clim_obs)) == memb_dim)]
+      pos_exp <- c(seq_along(dim(clim_exp)))[-which(names(dim(clim_exp)) == memb_dim)]
+      pos_obs <- c(seq_along(dim(clim_obs)))[-which(names(dim(clim_obs)) == memb_dim)]
 
       tmp_dim_exp <- dim(clim_exp)
       tmp_dim_obs <- dim(clim_obs)

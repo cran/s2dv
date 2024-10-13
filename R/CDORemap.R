@@ -76,6 +76,8 @@
 #'@param write_dir Path to the directory where to create the intermediate 
 #'  files for CDO to work. By default, the R session temporary directory is 
 #'  used (\code{tempdir()}).
+#'@param print_sys_msg A logical value indicating to print the messages from 
+#'  system CDO commands. The default is FALSE to keep function using clean.
 #'@param ncores An integer indicating the number of theads used for 
 #'  interpolation (i.e., \code{-P} in cdo command.) The default value is NULL
 #'  and \code{-P} is not used.
@@ -227,6 +229,7 @@
 CDORemap <- function(data_array = NULL, lons, lats, grid, method, 
                      avoid_writes = TRUE, crop = TRUE,
                      force_remap = FALSE, write_dir = tempdir(),
+                     print_sys_msg = FALSE,
                      ncores = NULL) {  #, mask = NULL) {
   .isRegularVector <- function(x, tol = 0.1) {
     if (length(x) < 2) {
@@ -292,7 +295,7 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
       }
     }
 
-    data_array <- array(as.numeric(NA), array_dims)
+    data_array <- array(NA_real_, array_dims)
   }
   if (!(is.logical(data_array) || is.numeric(data_array)) || !is.array(data_array)) {
     stop("Parameter 'data_array' must be a numeric array.")
@@ -410,14 +413,16 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     method <- 'con'
   } else if (method %in% c('dis', 'distance-weighted')) {
     method <- 'dis'
-  } else if (method %in% 'nn') {
+  } else if (method == 'nn') {
     method <- 'nn'
-  } else if (method %in% 'laf') {
+  } else if (method == 'laf') {
     method <- 'laf'
-  } else if (method %in% 'con2') {
+  } else if (method == 'con2') {
     method <- 'con2'
   } else {
-    stop("Unsupported CDO remap method. Only 'bilinear', 'bicubic', 'conservative', 'distance-weighted', 'nn', 'laf', and 'con2' are supported.")
+    stop("Unsupported CDO remap method. Only 'bilinear', ",
+         "'bicubic', 'conservative', 'distance-weighted', 'nn', ",
+         "'laf', and 'con2' are supported.")
   }
   # Check avoid_writes
   if (!is.logical(avoid_writes)) {
@@ -429,7 +434,8 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     if (crop == 'tight') {
       crop_tight <- TRUE
     } else if (crop != 'preserve') {
-      stop("Parameter 'crop' can only take the values 'tight' or 'preserve' if specified as a character string.")
+      stop("Parameter 'crop' can only take the values 'tight' or 'preserve' ",
+           "if specified as a character string.")
     }
     crop <- TRUE
   }
@@ -453,9 +459,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           tmp_lon <- lons
         } else {
           min_pos <- which(lons == min(lons), arr.ind = TRUE)[1, ]
-          tmp_lon <- Subset(lons, lat_dim, min_pos[which(names(dim(lons)) == lat_dim)], drop = 'selected')
+          tmp_lon <- Subset(lons, lat_dim,
+                            min_pos[which(names(dim(lons)) == lat_dim)],
+                            drop = 'selected')
         }
-        i <- 1:length(tmp_lon)
+        i <- seq_along(tmp_lon)
         degree <- min(3, length(i) - 1)
         lon_model <- lm(tmp_lon ~ poly(i, degree))
         lon_extremes <- c(NA, NA)
@@ -468,7 +476,9 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           # The signif is needed because cdo sellonlatbox crashes with too many digits
           lon_extremes[1] <- tmp_lon[1] - first_lon_cell_width / 2
         } else {
-          lon_extremes[1] <- min(tmp_lon)
+          next_lon <- predict(lon_model, data.frame(i = length(tmp_lon) + 1))
+          last_lon_cell_width <- (next_lon - tmp_lon[length(tmp_lon)])
+          lon_extremes[1] <- tmp_lon[length(tmp_lon)] + last_lon_cell_width / 2
         }
         if (which.max(tmp_lon) == length(tmp_lon)) {
           right_is_max <- TRUE
@@ -476,18 +486,25 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           last_lon_cell_width <- (next_lon - tmp_lon[length(tmp_lon)])
           lon_extremes[2] <- tmp_lon[length(tmp_lon)] + last_lon_cell_width / 2
         } else {
-          lon_extremes[2] <- max(tmp_lon)
+          prev_lon <- predict(lon_model, data.frame(i = 0))
+          first_lon_cell_width <- (tmp_lon[1] - prev_lon)
+          # The signif is needed because cdo sellonlatbox crashes with too many digits
+          lon_extremes[2] <- tmp_lon[1] - first_lon_cell_width / 2
         }
+        tolerance <- 1e-10
+        lon_extremes <- round(lon_extremes, 10)
         # Adjust the crop window if possible in order to keep lons from 0 to 360 
         # or from -180 to 180 when the extremes of the cropped window are contiguous.
         if (right_is_max) {
           if (lon_extremes[1] < -180) {
-            if (!((lon_extremes[2] < 180) && !((180 - lon_extremes[2]) <= last_lon_cell_width / 2))) {
+            if (!((lon_extremes[2] < 180) && 
+                !(abs((180 - lon_extremes[2]) - last_lon_cell_width / 2) <= tolerance))) {
               lon_extremes[1] <- -180
               lon_extremes[2] <- 180
             }
           } else if (lon_extremes[1] < 0) {
-            if (!((lon_extremes[2] < 360) && !((360 - lon_extremes[2]) <= last_lon_cell_width / 2))) {
+            if (!((lon_extremes[2] < 360) && 
+                !(abs((360 - lon_extremes[2]) - last_lon_cell_width / 2) <= tolerance))) {
               lon_extremes[1] <- 0
               lon_extremes[2] <- 360
             }
@@ -495,12 +512,14 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
         } 
         if (left_is_min) {
           if (lon_extremes[2] > 360) {
-            if (!((lon_extremes[1] > 0) && !(lon_extremes[1] <= first_lon_cell_width / 2))) {
+            if (!((lon_extremes[1] > 0) && 
+                !(abs(lon_extremes[1] - first_lon_cell_width / 2) <= tolerance))) {
               lon_extremes[1] <- 0
               lon_extremes[2] <- 360
             }
           } else if (lon_extremes[2] > 180) {
-            if (!((lon_extremes[1] > -180) && !((180 + lon_extremes[1]) <= first_lon_cell_width / 2))) {
+            if (!((lon_extremes[1] > -180) &&
+                !(abs((180 + lon_extremes[1]) - first_lon_cell_width / 2) <= tolerance))) {
               lon_extremes[1] <- -180
               lon_extremes[2] <- 180
             }
@@ -513,9 +532,10 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           tmp_lat <- lats
         } else {
           min_pos <- which(lats == min(lats), arr.ind = TRUE)[1, ]
-          tmp_lat <- Subset(lats, lon_dim, min_pos[which(names(dim(lats)) == lon_dim)], drop = 'selected')
+          tmp_lat <- Subset(lats, lon_dim, min_pos[which(names(dim(lats)) == lon_dim)],
+                            drop = 'selected')
         }
-        i <- 1:length(tmp_lat)
+        i <- seq_along(tmp_lat)
         degree <- min(3, length(i) - 1)
         lat_model <- lm(tmp_lat ~ poly(i, degree))
         lat_extremes <- c(NA, NA)
@@ -523,14 +543,17 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           prev_lat <- predict(lat_model, data.frame(i = 0))
           lat_extremes[1] <- tmp_lat[1] - (tmp_lat[1] - prev_lat) / 2
         } else {
-          lat_extremes[1] <- min(tmp_lat)
+          next_lat <- predict(lat_model, data.frame(i = length(tmp_lat) + 1))
+          lat_extremes[1] <- tmp_lat[length(tmp_lat)] + (next_lat - tmp_lat[length(tmp_lat)]) / 2
         }
         if (which.max(tmp_lat) == length(tmp_lat)) {
           next_lat <- predict(lat_model, data.frame(i = length(tmp_lat) + 1))
           lat_extremes[2] <- tmp_lat[length(tmp_lat)] + (next_lat - tmp_lat[length(tmp_lat)]) / 2
         } else {
-          lat_extremes[2] <- max(tmp_lat)
+          prev_lat <- predict(lat_model, data.frame(i = 0))
+          lat_extremes[2] <- tmp_lat[1] - (tmp_lat[1] - prev_lat) / 2
         }
+        lat_extremes <- round(lat_extremes, 10)
 ##      lat_extremes <- signif(lat_extremes, 5)
         # Adjust crop window
         if (lat_extremes[1] < -90) {
@@ -548,7 +571,8 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     }
   } else if (is.numeric(crop)) {
     if (length(crop) != 4) {
-      stop("Paramrter 'crop' must be a logical value or a numeric vector of length 4: c(western border, eastern border, southern border, northern border.")
+      stop("Paramrter 'crop' must be a logical value or a numeric vector of length 4: ",
+           "c(western border, eastern border, southern border, northern border.")
     } else {
       lon_extremes <- crop[1:2]
       lat_extremes <- crop[3:4]
@@ -618,18 +642,16 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
 #  }
   # Check if interpolation can be skipped.
   interpolation_needed <- TRUE
-  if (!force_remap) {
-    if (!(grid_type == 'custom')) {
-      if (length(lons) == grid_lons && length(lats) == grid_lats) {
-        if (grid_type == 'regular') {
-          if (.isRegularVector(lons) && .isRegularVector(lats)) {
-            interpolation_needed <- FALSE
-          }
-        } else if (grid_type == 'gaussian') {
-          # TODO: improve this check. Gaussian quadrature should be used.
-          if (.isRegularVector(lons) && !.isRegularVector(lats)) {
-            interpolation_needed <- FALSE
-          }
+  if (!force_remap && !(grid_type == 'custom')) {
+    if (length(lons) == grid_lons && length(lats) == grid_lats) {
+      if (grid_type == 'regular') {
+        if (.isRegularVector(lons) && .isRegularVector(lats)) {
+          interpolation_needed <- FALSE
+        }
+      } else if (grid_type == 'gaussian') {
+        # TODO: improve this check. Gaussian quadrature should be used.
+        if (.isRegularVector(lons) && !.isRegularVector(lats)) {
+          interpolation_needed <- FALSE
         }
       }
     }
@@ -676,7 +698,8 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     unlimited_dim <- NULL
     dims_to_iterate <- NULL
     total_slices <- 1
-    other_dims_per_chunk <- ifelse(is_irregular, 1, 2)  # 4 (the maximum accepted by CDO) - 2 (lon, lat) = 2.
+    # Explanation for below: 4 (the maximum accepted by CDO) - 2 (lon, lat) = 2
+    other_dims_per_chunk <- ifelse(is_irregular, 1, 2)
     if (length(other_dims) > 1 || (length(other_dims) > 0 && (is_irregular))) {
       # If lat/lon is the last dimension OR the largest other_dims is not the last one, 
       # reorder the largest other dimension to the last as unlimited dim.
@@ -687,7 +710,7 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           dims_mod[which(names(dim(data_array)) %in%
                    c(lon_dim, lat_dim))] <- 0
           dim_to_move <- which.max(dims_mod)
-          permutation <- (1:length(dim(data_array)))[-dim_to_move]
+          permutation <- seq_along(dim(data_array))[-dim_to_move]
           permutation <- c(permutation, dim_to_move)
           permutation_back <- sort(permutation, index.return = TRUE)$ix
 #          dim_backup <- dim(data_array)
@@ -700,8 +723,10 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           other_dims_per_chunk <- 1
         }
       }
-      other_dims_ordered_by_size <- other_dims[sort(dim(data_array)[other_dims], index.return = TRUE)$ix]
-      dims_to_iterate <- sort(head(other_dims_ordered_by_size, length(other_dims) - other_dims_per_chunk))
+      other_dims_ordered_by_size <- other_dims[sort(dim(data_array)[other_dims],
+                                                    index.return = TRUE)$ix]
+      dims_to_iterate <- sort(head(other_dims_ordered_by_size, length(other_dims) -
+                                   other_dims_per_chunk))
       if (length(dims_to_iterate) == 0) {
         dims_to_iterate <- NULL
       } else {
@@ -724,13 +749,15 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     dim_backup <- dim(data_array)
     attributes(data_array) <- NULL
     dim(data_array) <- dim_backup
-    names(dim(data_array)) <- paste0('dim', 1:length(dim(data_array)))
+    names(dim(data_array)) <- paste0('dim', seq_along(dim(data_array)))
     names(dim(data_array))[c(lon_pos, lat_pos)] <- c(lon_dim, lat_dim)
     if (!is.null(unlimited_dim)) {
       # This will make ArrayToNc create this dim as unlimited.
       names(dim(data_array))[unlimited_dim] <- 'time'
-      # create time variable. The value is random since CDORemap() doesn't support time remapping now and we just want to avoid cdo warning
-      time_attr <- array(c(1:dim(data_array)[unlimited_dim]), dim = c(dim(data_array)[unlimited_dim]))
+      # create time variable. The value is random since CDORemap() doesn't support 
+      #time remapping now and we just want to avoid cdo warning
+      time_attr <- array(seq_len(dim(data_array)[unlimited_dim]), 
+                         dim = c(dim(data_array)[unlimited_dim]))
     }
     if (length(dim(lons)) == 1) {
       names(dim(lons)) <- lon_dim
@@ -777,7 +804,7 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           pos_lat_dim_in_lons <- which(names(dim(lons)) == lat_dim)
         if ((pos_lon > pos_lat && pos_lon_dim_in_lons < pos_lat_dim_in_lons) ||
          (pos_lon < pos_lat && pos_lon_dim_in_lons > pos_lat_dim_in_lons)) {
-            new_pos <- 1:length(dim(subset))
+            new_pos <- seq_along(dim(subset))
             new_pos[pos_lon] <- pos_lat
             new_pos[pos_lat] <- pos_lon
             subset <- .aperm2(subset, new_pos)
@@ -793,9 +820,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
 #        dims_before_crop <- dim(subset)
         # Make sure subset goes along with metadata
         if (is.null(unlimited_dim)) {
-          easyNCDF::ArrayToNc(setNames(list(subset, lons, lats), c('var', lon_var_name, lat_var_name)), tmp_file)
+          easyNCDF::ArrayToNc(setNames(list(subset, lons, lats), 
+                              c('var', lon_var_name, lat_var_name)), tmp_file)
         } else {
-        easyNCDF::ArrayToNc(setNames(list(subset, lons, lats, time_attr), c('var', lon_var_name, lat_var_name, 'time')), tmp_file)
+        easyNCDF::ArrayToNc(setNames(list(subset, lons, lats, time_attr),
+                            c('var', lon_var_name, lat_var_name, 'time')), tmp_file)
         }
       } else {
          if (is_irregular) {
@@ -805,7 +834,7 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
            pos_lat_dim_in_lons <- which(names(dim(lons)) == lat_dim)
            if ((pos_lon > pos_lat && pos_lon_dim_in_lons < pos_lat_dim_in_lons) ||
          (pos_lon < pos_lat && pos_lon_dim_in_lons > pos_lat_dim_in_lons)) {
-             new_pos <- 1:length(dim(data_array))
+             new_pos <- seq_along(dim(data_array))
              new_pos[pos_lon] <- pos_lat
              new_pos[pos_lat] <- pos_lon
              data_array <- .aperm2(data_array, new_pos)
@@ -813,9 +842,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
          }
 #        dims_before_crop <- dim(data_array)
         if (is.null(unlimited_dim)) {
-          easyNCDF::ArrayToNc(setNames(list(data_array, lons, lats), c('var', lon_var_name, lat_var_name)), tmp_file)
+          easyNCDF::ArrayToNc(setNames(list(data_array, lons, lats),
+                              c('var', lon_var_name, lat_var_name)), tmp_file)
         } else {
-          easyNCDF::ArrayToNc(setNames(list(data_array, lons, lats, time_attr), c('var', lon_var_name, lat_var_name, 'time')), tmp_file)
+          easyNCDF::ArrayToNc(setNames(list(data_array, lons, lats, time_attr),
+                              c('var', lon_var_name, lat_var_name, 'time')), tmp_file)
         }
       }
       sellonlatbox <- ''
@@ -828,17 +859,19 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
       if (is.null(ncores)) {
         err <- try({
           system(paste0("cdo -s ", sellonlatbox, "remap", method, ",", grid, " ", 
-                        tmp_file, " ", tmp_file2), ignore.stdout = T, ignore.stderr = T)
+                        tmp_file, " ", tmp_file2),
+                 ignore.stdout = !print_sys_msg, ignore.stderr = !print_sys_msg)
         })
       } else {
         err <- try({
-          system(paste0("cdo -P ", ncores," -s ", sellonlatbox, "remap", method, ",", 
-                        grid, " ", tmp_file, " ", tmp_file2), ignore.stdout = T, ignore.stderr = T)
+          system(paste0("cdo -P ", ncores, " -s ", sellonlatbox, "remap", method, ",", 
+                        grid, " ", tmp_file, " ", tmp_file2),
+                 ignore.stdout = !print_sys_msg, ignore.stderr = !print_sys_msg)
         })
       }
       file.remove(tmp_file)
       if (is(err, 'try-error') || err > 0) {
-        stop("CDO remap failed. Possible problem: parameter 'grid'.")
+        stop("CDO remap failed. Set 'print_sys_msg' to TRUE to see CDO system message..")
       }
       ncdf_remapped <- nc_open(tmp_file2)
       if (!lons_lats_taken) {
@@ -915,13 +948,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
             lat_pos <- which(names(new_dims) == lat_dim)
             # Fix issue 259, expected order from CDO output is lon lat
             # If is irregular, lat and lon position need to be checked:
-            if (is_irregular) {
-              if (lon_pos > lat_pos) {
-                new_pos <- 1:length(new_dims)
-                new_pos[lon_pos] <- lat_pos
-                new_pos[lat_pos] <- lon_pos
-                new_dims <- new_dims[new_pos]
-              }
+            if (is_irregular && lon_pos > lat_pos) {
+              new_pos <- seq_along(new_dims)
+              new_pos[lon_pos] <- lat_pos
+              new_pos[lat_pos] <- lon_pos
+              new_dims <- new_dims[new_pos]
             }
             result_array <- array(dim = new_dims)
             store_indices <- as.list(rep(TRUE, length(dim(result_array))))
@@ -929,23 +960,26 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
         }
         if (return_array) {
           store_indices[dims_to_iterate] <- as.list(slice_indices)
-          # If is irregular, the order of dimenesions in result_array and file may be different and need to be checked before reading the temporal file:
+          # If is irregular, the order of dimenesions in result_array and file may be
+          # different and need to be checked before reading the temporal file:
           if (is_irregular) {
             test_dims <- dim(ncvar_get(ncdf_remapped, 'var',
                              collapse_degen = FALSE))
             test_dims <- test_dims[which(test_dims > 1)]
-            pos_test_dims <- match(dim(result_array), test_dims)
+            pos_test_dims <- match(names(dim(result_array)),
+                                   names(test_dims))
             if (is.unsorted(pos_test_dims, na.rm = TRUE)) {
                # pos_new_dims is used later in the code. Don't overwrite
-               pos_new_dims <- 1:length(dim(result_array))
+               pos_new_dims <- seq_along(dim(result_array))
                pos_new_dims[which(!is.na(pos_test_dims))] <-
-                                              match(test_dims, dim(result_array))
+                 match(names(test_dims), names(dim(result_array)))
                backup_result_array_dims <- dim(result_array)
                dim(result_array) <- dim(result_array)[pos_new_dims]
             }
           }
           result_array <- do.call('[<-', c(list(x = result_array), store_indices, 
-                                           list(value = ncvar_get(ncdf_remapped, 'var', collapse_degen = FALSE))))
+                                           list(value = ncvar_get(ncdf_remapped, 'var', 
+                                                                  collapse_degen = FALSE))))
         }
       } else {
         new_dims <- dim(data_array)
@@ -954,7 +988,7 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
           lon_pos <- which(names(new_dims) == lon_dim)
           lat_pos <- which(names(new_dims) == lat_dim)
           if (lon_pos > lat_pos) {
-            new_pos <- 1:length(new_dims)
+            new_pos <- seq_along(new_dims)
             new_pos[lon_pos] <- lat_pos
             new_pos[lat_pos] <- lon_pos
             new_dims <- new_dims[new_pos]
@@ -969,8 +1003,9 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     # If is irregular, the order of dimension may need to be recovered after reading all the file:
     if (is_irregular & (!is.null(dims_to_iterate))) {
       if (exists('pos_new_dims')) {
-        pos_new_dims <- 1:length(dim(result_array))
-        dims_to_change <- match(backup_result_array_dims, dim(result_array))
+        pos_new_dims <- seq_along(dim(result_array))
+        dims_to_change <- match(names(backup_result_array_dims),
+                                names(dim(result_array)))
         pos_new_dims[which(dims_to_change != 1)] <-
           dims_to_change[which(dims_to_change != 1)]
         result_array <- .aperm2(result_array, pos_new_dims)
@@ -987,14 +1022,17 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     if (length(dim(found_lats)) > 1 && length(dim(found_lons)) > 1) {
       result_is_irregular <- TRUE
     }
-    attribute_backup[['dim']][which(names(dim(result_array)) == lon_dim)] <- dim(result_array)[lon_dim]
-    attribute_backup[['dim']][which(names(dim(result_array)) == lat_dim)] <- dim(result_array)[lat_dim]
+    attribute_backup[['dim']][which(names(dim(result_array)) == lon_dim)] <- 
+      dim(result_array)[lon_dim]
+    attribute_backup[['dim']][which(names(dim(result_array)) == lat_dim)] <- 
+      dim(result_array)[lat_dim]
     names(attribute_backup[['dim']])[which(names(dim(result_array)) == lon_dim)] <- new_lon_name
     names(attribute_backup[['dim']])[which(names(dim(result_array)) == lat_dim)] <- new_lat_name
-    if (!is.null(attribute_backup[['variables']]) && (length(attribute_backup[['variables']]) > 0)) {
-      for (var in 1:length(attribute_backup[['variables']])) {
+    if (!is.null(attribute_backup[['variables']]) && 
+        (length(attribute_backup[['variables']]) > 0)) {
+      for (var in seq_along(attribute_backup[['variables']])) {
         if (length(attribute_backup[['variables']][[var]][['dim']]) > 0) {
-          for (dim in 1:length(attribute_backup[['variables']][[var]][['dim']])) {
+          for (dim in seq_along(attribute_backup[['variables']][[var]][['dim']])) {
             dim_name <- NULL
             if ('name' %in% names(attribute_backup[['variables']][[var]][['dim']][[dim]])) {
               dim_name <- attribute_backup[['variables']][[var]][['dim']][[dim]][['name']]
@@ -1009,9 +1047,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
               dim_name <- names(attribute_backup[['variables']][[var]][['dim']])[dim]
               if (dim_name %in% c(lon_dim, lat_dim)) {
                 if (dim_name == lon_dim) {
-                  names(attribute_backup[['variables']][[var]][['dim']])[which(names(attribute_backup[['variables']][[var]][['dim']]) == lon_dim)] <- new_lon_name
+                  tmp <- which(names(attribute_backup[['variables']][[var]][['dim']]) == lon_dim)
+                  names(attribute_backup[['variables']][[var]][['dim']])[tmp] <- new_lon_name
                 } else {
-                  names(attribute_backup[['variables']][[var]][['dim']])[which(names(attribute_backup[['variables']][[var]][['dim']]) == lat_dim)] <- new_lat_name
+                  tmp <- which(names(attribute_backup[['variables']][[var]][['dim']]) == lat_dim)
+                  names(attribute_backup[['variables']][[var]][['dim']])[tmp] <- new_lat_name
                 }
               }
             }
@@ -1023,13 +1063,15 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
                   new_vals <- found_lats[TRUE]
                 }
                 if (!is.null(attribute_backup[['variables']][[var]][['dim']][[dim]][['len']])) {
-                  attribute_backup[['variables']][[var]][['dim']][[dim]][['len']] <- length(new_vals)
+                  attribute_backup[['variables']][[var]][['dim']][[dim]][['len']] <- 
+                    length(new_vals)
                 }
                 if (!is.null(attribute_backup[['variables']][[var]][['dim']][[dim]][['vals']])) {
                   if (!result_is_irregular) {
                     attribute_backup[['variables']][[var]][['dim']][[dim]][['vals']] <- new_vals
                   } else {
-                    attribute_backup[['variables']][[var]][['dim']][[dim]][['vals']] <- 1:length(new_vals)
+                    attribute_backup[['variables']][[var]][['dim']][[dim]][['vals']] <- 
+                      seq_along(new_vals)
                   }
                 }
               }
@@ -1046,10 +1088,10 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     attributes(result_array) <- attribute_backup
     lons_attr_bk[['dim']] <- dim(found_lons)
     if (!is.null(lons_attr_bk[['variables']]) && (length(lons_attr_bk[['variables']]) > 0)) {
-      for (var in 1:length(lons_attr_bk[['variables']])) {
+      for (var in seq_along(lons_attr_bk[['variables']])) {
         if (length(lons_attr_bk[['variables']][[var]][['dim']]) > 0) {
           dims_to_remove <- NULL
-          for (dim in 1:length(lons_attr_bk[['variables']][[var]][['dim']])) {
+          for (dim in seq_along(lons_attr_bk[['variables']][[var]][['dim']])) {
             dim_name <- NULL
             if ('name' %in% names(lons_attr_bk[['variables']][[var]][['dim']][[dim]])) {
               dim_name <- lons_attr_bk[['variables']][[var]][['dim']][[dim]][['name']]
@@ -1064,9 +1106,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
               dim_name <- names(lons_attr_bk[['variables']][[var]][['dim']])[dim]
               if (dim_name %in% c(lon_dim, lat_dim)) {
                 if (dim_name == lon_dim) {
-                  names(lons_attr_bk[['variables']][[var]][['dim']])[which(names(lons_attr_bk[['variables']][[var]][['dim']]) == lon_dim)] <- new_lon_name
+                  tmp <- which(names(lons_attr_bk[['variables']][[var]][['dim']]) == lon_dim)
+                  names(lons_attr_bk[['variables']][[var]][['dim']])[tmp] <- new_lon_name
                 } else {
-                  names(lons_attr_bk[['variables']][[var]][['dim']])[which(names(lons_attr_bk[['variables']][[var]][['dim']]) == lat_dim)] <- new_lat_name
+                  tmp <- which(names(lons_attr_bk[['variables']][[var]][['dim']]) == lat_dim)
+                  names(lons_attr_bk[['variables']][[var]][['dim']])[tmp] <- new_lat_name
                 }
               }
             }
@@ -1087,14 +1131,16 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
                   if (!result_is_irregular) {
                     lons_attr_bk[['variables']][[var]][['dim']][[dim]][['vals']] <- new_vals
                   } else {
-                    lons_attr_bk[['variables']][[var]][['dim']][[dim]][['vals']] <- 1:length(new_vals)
+                    lons_attr_bk[['variables']][[var]][['dim']][[dim]][['vals']] <-
+                      seq_along(new_vals)
                   }
                 }
               }
             }
           }
           if (length(dims_to_remove) > 1) {
-            lons_attr_bk[['variables']][[var]][['dim']] <- lons_attr_bk[['variables']][[var]][['dim']][[-dims_to_remove]]
+            lons_attr_bk[['variables']][[var]][['dim']] <- 
+              lons_attr_bk[['variables']][[var]][['dim']][[-dims_to_remove]]
           }
         }
       }
@@ -1104,10 +1150,10 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
     attributes(found_lons) <- lons_attr_bk
     lats_attr_bk[['dim']] <- dim(found_lats)
     if (!is.null(lats_attr_bk[['variables']]) && (length(lats_attr_bk[['variables']]) > 0)) {
-      for (var in 1:length(lats_attr_bk[['variables']])) {
+      for (var in seq_along(lats_attr_bk[['variables']])) {
         if (length(lats_attr_bk[['variables']][[var]][['dim']]) > 0) {
           dims_to_remove <- NULL
-          for (dim in 1:length(lats_attr_bk[['variables']][[var]][['dim']])) {
+          for (dim in seq_along(lats_attr_bk[['variables']][[var]][['dim']])) {
             dim_name <- NULL
             if ('name' %in% names(lats_attr_bk[['variables']][[var]][['dim']][[dim]])) {
               dim_name <- lats_attr_bk[['variables']][[var]][['dim']][[dim]][['name']]
@@ -1122,9 +1168,11 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
               dim_name <- names(lats_attr_bk[['variables']][[var]][['dim']])[dim]
               if (dim_name %in% c(lon_dim, lat_dim)) {
                 if (dim_name == lon_dim) {
-                  names(lats_attr_bk[['variables']][[var]][['dim']])[which(names(lats_attr_bk[['variables']][[var]][['dim']]) == lon_dim)] <- new_lon_name
+                  tmp <- which(names(lats_attr_bk[['variables']][[var]][['dim']]) == lon_dim)
+                  names(lats_attr_bk[['variables']][[var]][['dim']])[tmp] <- new_lon_name
                 } else {
-                  names(lats_attr_bk[['variables']][[var]][['dim']])[which(names(lats_attr_bk[['variables']][[var]][['dim']]) == lat_dim)] <- new_lat_name
+                  tmp <- which(names(lats_attr_bk[['variables']][[var]][['dim']]) == lat_dim)
+                  names(lats_attr_bk[['variables']][[var]][['dim']])[tmp] <- new_lat_name
                 }
               }
             }
@@ -1145,14 +1193,16 @@ CDORemap <- function(data_array = NULL, lons, lats, grid, method,
                   if (!result_is_irregular) {
                     lats_attr_bk[['variables']][[var]][['dim']][[dim]][['vals']] <- new_vals
                   } else {
-                    lats_attr_bk[['variables']][[var]][['dim']][[dim]][['vals']] <- 1:length(new_vals)
+                    lats_attr_bk[['variables']][[var]][['dim']][[dim]][['vals']] <- 
+                      seq_along(new_vals)
                   }
                 }
               }
             }
           }
           if (length(dims_to_remove) > 1) {
-            lats_attr_bk[['variables']][[var]][['dim']] <- lats_attr_bk[['variables']][[var]][['dim']][[-dims_to_remove]]
+            lats_attr_bk[['variables']][[var]][['dim']] <-
+              lats_attr_bk[['variables']][[var]][['dim']][[-dims_to_remove]]
           }
         }
       }

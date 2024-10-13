@@ -148,13 +148,13 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
   # data_lats and data_lons part2
   if (dim(data_tas)[lat_dim] != length(data_lats) |
       dim(data_tos)[lat_dim] != length(data_lats)) {
-    stop(paste0("The latitude dimension of parameter 'data_tas' and 'data_tos'",
-                " must be the same length of parameter 'data_lats'."))
+    stop("The latitude dimension of parameter 'data_tas' and 'data_tos'",
+         " must be the same length of parameter 'data_lats'.")
   }
   if (dim(data_tas)[lon_dim] != length(data_lons) |
       dim(data_tos)[lon_dim] != length(data_lons)) {
-    stop(paste0("The longitude dimension of parameter 'data_tas' and 'data_tos'",
-                " must be the same length of parameter 'data_lons'."))
+    stop("The longitude dimension of parameter 'data_tas' and 'data_tos'",
+         " must be the same length of parameter 'data_lons'.")
   }
   # sea_value
   if (!is.numeric(sea_value) | length(sea_value) != 1) {
@@ -167,7 +167,8 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
     stop("Parameter 'mask_sea_land' must be an array with dimensions [lat_dim, lon_dim].")
   } else if (!identical(as.integer(dim(mask_sea_land)), 
                         c(length(data_lats), length(data_lons)))) {
-    stop("Parameter 'mask_sea_land' dimensions must be equal to the length of 'data_lats' and 'data_lons'.")
+    stop("Parameter 'mask_sea_land' dimensions must be equal to the length of ",
+         "'data_lats' and 'data_lons'.")
   }
   # type
   if (!type %in% c('dcpp', 'hist', 'obs')) {
@@ -175,19 +176,17 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
   }
   # mask 
   if (!is.null(mask)) {
-    if (!is.array(mask) | !identical(names(dim(mask)), c(lat_dim,lon_dim)) |
+    if (!is.array(mask) | !identical(names(dim(mask)), c(lat_dim, lon_dim)) |
         !identical(as.integer(dim(mask)), c(length(data_lats), length(data_lons)))) {
-      stop(paste0("Parameter 'mask' must be NULL (no mask) or a numerical array ",
-                  "with c(lat_dim, lon_dim) dimensions and 0 in those grid ",
-                  "points that have to be masked."))
+      stop("Parameter 'mask' must be NULL (no mask) or a numerical array ",
+           "with c(lat_dim, lon_dim) dimensions and 0 in those grid ",
+           "points that have to be masked.")
     }
   }
   # monini
-  if (type == 'dcpp') {
-    if (!is.numeric(monini) | monini %% 1 != 0 | monini < 1 |
-        monini > 12) {
-      stop("Parameter 'monini' must be an integer from 1 to 12.")
-    }
+  if (type == 'dcpp' &&
+      (!is.numeric(monini) | monini %% 1 != 0 | monini < 1 | monini > 12)) {
+    stop("Parameter 'monini' must be an integer from 1 to 12.")
   }
   # fmonth_dim
   if (type == 'dcpp') {
@@ -209,11 +208,11 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
   }  
   # indices_for_clim
   if (!is.null(indices_for_clim)) {
-    if (!class(indices_for_clim) %in% c('numeric', 'integer')
-        & !(is.logical(indices_for_clim) & !any(indices_for_clim))) {
-      stop(paste0("The parameter 'indices_for_clim' must be a numeric vector ",
-                  "or NULL to compute the anomalies based on the whole period, ",
-                  "or FALSE if data are already anomalies"))
+    if (!(is(indices_for_clim, "numeric") || is(indices_for_clim, "integer")) &
+        !(is.logical(indices_for_clim) & !any(indices_for_clim))) {
+      stop("The parameter 'indices_for_clim' must be a numeric vector ",
+           "or NULL to compute the anomalies based on the whole period, ",
+           "or FALSE if data are already anomalies")
     }
   }
   # year_dim
@@ -235,7 +234,7 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
     }
   }
   # na.rm
-  if (!na.rm %in% c(TRUE,FALSE)) {
+  if (!na.rm %in% c(TRUE, FALSE)) {
     stop("Parameter 'na.rm' must be TRUE or FALSE")
   }
   # ncores
@@ -252,7 +251,7 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
     data[mask_sea_land == sea_value] <- data_tos[mask_sea_land == sea_value]
     return(data)
   }
-  mask_sea_land <- s2dv::Reorder(data = mask_sea_land, order = c(lat_dim,lon_dim))
+  mask_sea_land <- s2dv::Reorder(data = mask_sea_land, order = c(lat_dim, lon_dim))
   data <- multiApply::Apply(data = list(data_tas, data_tos), 
                             target_dims = c(lat_dim, lon_dim), 
                             fun = mask_tas_tos, mask_sea_land = mask_sea_land, 
@@ -276,9 +275,9 @@ GMST <- function(data_tas, data_tos, data_lats, data_lons, mask_sea_land, sea_va
                                       londim = lon_dim, 
                                       latdim = lat_dim)
   
-  if (type == 'dcpp'){
+  if (type == 'dcpp') {
     target_dims <- c(sdate_dim, fmonth_dim)
-  } else if (type %in% c('hist','obs')){
+  } else if (type %in% c('hist', 'obs')) {
     target_dims <- c(year_dim, month_dim)
   }
   

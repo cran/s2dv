@@ -2,7 +2,8 @@
 % Please edit documentation in R/Corr.R
 \name{Corr}
 \alias{Corr}
-\title{Compute the correlation coefficient between an array of forecast and their corresponding observation}
+\title{Compute the correlation coefficient between an array of forecast and their
+corresponding observation}
 \usage{
 Corr(
   exp,

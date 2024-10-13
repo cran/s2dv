@@ -1,3 +1,26 @@
+# s2dv 2.1.0 (Release date: 2023-09-26)
+
+**Bugfixes**
+- CDORemap() crop = T bug fix in R >= 4.2.0
+- CDORemap() crop = T bug fix when coordinates are sorted in decreasing order 
+- PlotEquiMap() and PlotLayout() create color bar correctly when data have infinite values 
+- Correct Corr() output dimensions when dat_dim and memb_dim are NULL 
+- NAO(): eliminate ftime_dim check when ftime dimension is not required by the function 
+- Histo2Hindcast(): Fill array with NA values for time steps before the initial date
+- Add warning for default climatology when ref is null in RMSSS() and MSSS()
+
+**Development**
+- NAO(): new parameter "exp_cor" to calculate forecast
+- New parameter "abs_threshold" in GetProbs()
+- New parameter "return_mean" in RPS() and CRPS()
+- New parameter "print_sys_msg" in CDORemap()
+- New function SprErr()
+- New parameter "alpha" in Bias()
+- New parameter "N.eff" in RandomWalkTest()
+
+**Other**
+- Add citation file
+
 # s2dv 2.0.0 (Release date: 2023-10-11)
 The compability break happens at the parameter changes. All the functionality remains 
 the same but please pay attention to the parameter changes like name or default value if some error is raised.

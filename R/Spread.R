@@ -97,14 +97,14 @@ Spread <- function(data, compute_dim = 'member', na.rm = TRUE,
     dim(data) <- c(length(data))
     names(dim(data)) <- compute_dim[1]
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## compute_dim
   if (!is.character(compute_dim)) {
     stop("Parameter 'compute_dim' must be a character vector.")
   }
-  if (any(!compute_dim %in% names(dim(data)))) {
+  if (!all(compute_dim %in% names(dim(data)))) {
     stop("Parameter 'compute_dim' has some element not in 'data' dimension names.")
   }
   ## na.rm

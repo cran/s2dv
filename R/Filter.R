@@ -53,7 +53,7 @@ Filter <- function(data, freq, time_dim = 'ftime', ncores = NULL) {
     dim(data) <- c(length(data))
     names(dim(data)) <- time_dim
   }
-  if(any(is.null(names(dim(data))))| any(nchar(names(dim(data))) == 0)) {
+  if (any(is.null(names(dim(data)))) | any(nchar(names(dim(data))) == 0)) {
     stop("Parameter 'data' must have dimension names.")
   }
   ## freq
@@ -102,19 +102,18 @@ Filter <- function(data, freq, time_dim = 'ftime', ncores = NULL) {
 
   for (jfreq in seq(freq - 0.5 / ndat2, freq + 0.5 / ndat2, 0.1 / (ndat2 * fac1))) {
     for (phase in seq(0, pi, (pi / (10 * fac2)))) {
-      xtest <- cos(phase + c(1:ndat) * jfreq * 2 * pi)
-      test <- lm(data[is.na(data) == FALSE] ~ xtest[
-              is.na(data) == FALSE])$fitted.values
-      if (sum(test ^ 2) > maxi) { 
+      xtest <- cos(phase + 1:ndat * jfreq * 2 * pi)
+      test <- lm(data[!is.na(data)] ~ xtest[!is.na(data)])$fitted.values
+      if (sum(test^2) > maxi) { 
         endphase <- phase
         endfreq <- jfreq
       }
-      maxi <- max(sum(test ^ 2), maxi)
+      maxi <- max(sum(test^2), maxi)
     }
   }
-  xend <- cos(endphase + c(1:ndat) * endfreq * 2 * pi)
-  data[is.na(data) == FALSE] <- data[is.na(data) == FALSE] - lm(
-                              data[is.na(data) == FALSE] ~ xend[is.na(data) == FALSE]
+  xend <- cos(endphase + 1:ndat * endfreq * 2 * pi)
+  data[!is.na(data)] <- data[!is.na(data)] - lm(
+                              data[!is.na(data)] ~ xend[!is.na(data)]
                               )$fitted.values
 
   return(invisible(data))

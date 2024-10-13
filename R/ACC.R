@@ -1,4 +1,5 @@
-#'Compute the spatial anomaly correlation coefficient between the forecast and corresponding observation
+#'Compute the spatial anomaly correlation coefficient between the forecast and 
+#'corresponding observation
 #'
 #'Calculate the spatial anomaly correlation coefficient (ACC) for the ensemble
 #'mean of each model and the corresponding references over a spatial domain. It
@@ -149,11 +150,11 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
     stop("Parameter 'exp' and 'obs' must be a numeric array.")
   }
   if (is.null(dim(exp)) | is.null(dim(obs))) {
-    stop(paste0("Parameter 'exp' and 'obs' must have at least dimensions ",
-                "lat_dim and lon_dim."))
+    stop("Parameter 'exp' and 'obs' must have at least dimensions ",
+         "lat_dim and lon_dim.")
   }
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## dat_dim
@@ -213,14 +214,14 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
     stop("Parameter 'lat' cannot be NULL. It is required for area weighting.")
   }
   if (!is.numeric(lat) | length(lat) != dim(exp)[lat_dim]) {
-    stop(paste0("Parameter 'lat' must be a numeric vector with the same ",
-                "length as the latitude dimension of 'exp' and 'obs'."))
+    stop("Parameter 'lat' must be a numeric vector with the same ",
+         "length as the latitude dimension of 'exp' and 'obs'.")
   }
   ## lon
   if (!is.null(lon)) {
     if (!is.numeric(lon) | length(lon) != dim(exp)[lon_dim]) {
-      stop(paste0("Parameter 'lon' must be a numeric vector with the same ",
-                  "length as the longitude dimension of 'exp' and 'obs'."))
+      stop("Parameter 'lon' must be a numeric vector with the same ",
+           "length as the longitude dimension of 'exp' and 'obs'.")
     }
   }
   ## lonlatbox
@@ -270,7 +271,7 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
   ## exp and obs (2)
   name_exp <- sort(names(dim(exp)))
   name_obs <- sort(names(dim(obs)))
-  if(!all(name_exp %in% name_obs) | !all(name_obs %in% name_exp)) {
+  if (!all(name_exp %in% name_obs) | !all(name_obs %in% name_exp)) {
     stop("Parameter 'exp' and 'obs' must have same dimension names.")
   }
   if (!is.null(dat_dim)) {
@@ -282,8 +283,8 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
     name_obs <- name_obs[-which(name_obs == memb_dim)]
   }
   if (!identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all the dimensions except 'dat_dim' and 'memb_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all the dimensions except 'dat_dim' and 'memb_dim'.")
   }
 
 #-----------------------------------------------------------------
@@ -329,7 +330,8 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
   if (is.null(avg_dim)) {
     target_dims <- list(c(lat_dim, lon_dim, dat_dim), c(lat_dim, lon_dim, dat_dim))
   } else {
-    target_dims <- list(c(lat_dim, lon_dim, avg_dim, dat_dim), c(lat_dim, lon_dim, avg_dim, dat_dim))
+    target_dims <- list(c(lat_dim, lon_dim, avg_dim, dat_dim),
+                        c(lat_dim, lon_dim, avg_dim, dat_dim))
   }
   res <- Apply(list(exp, obs),
                  target_dims = target_dims,
@@ -367,7 +369,7 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
   return(res)
 }
 
-.ACC <- function(exp, obs, dat_dim = NULL, avg_dim = 'sdate', lat, alpha = 0.05,
+.ACC <- function(exp, obs, lat, dat_dim = NULL, avg_dim = 'sdate', alpha = 0.05,
                  pval = TRUE, sign = FALSE, conf = TRUE, conftype = "parametric") {
   # .ACC() should use all the spatial points to calculate ACC. It returns [nexp, nobs].
   # If dat_dim = NULL, it returns a number.
@@ -413,7 +415,7 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
   ## spatial centralization for each [avg_dim, dat]
   dim_exp <- dim(exp)
   dim_obs <- dim(obs)
-  wt <- cos(lat * pi/180)
+  wt <- cos(lat * pi / 180)
   wt <- rep(wt, times = prod(dim_exp[2:length(dim_exp)]))
 
   if (is.null(avg_dim) & is.null(dat_dim)) {  #[lat, lon]
@@ -457,26 +459,26 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
         # ACC
         top <- sum(exp_sub * obs_sub, na.rm = TRUE)  #a number
         bottom <- sqrt(sum(exp_sub^2, na.rm = TRUE) * sum(obs_sub^2, na.rm = TRUE))
-        acc[iexp, iobs] <- top/bottom #a number
+        acc[iexp, iobs] <- top / bottom #a number
         # handle bottom = 0
         if (is.infinite(acc[iexp, iobs])) acc[iexp, iobs] <- NA
 
         # pval, sign, and conf
-        if (pval | conf | sign) {
-          if (conftype == "parametric") {
-            # calculate effective sample size
-            eno <- .Eno(as.vector(obs_sub), na.action = na.pass)
+        if ((pval | conf | sign) && conftype == "parametric") {
+          # calculate effective sample size
+          eno <- .Eno(as.vector(obs_sub), na.action = na.pass)
 
-            if (pval | sign) {
-              t <- qt(1 - alpha, eno - 2)  # a number
-              p.value <- sqrt(t^2 / (t^2 + eno - 2))
-              if (pval) p.val[iexp, iobs] <- p.value
-              if (sign) signif[iexp, iobs] <- !is.na(p.value) & p.value <= alpha
-            }
-            if (conf) {
-              conf.upper[iexp, iobs] <- tanh(atanh(acc[iexp, iobs]) + qnorm(1 - alpha / 2) / sqrt(eno - 3))
-              conf.lower[iexp, iobs] <- tanh(atanh(acc[iexp, iobs]) + qnorm(alpha / 2) / sqrt(eno - 3))
-            }
+          if (pval | sign) {
+            t <- qt(1 - alpha, eno - 2)  # a number
+            p.value <- sqrt(t^2 / (t^2 + eno - 2))
+            if (pval) p.val[iexp, iobs] <- p.value
+            if (sign) signif[iexp, iobs] <- !is.na(p.value) & p.value <= alpha
+          }
+          if (conf) {
+            conf.upper[iexp, iobs] <- tanh(atanh(acc[iexp, iobs]) + 
+                                        qnorm(1 - alpha / 2) / sqrt(eno - 3))
+            conf.lower[iexp, iobs] <- tanh(atanh(acc[iexp, iobs]) + 
+                                        qnorm(alpha / 2) / sqrt(eno - 3))
           }
         }
 
@@ -486,46 +488,43 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
         # MACC
         top <- sum(exp_sub * obs_sub, na.rm = TRUE)  #a number
         bottom <- sqrt(sum(exp_sub^2, na.rm = TRUE) * sum(obs_sub^2, na.rm = TRUE))
-        macc[iexp, iobs] <- top/bottom #a number
+        macc[iexp, iobs] <- top / bottom #a number
 
         # handle bottom = 0
         if (is.infinite(macc[iexp, iobs])) macc[iexp, iobs] <- NA
 
         # ACC
-        for (i in 1:dim(acc)[3]) {
+        for (i in seq_len(dim(acc)[3])) {
           exp_sub_i <- exp_sub[, , i]
           obs_sub_i <- obs_sub[, , i]
           top <- sum(exp_sub_i * obs_sub_i, na.rm = TRUE)  #a number
           bottom <- sqrt(sum(exp_sub_i^2, na.rm = TRUE) * sum(obs_sub_i^2, na.rm = TRUE))
-          acc[iexp, iobs, i] <- top/bottom #a number
+          acc[iexp, iobs, i] <- top / bottom #a number
           # handle bottom = 0
           if (is.infinite(acc[iexp, iobs, i])) acc[iexp, iobs, i] <- NA
         }
 
         # pval, sign, and conf
-        if (pval | sign | conf) {
-          if (conftype == "parametric") {
-            # calculate effective sample size along lat_dim and lon_dim 
-            # combine lat_dim and lon_dim into one dim first
-            obs_tmp <- array(obs_sub, 
-                             dim = c(space = prod(dim(obs_sub)[1:2]), 
-                                     dim(obs_sub)[3]))
-            eno <- apply(obs_tmp, 2, .Eno, na.action = na.pass)  # a vector of avg_dim
-            if (pval | sign) {
-              t <- qt(1 - alpha, eno - 2)  # a vector of avg_dim
-              p.value <- sqrt(t^2 / (t^2 + eno - 2))
-              if (pval) p.val[iexp, iobs, ] <- p.value
-              if (sign) signif[iexp, iobs, ] <- !is.na(p.value) & p.value <= alpha
-            }
-            if (conf) {
-              conf.upper[iexp, iobs, ] <- tanh(atanh(acc[iexp, iobs, ]) + 
+        if ((pval | sign | conf) && conftype == "parametric") {
+          # calculate effective sample size along lat_dim and lon_dim 
+          # combine lat_dim and lon_dim into one dim first
+          obs_tmp <- array(obs_sub, 
+                           dim = c(space = prod(dim(obs_sub)[1:2]), 
+                                   dim(obs_sub)[3]))
+          eno <- apply(obs_tmp, 2, .Eno, na.action = na.pass)  # a vector of avg_dim
+          if (pval | sign) {
+            t <- qt(1 - alpha, eno - 2)  # a vector of avg_dim
+            p.value <- sqrt(t^2 / (t^2 + eno - 2))
+            if (pval) p.val[iexp, iobs, ] <- p.value
+            if (sign) signif[iexp, iobs, ] <- !is.na(p.value) & p.value <= alpha
+          }
+          if (conf) {
+            conf.upper[iexp, iobs, ] <- tanh(atanh(acc[iexp, iobs, ]) + 
                                           qnorm(1 - alpha / 2) / sqrt(eno - 3))
-              conf.lower[iexp, iobs, ] <- tanh(atanh(acc[iexp, iobs, ]) + 
+            conf.lower[iexp, iobs, ] <- tanh(atanh(acc[iexp, iobs, ]) + 
                                           qnorm(alpha / 2) / sqrt(eno - 3))
-            }
           }
         }
-
       }  # if avg_dim is not NULL
 
     }
@@ -569,8 +568,8 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
 }
 
 
-.ACC_bootstrap <- function(exp, obs, dat_dim = NULL, 
-                           avg_dim = 'sdate', memb_dim = NULL, lat, alpha = 0.05,
+.ACC_bootstrap <- function(exp, obs, lat, dat_dim = NULL, 
+                           avg_dim = 'sdate', memb_dim = NULL, alpha = 0.05,
                            pval = TRUE, sign = FALSE, conf = TRUE, conftype = "parametric") {
 # if (is.null(avg_dim)) 
   # exp: [memb_exp, (dat_exp), lat, lon]
@@ -605,10 +604,12 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
 
   for (jdraw in 1:ndraw) {
     #choose a randomly member index for each point of the matrix 
-    indexp <- array(sample(nmembexp, size = prod(dim(exp)[-c(length(dim(exp)) - 1, length(dim(exp)))]),
+    indexp <- array(sample(nmembexp, 
+                           size = prod(dim(exp)[-c(length(dim(exp)) - 1, length(dim(exp)))]),
                            replace = TRUE), 
                     dim = dim(exp))
-    indobs <- array(sample(nmembobs, size = prod(dim(obs)[-c(length(dim(obs)) - 1, length(dim(obs)))]),               
+    indobs <- array(sample(nmembobs, 
+                           size = prod(dim(obs)[-c(length(dim(obs)) - 1, length(dim(obs)))]),
                            replace = TRUE),
                      dim = dim(obs))
 
@@ -620,10 +621,10 @@ ACC <- function(exp, obs, dat_dim = NULL, lat_dim = 'lat', lon_dim = 'lon',
 #    if (is.null(avg_dim)) {
 
     drawexp <- array( 
-                    apply(varindexp, c(2:length(dim(exp))), function(x) x[,1][x[,2]] ),
+                    apply(varindexp, 2:length(dim(exp)), function(x) x[, 1][x[, 2]]),
                           dim = dim(exp)) 
     drawobs <- array(
-                    apply(varindobs, c(2:length(dim(obs))), function(x) x[,1][x[,2]] ),
+                    apply(varindobs, 2:length(dim(obs)), function(x) x[, 1][x[, 2]]),
                           dim = dim(obs))
 
     # ensemble mean before .ACC

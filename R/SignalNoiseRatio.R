@@ -25,7 +25,8 @@
 #'@import multiApply
 #'@importFrom stats var
 #'@export
-SignalNoiseRatio <- function(data, time_dim = 'year', member_dim = 'member', na.rm = FALSE, ncores = NULL) {
+SignalNoiseRatio <- function(data, time_dim = 'year', member_dim = 'member', 
+                             na.rm = FALSE, ncores = NULL) {
   
   ## Input Check
   if (is.null(data)) {
@@ -49,8 +50,8 @@ SignalNoiseRatio <- function(data, time_dim = 'year', member_dim = 'member', na.
   if (!is.logical(na.rm)) {
     stop("Parameter 'na.rm' must be TRUE or FALSE.")
   }
-  if (!is.null(ncores)){
-    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 | length(ncores) > 1){
+  if (!is.null(ncores)) {
+    if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 | length(ncores) > 1) {
       stop("Parameter 'ncores' must be a positive integer.")
     }
   }
@@ -68,7 +69,7 @@ SignalNoiseRatio <- function(data, time_dim = 'year', member_dim = 'member', na.
   # data: [time, member]
 
   ## Ensemble mean and spread
-  ens_mean <- apply(data, 1, mean, na.rm = na.rm)
+  ens_mean <- rowMeans(data, na.rm = na.rm)
   ens_spread <- apply(data, 2, "-", ens_mean)
 
   ## Ensemble mean variance -> signal

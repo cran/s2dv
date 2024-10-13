@@ -52,6 +52,9 @@
 #'@param cross.val A logical indicating whether to compute the thresholds
 #'  between probabilistic categories in cross-validation. The default value is
 #'  FALSE.
+#'@param return_mean A logical indicating whether to return the temporal mean
+#'  of the RPS or not. If TRUE, the temporal mean is calculated along time_dim,
+#'  if FALSE the time dimension is not aggregated. The default is TRUE.
 #'@param na.rm A logical or numeric value between 0 and 1. If it is numeric, it 
 #'  means the lower limit for the fraction of the non-NA values. 1 is equal to 
 #'  FALSE (no NA is acceptable), 0 is equal to TRUE (all NAs are acceptable). 
@@ -85,7 +88,8 @@
 #'@export
 RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NULL, 
                 dat_dim = NULL, prob_thresholds = c(1/3, 2/3), indices_for_clim = NULL, 
-                Fair = FALSE, weights = NULL, cross.val = FALSE, na.rm = FALSE, ncores = NULL) {
+                Fair = FALSE, weights = NULL, cross.val = FALSE, return_mean = TRUE,
+                na.rm = FALSE, ncores = NULL) {
   
   # Check inputs
   ## exp and obs (1)
@@ -93,8 +97,8 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
     stop('Parameter "exp" must be a numeric array.')
   if (!is.array(obs) | !is.numeric(obs))
     stop('Parameter "obs" must be a numeric array.')
-  if(any(is.null(names(dim(exp))))| any(nchar(names(dim(exp))) == 0) |
-     any(is.null(names(dim(obs))))| any(nchar(names(dim(obs))) == 0)) {
+  if (any(is.null(names(dim(exp)))) | any(nchar(names(dim(exp))) == 0) |
+      any(is.null(names(dim(obs)))) | any(nchar(names(dim(obs))) == 0)) {
     stop("Parameter 'exp' and 'obs' must have dimension names.")
   }
   ## time_dim
@@ -150,8 +154,8 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
   }
   if (!identical(length(name_exp), length(name_obs)) |
       !identical(dim(exp)[name_exp], dim(obs)[name_obs])) {
-    stop(paste0("Parameter 'exp' and 'obs' must have same length of ",
-                "all dimensions except 'memb_dim' and 'dat_dim'."))
+    stop("Parameter 'exp' and 'obs' must have same length of ",
+         "all dimensions except 'memb_dim' and 'dat_dim'.")
   }
   ## prob_thresholds
   if (!is.numeric(prob_thresholds) | !is.vector(prob_thresholds) |
@@ -160,7 +164,7 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
   }
   ## indices_for_clim
   if (is.null(indices_for_clim)) {
-    indices_for_clim <- 1:dim(obs)[time_dim]
+    indices_for_clim <- seq_len(dim(obs)[time_dim])
   } else {
     if (!is.numeric(indices_for_clim) | !is.vector(indices_for_clim)) {
       stop("Parameter 'indices_for_clim' must be NULL or a numeric vector.")
@@ -171,8 +175,12 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
     }
   }
   ## Fair
-  if (!is.logical(Fair)  | length(Fair) > 1) {
+  if (!is.logical(Fair) | length(Fair) > 1) {
     stop("Parameter 'Fair' must be either TRUE or FALSE.")
+  }
+  ## return_mean
+  if (!is.logical(return_mean) | length(return_mean) > 1) {
+    stop("Parameter 'return_mean' must be either TRUE or FALSE.")
   }
   ## cross.val
   if (!is.logical(cross.val)  | length(cross.val) > 1) {
@@ -183,26 +191,28 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
     if (!is.array(weights) | !is.numeric(weights))
       stop("Parameter 'weights' must be a named numeric array.")
     if (is.null(dat_dim)) {
-      if (length(dim(weights)) != 2 | any(!names(dim(weights)) %in% c(memb_dim, time_dim)))
-        stop("Parameter 'weights' must have two dimensions with the names of 'memb_dim' and 'time_dim'.")
+      if (length(dim(weights)) != 2 | !all(names(dim(weights)) %in% c(memb_dim, time_dim)))
+        stop("Parameter 'weights' must have two dimensions with the names of ",
+             "'memb_dim' and 'time_dim'.")
       if (dim(weights)[memb_dim] != dim(exp)[memb_dim] |
           dim(weights)[time_dim] != dim(exp)[time_dim]) {
-        stop(paste0("Parameter 'weights' must have the same dimension lengths ", 
-                    "as 'memb_dim' and 'time_dim' in 'exp'."))
+        stop("Parameter 'weights' must have the same dimension lengths ", 
+             "as 'memb_dim' and 'time_dim' in 'exp'.")
       }
       weights <- Reorder(weights, c(time_dim, memb_dim))
-
+      
     } else {
-      if (length(dim(weights)) != 3 | any(!names(dim(weights)) %in% c(memb_dim, time_dim, dat_dim)))
-        stop("Parameter 'weights' must have three dimensions with the names of 'memb_dim', 'time_dim' and 'dat_dim'.")
+      if (length(dim(weights)) != 3 | !all(names(dim(weights)) %in% c(memb_dim, time_dim, dat_dim)))
+        stop("Parameter 'weights' must have three dimensions with the names of ",
+             "'memb_dim', 'time_dim' and 'dat_dim'.")
       if (dim(weights)[memb_dim] != dim(exp)[memb_dim] |
           dim(weights)[time_dim] != dim(exp)[time_dim] |
           dim(weights)[dat_dim] != dim(exp)[dat_dim]) {
-        stop(paste0("Parameter 'weights' must have the same dimension lengths ", 
-                    "as 'memb_dim', 'time_dim' and 'dat_dim' in 'exp'."))
+        stop("Parameter 'weights' must have the same dimension lengths ", 
+             "as 'memb_dim', 'time_dim' and 'dat_dim' in 'exp'.")
       }
       weights <- Reorder(weights, c(time_dim, memb_dim, dat_dim))
-
+      
     }
   } else if (!is.null(weights) & !is.null(cat_dim)) {
     .warning(paste0("Parameter 'exp' and 'obs' are probabilities already, so parameter ",
@@ -216,15 +226,15 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
   ## ncores
   if (!is.null(ncores)) {
     if (!is.numeric(ncores) | ncores %% 1 != 0 | ncores <= 0 |
-      length(ncores) > 1) {
+        length(ncores) > 1) {
       stop("Parameter 'ncores' must be either NULL or a positive integer.")
     }
   }
-
+  
   ###############################
- 
+  
   # Compute RPS
-
+  
   ## Decide target_dims
   if (!is.null(memb_dim)) {
     target_dims_exp <- c(time_dim, memb_dim, dat_dim)
@@ -236,7 +246,7 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
   } else {  # cat_dim
     target_dims_exp <- target_dims_obs <- c(time_dim, cat_dim, dat_dim)
   }
-
+  
   rps <- Apply(data = list(exp = exp, obs = obs), 
                target_dims = list(exp = target_dims_exp, 
                                   obs = target_dims_obs),
@@ -247,10 +257,13 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
                indices_for_clim = indices_for_clim, Fair = Fair,
                weights = weights, cross.val = cross.val, 
                na.rm = na.rm, ncores = ncores)$output1
- 
-  # Return only the mean RPS
-  rps <- MeanDims(rps, time_dim, na.rm = TRUE)
- 
+  
+  if (return_mean) {
+    rps <- MeanDims(rps, time_dim, na.rm = TRUE)
+  } else {
+    rps <- rps
+  }
+  
   return(rps)
 }
 
@@ -265,14 +278,14 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
   #--- if cat_dim:
   # exp: [sdate, bin, (dat)]
   # obs: [sdate, bin, (dat)]
-
+  
   # Adjust dimensions to be [sdate, memb, dat] for both exp and obs
   if (!is.null(memb_dim)) {
     if (!memb_dim %in% names(dim(obs))) {
       obs <- InsertDim(obs, posdim = 2, lendim = 1, name = memb_dim)
     }
   }
-
+  
   if (is.null(dat_dim)) {
     nexp <- 1
     nobs <- 1
@@ -283,17 +296,17 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
     nexp <- as.numeric(dim(exp)[dat_dim])
     nobs <- as.numeric(dim(obs)[dat_dim])
   }
-
+  
   rps <- array(dim = c(dim(exp)[time_dim], nexp = nexp, nobs = nobs))
-
+  
   for (i in 1:nexp) {
     for (j in 1:nobs) {
-      exp_data <- exp[ , , i]
-      obs_data <- obs[ , , j]
-
+      exp_data <- exp[, , i]
+      obs_data <- obs[, , j]
+      
       if (is.null(dim(exp_data))) dim(exp_data) <- c(dim(exp)[1:2])
       if (is.null(dim(obs_data))) dim(obs_data) <- c(dim(obs)[1:2])
-
+      
       # Find the fraction of NAs
       ## If any member/bin is NA at this time step, it is not good value.
       exp_mean <- rowMeans(exp_data)
@@ -307,7 +320,7 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
       } else {
         f_NAs <- na.rm
       }
-
+      
       if (f_NAs <= sum(good_values) / length(obs_mean)) {
         
         exp_data <- exp_data[good_values, , drop = F]
@@ -316,21 +329,23 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
         # If the data inputs are forecast/observation, calculate probabilities
         if (is.null(cat_dim)) {
           if (!is.null(weights)) {
-            weights_data <- weights[which(good_values) , , i]
+            weights_data <- weights[which(good_values), , i]
             if (is.null(dim(weights_data))) dim(weights_data) <- c(dim(weights)[1:2])
           } else {
             weights_data <- weights #NULL
           }
-
+          
           # Subset indices_for_clim
           dum <- match(indices_for_clim, which(good_values))
           good_indices_for_clim <- dum[!is.na(dum)]
-     
+          
           exp_probs <- .GetProbs(data = exp_data, indices_for_quantiles = good_indices_for_clim, 
-                                 prob_thresholds = prob_thresholds, weights = weights_data, cross.val = cross.val)
+                                 prob_thresholds = prob_thresholds, weights = weights_data, 
+                                 cross.val = cross.val)
           # exp_probs: [bin, sdate]
           obs_probs <- .GetProbs(data = obs_data, indices_for_quantiles = good_indices_for_clim, 
-                                 prob_thresholds = prob_thresholds, weights = NULL, cross.val = cross.val)
+                                 prob_thresholds = prob_thresholds, weights = NULL, 
+                                 cross.val = cross.val)
           # obs_probs: [bin, sdate]
           
         } else { # inputs are probabilities already
@@ -343,29 +358,29 @@ RPS <- function(exp, obs, time_dim = 'sdate', memb_dim = 'member', cat_dim = NUL
         
         # rps: [sdate, nexp, nobs]
         rps [good_values, i, j] <- colSums((probs_exp_cumsum - probs_obs_cumsum)^2)
-
+        
         if (Fair) { # FairRPS
-          ## adjustment <- rowSums(-1 * (1/R - 1/R.new) * ens.cum * (R - ens.cum)/R/(R - 1)) [formula taken from SpecsVerification::EnsRps]
+          ## adjustment <- rowSums(-1 * (1/R - 1/R.new) * ens.cum * (R - ens.cum)/R/(R - 1))
+          ## [formula taken from SpecsVerification::EnsRps]
           R <- dim(exp)[2]  #memb
-          R_new <- Inf
           adjustment <- (-1) / (R - 1) * probs_exp_cumsum * (1 - probs_exp_cumsum)
           adjustment <- colSums(adjustment)
-          rps[ , i, j] <- rps[ , i, j] + adjustment
+          rps[, i, j] <- rps[, i, j] + adjustment
         }
         
       } else { ## not enough values different from NA
         
-        rps[ , i, j] <- as.numeric(NA)
+        rps[, i, j] <- NA_real_
         
       }
       
     }
   }
-
+  
   if (is.null(dat_dim)) {
     dim(rps) <- dim(exp)[time_dim]
   }
-
+  
   return(rps)
 }
 
